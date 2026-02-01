@@ -1,0 +1,119 @@
+# Annex III: Technical Roadmap & MVP Architecture
+
+## 1. Executive Summary of Technology
+
+To support VOCE’s dual mission of **engagement** (community building) and **evidence generation** (data science), the technical architecture has been upgraded from a standard MERN stack to a **Data-First Stack (React + Python + SQL)**.
+
+This shift ensures that the platform is ready for AI integration (via Python) and complex relational data management (via PostgreSQL) from Day 1, ensuring scalability for global clinical trial standards.
+
+## 2. The Tech Stack (PERN - Python Edition)
+
+| Component | Technology | Rationale for VOCE |
+| --- | --- | --- |
+| **Frontend** | **React.js (Vite)** | Ensures a responsive, mobile-first interface optimized for low-bandwidth environments in LMICs. |
+| **Backend** | **Python (FastAPI)** | High-performance API framework. Native support for data science libraries (Pandas, NumPy), making future AI/Chatbot integration seamless. |
+| **Database** | **PostgreSQL** | Robust relational database. Essential for managing complex relationships between **Patients ↔ Trials ↔ Hospitals ↔ Consent Forms**. |
+| **ORM** | **SQLAlchemy** | Manages database interactions securely, preventing SQL injection attacks. |
+| **Search** | **Full-Text Search (Postgres)** | Built-in search capabilities to query clinical trials by disease and location without external dependencies. |
+| **Infra** | **Docker** & **AWS/Cloud** | Containerized deployment ensures the app runs identically on local dev machines and global servers. |
+
+---
+
+## 3. MVP Developer Roadmap
+
+This roadmap is strictly scoped to the **Minimum Viable Product**. Features are prioritized based on the "Golden Rule": *Does this feature connect a user to a trial or educate them on advocacy?*
+
+### PHASE 1: Core Infrastructure & Compliance
+
+**Objective:** Secure foundation with privacy-by-design.
+
+* **Repo & Env Setup:** Initialize Monorepo with React (Frontend) and FastAPI (Backend).
+* **Security Layer:**
+* Implement **HIPAA/GDPR-compliant** database encryption (at rest and in transit).
+* Set up **Consent Manager Middleware**: Enforces that no user data is written to the DB without explicit, granular consent.
+
+
+* **API Gateway:** Establish RESTful API structure (`/api/v1/`) with rate limiting to prevent abuse.
+* **Interoperability:** Define data models compliant with **FHIR** standards (mocked structure for MVP).
+
+### PHASE 2: Identity & Access Management (RBAC)
+
+**Objective:** Secure, role-based access for diverse stakeholders.
+
+* **Auth Architecture:**
+* Implementation of **OAuth2 with JWT (JSON Web Tokens)** for stateless, secure session management.
+* Password hashing using `bcrypt`.
+
+
+* **User Roles (RBAC):**
+* **Patient:** Anonymous browsing + Registration for "Saved Trials."
+* **HCP:** Registration with "Verification Flag" (Medical License ID field).
+* **Admin:** Dashboard access for content moderation.
+
+
+* **Onboarding Logic:**
+* Dynamic tagging system: Patients select "Disease Interests" (e.g., HIV, Malaria) during signup to personalize the feed.
+
+
+
+### PHASE 3: The Clinical Trial Navigator (The Engine)
+
+**Objective:** The core value proposition—connecting people to trials.
+
+* **Database Schema:**
+* Creation of Relational Tables: `Trials`, `Locations`, `Inclusion_Criteria`, `Sponsors`.
+
+
+* **Data Ingestion:**
+* Development of a **Bulk Upload Tool (CSV/JSON)** for Admins to curate and upload trial data manually (Scraping automated in V2).
+
+
+* **Search Engine:**
+* FastAPI endpoint with query parameters: `GET /trials?disease=TB&country=South_Africa`.
+* Frontend filters for **Status** (Recruiting/Closed) and **Phase** (I-IV).
+
+
+
+### PHASE 4: Engagement & Education Hubs
+
+**Objective:** Building community literacy and trust.
+
+* **Resource Library (CMS):**
+* Admin interface to upload PDF toolkits and video links.
+* Tagging system for "Advocacy," "Ethics," and "Trial Literacy."
+
+
+* **Forums (MVP Lite):**
+* Threaded discussions (`Topic` > `Post` > `Reply`).
+* **Moderation Tools:** "Report Content" flag (Critical for preventing medical misinformation).
+
+
+
+### PHASE 5: AI Assistant & Intelligence
+
+**Objective:** Scalable support and insight generation.
+
+* **The VOCE Assistant (Rule-Based):**
+* Python-based logic (not yet Generative AI to ensure safety).
+* *Logic Flow:* User queries "Consent" -> Bot returns link to "Informed Consent Module."
+
+
+* **Analytics Dashboard:**
+* Backend logs for "Most Searched Diseases" and "Resource Download Rates" to inform IDA policy strategy.
+
+
+
+### PHASE 6: Pilot & Launch Readiness
+
+**Objective:** Deployment and localization.
+
+* **Localization (i18n):**
+* Frontend support for **English + 1 Priority Language** (e.g., French or Spanish).
+
+
+* **Beta Group:**
+* Onboarding of 50 Patients + 10 HCPs for User Acceptance Testing (UAT).
+
+
+* **Feedback Loop:**
+* "Suggest a Feature" / "Report a Bug" prominent UI elements.
