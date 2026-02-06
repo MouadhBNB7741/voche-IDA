@@ -1,0 +1,37 @@
+graph TD
+    %% Authentication & Onboarding
+    Start([New Patient]) --> UC1[Register Account]
+    UC1 --> UC4[Verify Email]
+    UC4 --> UC2[Login]
+    UC2 --> UC5[Complete Health Profile]
+    UC5 --> UC6[Update Medical History]
+    UC6 --> ProfileDone{Profile Set Up}
+
+    %% Main Navigation Hub
+    ProfileDone --> Nav[Dashboard / Menu]
+
+    %% Trial Discovery Loop
+    Nav --> UC9[Search Trials]
+    UC9 --> UC10[Filter by Disease/Location]
+    UC10 --> UC12[View Trial Details]
+    UC12 --> UC13[Check Eligibility]
+    
+    UC13 --> EligCheck{Eligible?}
+    EligCheck -- Yes --> UC16[Complete Screening Survey]
+    EligCheck -- No/Maybe --> UC14[Save Trial]
+    
+    UC16 --> UC17[Contact Trial Site]
+    UC14 --> UC15[Set Alerts]
+
+    %% Community & Learning (Parallel Paths)
+    Nav --> Community[Community & Forums]
+    Community --> UC19[Join Forum]
+    UC19 --> UC20[Post/Reply/Upvote]
+
+    Nav --> Learning[Learning Center]
+    Learning --> UC23[Browse Resources]
+    UC23 --> UC25[Watch Videos/Download]
+    UC25 --> UC26[Complete Training]
+
+    %% Final Engagement
+    UC17 --> UC18[Share Experience]
