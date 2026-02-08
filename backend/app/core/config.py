@@ -1,12 +1,12 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 
 
 class Settings(BaseSettings):
-    project_name: str = ""
+    project_name: str = "VOCE App"
     database_url: str = ""
     redis_url: str = ""
-    secret_key: str = ""
+    secret_key: str = "unsafe_secret_key"
     
     # Email Configuration
     smtp_host: str = "smtp.gmail.com"
@@ -16,9 +16,11 @@ class Settings(BaseSettings):
     email_from: str = "noreply@smsgateway.com"
     frontend_url: str = "http://localhost:5173"
 
-    model_config = {
-        "env_file": ".env",
-    }
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        extra="ignore",
+        case_sensitive=False
+    )
 
 
 @lru_cache

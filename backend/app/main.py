@@ -1,43 +1,41 @@
 import os
-from fastapi.staticfiles import StaticFiles
-import asyncio
-from fastapi import FastAPI
+import logging
 from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+
 from app.core.config import settings
 from app.db.postgres import PostgresDB
 from app.db.redis import connect_redis, disconnect_redis
 from app.api.v1.auth import router as auth_router
 
-
-async def startup():
-    await PostgresDB.connect()
-    await connect_redis()
-
-
-async def shutdown():
-    await PostgresDB.disconnect()
-    await disconnect_redis()
-
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
-    await startup()
+    # --- Startup ---
+    logger.info("🚀 VOCE Backend Starting up...")
+    await PostgresDB.connect()
+    await connect_redis()
     yield
-    # Shutdown
-    await shutdown()
+    # --- Shutdown ---
+    logger.info("🛑 VOCE Backend Shutting down...")
+    await PostgresDB.disconnect()
+    await disconnect_redis()
 
+app = FastAPI(
+    title=settings.project_name,
+    description="VOCE Platform API for Clinical Trials & Community",
+    version="0.1.0",
+    lifespan=lifespan
+)
 
-app = FastAPI(title=settings.project_name, lifespan=lifespan)
-
-# Mount Static Files (Uploads)
 os.makedirs("uploads", exist_ok=True)
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+app.mount("/static", StaticFiles(directory="uploads"), name="static")
 
-app.include_router(auth_router)
-
-# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -46,12 +44,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
 
-@app.get("/")
+@app.get("/", tags=["Status"])
 async def root():
-    return {"message": "SMS Gateway Server is running"}
+    return {
+        "message": "VOCE Backend API is running",
+        "docs_url": "/docs",
+        "redoc_url": "/redoc"
+    }
 
-
-@app.get("/health")
+@app.get("/health", tags=["Status"])
 async def health_check():
-    return {"status": "online"}
+    return {
+        "status": "online",
+        "database": "connected",
+        "redis": "connected",
+        "version": "0.1.0"
+    }
