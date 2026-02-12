@@ -10,6 +10,7 @@ from app.core.config import settings
 from app.db.postgres import PostgresDB
 from app.db.redis import connect_redis, disconnect_redis
 from app.api.v1.auth import router as auth_router
+from app.api.v1.users import router as users_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -18,8 +19,17 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     # --- Startup ---
     logger.info("🚀 VOCE Backend Starting up...")
-    await PostgresDB.connect()
-    await connect_redis()
+    try:
+        await PostgresDB.connect()
+        logger.info("Database connected.")
+    except Exception as e:
+        logger.error(f"Database connection failed: {e}")
+        
+    try:
+        await connect_redis()
+    except Exception as e:
+        logger.warning(f"Redis connection failed: {e}")
+        
     yield
     # --- Shutdown ---
     logger.info("🛑 VOCE Backend Shutting down...")
@@ -30,7 +40,10 @@ app = FastAPI(
     title=settings.project_name,
     description="VOCE Platform API for Clinical Trials & Community",
     version="0.1.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    docs_url="/api/v1/docs",
+    redoc_url="/api/v1/redoc",
+    openapi_url="/api/v1/openapi.json"
 )
 
 os.makedirs("uploads", exist_ok=True)
@@ -44,17 +57,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
+app.include_router(auth_router, prefix="/api/v1")
+app.include_router(users_router, prefix="/api/v1")
 
-@app.get("/", tags=["Status"])
+
+@app.get("/api/v1/", tags=["Status"])
 async def root():
     return {
         "message": "VOCE Backend API is running",
-        "docs_url": "/docs",
+        "docs_url": "/api/v1/docs", 
         "redoc_url": "/redoc"
     }
 
-@app.get("/health", tags=["Status"])
+@app.get("/api/v1/health", tags=["Status"])
 async def health_check():
     return {
         "status": "online",

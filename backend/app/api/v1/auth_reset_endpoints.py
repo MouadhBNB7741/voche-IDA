@@ -7,7 +7,7 @@ from app.api.dependencies.connections import get_connection
 from app.services.email import EmailService
 
 
-router = APIRouter(prefix="/api/v1/auth", tags=["Auth"])
+router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
 class PasswordResetRequest(BaseModel):

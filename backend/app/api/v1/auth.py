@@ -1,190 +1,214 @@
+import logging
 import secrets
-from datetime import datetime, timedelta, UTC
-from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel, EmailStr
-from app.schemas.auth import RegisterRequest
-from app.schemas.auth import LoginRequest, LoginResponse, PasswordUpdateSchema
-from app.core.security import hash_password
-from app.core.security import verify_password, create_jwt
+from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi.security import OAuth2PasswordRequestForm
+from app.schemas.auth import (
+    RegisterRequest, 
+    LoginRequest, 
+    LoginResponse, 
+    PasswordUpdateRequest, 
+    PasswordResetRequest, 
+    PasswordResetConfirm, 
+)
+from app.schemas.user import UserDetailsResponse
+from app.models.user_model import UserModel
+from app.models.password_reset_model import PasswordResetModel
+from app.models.profile_model import ProfileModel
+from app.core.security import hash_password, verify_password, create_jwt
 from app.api.dependencies.jwt_auth import get_current_user
-from app.api.dependencies.connections import get_connection
+from app.api.dependencies.connections import get_connection, get_transaction
 from app.services.email import EmailService
 
+router = APIRouter(prefix="/auth", tags=["Auth"])
 
-router = APIRouter(prefix="/api/v1/auth", tags=["Auth"])
+@router.post("/register", status_code=status.HTTP_201_CREATED, response_model=LoginResponse)
+async def register(data: RegisterRequest, conn=Depends(get_transaction)):
+    """
+    Register a new user using the Model layer.
+    """
+    user_model = UserModel(conn)
+    
+    # 1. Check uniqueness
+    if await user_model.check_email_exists(data.email):
+        raise HTTPException(status_code=409, detail="Email already registered")
 
+    # 2. Hash password
+    pwd_hash = hash_password(data.password)
 
-class PasswordResetRequest(BaseModel):
-    email: EmailStr
+    # 3. Create user
+    # display_name defaults to "First Last"
+    display_name = f"{data.first_name} {data.last_name}".strip()
+    
+    try:
+        user = await user_model.create_user(
+            email=data.email, 
+            password_hash=pwd_hash, 
+            user_type=data.user_type, 
+            first_name=data.first_name, 
+            last_name=data.last_name, 
+            display_name=display_name
+        )
+    except Exception as e:
+        logging.error(f"Registration error: {e}")
+        raise HTTPException(status_code=500, detail="Registration failed")
 
+    # 4. Generate JWT
+    token = create_jwt({
+        "sub": str(user['id']),
+        "user_type": user['user_type']
+    })
 
-class PasswordResetConfirm(BaseModel):
-    token: str
-    new_password: str
-
-
-@router.post("/register")
-async def register(data: RegisterRequest, conn=Depends(get_connection)):
-    if data.role not in ("subscriber", "developer"):
-        raise HTTPException(400, "Invalid role")
-
-    api_key = None
-    if data.role == "developer":
-        api_key = f"dev_{secrets.token_hex(16)}"
-
-    exists = await conn.fetchval(
-        "SELECT 1 FROM users WHERE email=$1", data.email
+    return LoginResponse(
+        access_token=token, 
+        token_type="bearer",
+        user_type=user['user_type']
     )
-    if exists:
-        raise HTTPException(409, "User already exists")
-
-    await conn.execute("""
-        INSERT INTO users (email, password_hash, role, api_key, subscription_tier_id)
-        VALUES ($1, $2, $3, $4, 1)
-    """, data.email, hash_password(data.password), data.role, api_key)
-
-    return {
-        "status": "created",
-        "api_key": api_key
-    }
-
 
 @router.post("/login", response_model=LoginResponse)
 async def login(data: LoginRequest, conn=Depends(get_connection)):
-    user = await conn.fetchrow("""
-        SELECT id, password_hash, role
-        FROM users
-        WHERE email=$1 AND is_active=TRUE
-    """, data.email)
+    """
+    Login user using Model layer.
+    """
+    user_model = UserModel(conn)
+    user = await user_model.get_by_email(data.email)
 
-    if not user or not verify_password(data.password, user["password_hash"]):
-        raise HTTPException(401, "Invalid credentials")
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    if not verify_password(data.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+        
+    if not user["is_active"] or user["status"] != 'active':
+        raise HTTPException(status_code=403, detail="Account is inactive or suspended")
 
+    # Update last login
+    await user_model.update_last_login(str(user['id']))
+    
     token = create_jwt({
         "sub": str(user["id"]),
-        "role": user["role"]
+        "user_type": user["user_type"]
     })
+    
+    return LoginResponse(
+        access_token=token, 
+        token_type="bearer",
+        user_type=user['user_type']
+    )
 
-    return {"access_token": token}
-
-
-@router.get("/me")
-async def get_me(current_user = Depends(get_current_user)):
+@router.get("/me", response_model=UserDetailsResponse)
+async def get_me(
+    current_user: dict = Depends(get_current_user), 
+    conn=Depends(get_connection)
+):
     """
-    Returns the current user's profile based on the JWT token.
-    The 'get_current_user' dependency handles the token verification.
+    Get current user details using ProfileModel (joins data).
     """
-    return {
-        "id": str(current_user["id"]),
-        "email": current_user["email"],
-        "role": current_user["role"],
-        "api_key": current_user.get("api_key"), # Only exists for developers
-        "subscription_tier_id": current_user.get("subscription_tier_id", 1) # Default to Free
-    }
-
+    profile_model = ProfileModel(conn)
+    user_details = await profile_model.get_profile_by_user_id(current_user["id"])
+    
+    if not user_details:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    return user_details
 
 @router.put("/update-password")
 async def update_password(
-    data: PasswordUpdateSchema, 
-    user=Depends(get_current_user), 
-    db=Depends(get_connection)
+    data: PasswordUpdateRequest, 
+    current_user: dict = Depends(get_current_user), 
+    conn=Depends(get_connection)
 ):
-    # 1. Fetch current hashed password from DB
-    # 2. Verify current_password using argon2
-    # 3. Hash new_password
-    # 4. Update DB
-    return {"message": "Success"}
+    """
+    Update password using Model layer.
+    """
+    user_model = UserModel(conn)
+    user_id = current_user["id"]
+    
+    # Verify old password
+    current_hash = await user_model.get_password_hash(user_id)
+    if not current_hash:
+        raise HTTPException(status_code=404, detail="User not found")
 
+    if not verify_password(data.current_password, current_hash):
+        raise HTTPException(status_code=400, detail="Incorrect current password")
+        
+    # Update logic
+    new_hash = hash_password(data.new_password)
+    await user_model.update_password(user_id, new_hash)
+    
+    return {"message": "Password updated successfully"}
 
 @router.post("/request-reset")
-async def request_password_reset(data: PasswordResetRequest, conn=Depends(get_connection)):
+async def request_password_reset(
+    data: PasswordResetRequest, 
+    conn=Depends(get_connection)
+):
     """
-    Request password reset. Sends email with reset token.
-    Returns same response for valid/invalid emails (security).
+    Request password reset using Model layer.
     """
-    try:
-        user = await conn.fetchrow("SELECT id, email FROM users WHERE email = $1", data.email)
+    user_model = UserModel(conn)
+    pwd_model = PasswordResetModel(conn)
+    
+    # Check if user exists (to get ID)
+    user = await user_model.get_by_email(data.email)
+    
+    # Always return success
+    generic_msg = {"message": "If this email is registered, you will receive a reset link."}
+    
+    if not user:
+        return generic_msg
         
-        if user:
-            reset_token = secrets.token_urlsafe(32)
-            expires_at = datetime.now(UTC) + timedelta(hours=1)
-            
-            await conn.execute("""
-                UPDATE password_reset_tokens 
-                SET used = TRUE 
-                WHERE user_id = $1 AND used = FALSE
-            """, user["id"])
-            
-            await conn.execute("""
-                INSERT INTO password_reset_tokens (user_id, token, expires_at)
-                VALUES ($1, $2, $3)
-            """, user["id"], reset_token, expires_at)
-            
-            await EmailService.send_password_reset(user["email"], reset_token)
+    # Generate token
+    token = await pwd_model.create_token(str(user['id']))
     
-    except Exception as e:
-        print(f"Password reset error: {e}")
+    # Send email (mock)
+    # await EmailService.send_password_reset(data.email, token)
+    logging.info(f"RESET TOKEN for {data.email}: {token}")
     
-    return {"message": "If that email exists, a reset link has been sent."}
-
+    return generic_msg
 
 @router.get("/verify-reset-token/{token}")
 async def verify_reset_token(token: str, conn=Depends(get_connection)):
-    """Check if reset token is valid and not expired"""
-    token_record = await conn.fetchrow("""
-        SELECT id, user_id, expires_at, used
-        FROM password_reset_tokens
-        WHERE token = $1
-    """, token)
+    """
+    Verify token validity.
+    """
+    pwd_model = PasswordResetModel(conn)
+    result = await pwd_model.validate_token(token)
     
-    if not token_record:
-        raise HTTPException(400, "Invalid reset token")
+    if not result:
+        raise HTTPException(status_code=400, detail="Invalid token")
     
-    if token_record["used"]:
-        raise HTTPException(400, "Reset token already used")
-    
-    if datetime.now(UTC) > token_record["expires_at"]:
-        raise HTTPException(400, "Reset token expired")
-    
-    return {"valid": True}
-
+    if not result["valid"]:
+        detail = "Token expired" if result["reason"] == "expired" else "Token already used"
+        raise HTTPException(status_code=400, detail=detail)
+        
+    return {"message": "Token is valid", "valid": True}
 
 @router.post("/reset-password")
-async def reset_password(data: PasswordResetConfirm, conn=Depends(get_connection)):
-    """Reset password using valid token"""
+async def reset_password(
+    data: PasswordResetConfirm, 
+    conn=Depends(get_connection)
+):
+    """
+    Reset password using Model layer.
+    """
+    pwd_model = PasswordResetModel(conn)
+    user_model = UserModel(conn)
     
-    token_record = await conn.fetchrow("""
-        SELECT id, user_id, expires_at, used
-        FROM password_reset_tokens
-        WHERE token = $1
-    """, data.token)
+    # Validate
+    result = await pwd_model.validate_token(data.token)
     
-    if not token_record:
-        raise HTTPException(400, "Invalid reset token")
+    if not result:
+        raise HTTPException(status_code=400, detail="Invalid token")
+        
+    if not result["valid"]:
+        detail = "Token expired" if result["reason"] == "expired" else "Token already used"
+        raise HTTPException(status_code=400, detail=detail)
     
-    if token_record["used"]:
-        raise HTTPException(400, "Reset token already used")
-    
-    if datetime.now(UTC) > token_record["expires_at"]:
-        raise HTTPException(400, "Reset token expired")
-    
+    # Update password
     new_hash = hash_password(data.new_password)
-    await conn.execute("""
-        UPDATE users 
-        SET password_hash = $1 
-        WHERE id = $2
-    """, new_hash, token_record["user_id"])
+    await user_model.update_password(str(result["user_id"]), new_hash)
     
-    await conn.execute("""
-        UPDATE password_reset_tokens 
-        SET used = TRUE 
-        WHERE id = $1
-    """, token_record["id"])
+    # Mark token used
+    await pwd_model.mark_token_used(str(result["token_id"]))
     
-    await conn.execute("""
-        UPDATE password_reset_tokens 
-        SET used = TRUE 
-        WHERE user_id = $1 AND id != $2
-    """, token_record["user_id"], token_record["id"])
-    
-    return {"message": "Password reset successful"}
+    return {"message": "Password has been reset successfully"}

@@ -23,7 +23,12 @@ class PostgresDB:
     @classmethod
     async def disconnect(cls):
         if cls.__pool:
-            await cls.__pool.close()
+            try:
+                await cls.__pool.close()
+            except Exception:
+                pass
+            finally:
+                cls.__pool = None
 
     @classmethod
     async def execute(cls, query: str, *args):
