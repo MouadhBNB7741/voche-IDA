@@ -38,27 +38,31 @@ backend/
 ### Folder Responsibilities
 
 #### **`api/`** - The Gateway
+
 - **What it does:** Defines all the "doors" (endpoints) through which the frontend communicates with the backend
 - **Analogy:** Like a receptionist desk—receives requests, validates them, and routes to the appropriate department
 - **Examples:** Registration endpoint, trial search endpoint, profile update endpoint
 - **Contains:** Route definitions organized by feature (auth, trials, community, etc.)
 
 #### **`schemas/`** - The Contract Enforcer
+
 - **What it does:** Defines exactly what data format is expected for each request and response
 - **Analogy:** Like a customs inspector—ensures every incoming package matches its declared contents
 - **Examples:** "Registration must include email, password, name, and role", "Trial response includes id, title, phase, status"
 - **Purpose:** Prevents invalid data from entering the system and ensures consistent responses
 
 #### **`services/`** - The Brain
+
 - **What it does:** Contains all the business logic—the "how" behind operations
 - **Analogy:** Like department specialists—when reception receives a request, services figure out the actual work
-- **Examples:** 
+- **Examples:**
   - Matching algorithm that finds trials relevant to a user's profile
   - Email service that sends password reset links
   - Content moderation logic that filters inappropriate forum posts
 - **Purpose:** Keeps complex logic separate from API routes for maintainability
 
 #### **`core/`** - The Foundation
+
 - **What it does:** Handles system-wide concerns like security, authentication, and configuration
 - **Examples:**
   - Password hashing and verification
@@ -68,6 +72,7 @@ backend/
 - **Purpose:** Centralize critical security and configuration logic
 
 #### **`db/`** - The Data Layer
+
 - **What it does:** Manages all database interactions and schema migrations
 - **Analogy:** Like a filing system manager—handles storing, retrieving, and organizing all persistent data
 - **Contains:**
@@ -77,6 +82,7 @@ backend/
 - **Purpose:** Creates a clean separation between business logic and data storage
 
 #### **`tests/`** - The Quality Guardian
+
 - **What it does:** Automated tests that verify every component works correctly
 - **Types:**
   - Unit tests (individual function verification)
@@ -85,6 +91,7 @@ backend/
 - **Purpose:** Catch bugs before they reach production, enable confident updates
 
 #### **`main.py`** - The Orchestrator
+
 - **What it does:** The application's starting point—assembles all components
 - **Responsibilities:**
   - Initializes the FastAPI application
@@ -98,6 +105,7 @@ backend/
 ## 2. API Contract (High-Level)
 
 The API contract defines **how the frontend and backend communicate**. For each feature, we specify:
+
 - **What can be requested** (endpoint + HTTP method)
 - **What information must be provided** (input)
 - **What information is returned** (output)
@@ -111,6 +119,7 @@ This section is organized by feature domain, following RESTful conventions.
 **Purpose:** Establishes user identity, protects accounts, and manages sessions.
 
 #### **User Registration**
+
 - **What it does:** Creates a new user account in the system
 - **Method:** `POST /auth/register`
 - **Input Required:**
@@ -130,6 +139,7 @@ This section is organized by feature domain, following RESTful conventions.
 - **Output:** Authentication token (JWT) + user profile object
 
 #### **User Login**
+
 - **What it does:** Authenticates existing user and creates session
 - **Method:** `POST /auth/login`
 - **Input Required:**
@@ -144,6 +154,7 @@ This section is organized by feature domain, following RESTful conventions.
 - **Error cases:** Invalid credentials return generic error (security best practice)
 
 #### **Password Reset Request**
+
 - **What it does:** Initiates password recovery process
 - **Method:** `POST /auth/request-reset`
 - **Input Required:** Email address
@@ -155,6 +166,7 @@ This section is organized by feature domain, following RESTful conventions.
 - **Output:** Generic success message (prevents email enumeration attacks)
 
 #### **Password Reset Confirmation**
+
 - **What it does:** Completes password reset using emailed token
 - **Method:** `POST /auth/reset-password`
 - **Input Required:**
@@ -169,12 +181,14 @@ This section is organized by feature domain, following RESTful conventions.
 - **Output:** Success confirmation
 
 #### **Get Current User Profile**
+
 - **What it does:** Retrieves authenticated user's complete profile
 - **Method:** `GET /auth/me`
 - **Input Required:** Valid JWT token in Authorization header
 - **Output:** Complete user profile including preferences, saved items, verification status
 
 #### **Update Password (Authenticated)**
+
 - **What it does:** Allows logged-in user to change password
 - **Method:** `PUT /auth/update-password`
 - **Input Required:**
@@ -188,6 +202,7 @@ This section is organized by feature domain, following RESTful conventions.
 - **Output:** Success confirmation
 
 #### **Token Verification**
+
 - **What it does:** Validates reset token before allowing password change
 - **Method:** `GET /auth/verify-reset-token/{token}`
 - **Purpose:** Prevents user from filling out password form with invalid/expired token
@@ -200,6 +215,7 @@ This section is organized by feature domain, following RESTful conventions.
 **Purpose:** Manages user information, preferences, and personalization data.
 
 #### **Get User Profile**
+
 - **What it does:** Retrieves full profile for authenticated user
 - **Method:** `GET /users/me`
 - **Output Includes:**
@@ -212,6 +228,7 @@ This section is organized by feature domain, following RESTful conventions.
   - Privacy consent records
 
 #### **Update User Profile**
+
 - **What it does:** Modifies user information
 - **Method:** `PATCH /users/me`
 - **Updatable Fields:**
@@ -230,6 +247,7 @@ This section is organized by feature domain, following RESTful conventions.
   4. Updated profile returned
 
 #### **Upload Verification Documents (HCP Only)**
+
 - **What it does:** Allows healthcare professionals to submit medical license for verification
 - **Method:** `POST /users/me/verification`
 - **Input Required:**
@@ -244,6 +262,7 @@ This section is organized by feature domain, following RESTful conventions.
 - **Output:** Upload confirmation + expected review timeframe
 
 #### **Manage Notification Preferences**
+
 - **What it does:** Controls what notifications user receives
 - **Method:** `PATCH /users/me/notifications`
 - **Configurable Settings:**
@@ -260,6 +279,7 @@ This section is organized by feature domain, following RESTful conventions.
 **Purpose:** Enables discovery, filtering, and interaction with clinical trial listings.
 
 #### **Search & List Trials**
+
 - **What it does:** Returns trials matching search criteria
 - **Method:** `GET /trials`
 - **Search Filters:**
@@ -282,6 +302,7 @@ This section is organized by feature domain, following RESTful conventions.
   - Pagination metadata
 
 #### **Get Trial Details**
+
 - **What it does:** Returns complete information for specific trial
 - **Method:** `GET /trials/{trial_id}`
 - **Output Includes:**
@@ -296,6 +317,7 @@ This section is organized by feature domain, following RESTful conventions.
   - Safety information
 
 #### **Save/Bookmark Trial**
+
 - **What it does:** Adds trial to user's saved list for later reference
 - **Method:** `POST /trials/{trial_id}/save`
 - **Requires:** Authentication
@@ -305,16 +327,19 @@ This section is organized by feature domain, following RESTful conventions.
 - **Output:** Confirmation + updated save status
 
 #### **Remove Saved Trial**
+
 - **What it does:** Removes trial from user's saved list
 - **Method:** `DELETE /trials/{trial_id}/save`
 - **Output:** Confirmation
 
 #### **Get User's Saved Trials**
+
 - **What it does:** Retrieves all trials bookmarked by user
 - **Method:** `GET /users/me/saved-trials`
 - **Output:** Array of full trial objects + save timestamp
 
 #### **Express Interest / Contact Trial**
+
 - **What it does:** Captures user intent to participate
 - **Method:** `POST /trials/{trial_id}/interest`
 - **Purpose:** Connects patient with trial coordinator
@@ -326,6 +351,7 @@ This section is organized by feature domain, following RESTful conventions.
 - **Privacy:** User explicitly consents before contact info is shared
 
 #### **Create Trial Alert**
+
 - **What it does:** Notifies user when trials matching criteria are added
 - **Method:** `POST /alerts/trials`
 - **Input Required:**
@@ -341,6 +367,7 @@ This section is organized by feature domain, following RESTful conventions.
 **Purpose:** Facilitates peer support through discussion forums while maintaining safety and privacy.
 
 #### **List Forum Posts**
+
 - **What it does:** Retrieves community discussions
 - **Method:** `GET /community/posts`
 - **Filters:**
@@ -358,6 +385,7 @@ This section is organized by feature domain, following RESTful conventions.
   - Pagination metadata
 
 #### **Get Post Details & Replies**
+
 - **What it does:** Retrieves full post content and all comments/replies
 - **Method:** `GET /community/posts/{post_id}`
 - **Output:**
@@ -370,6 +398,7 @@ This section is organized by feature domain, following RESTful conventions.
 - **Privacy:** Author's email never exposed, only display name
 
 #### **Create New Post**
+
 - **What it does:** Publishes new discussion thread
 - **Method:** `POST /community/posts`
 - **Input Required:**
@@ -385,6 +414,7 @@ This section is organized by feature domain, following RESTful conventions.
 - **Output:** Created post object with ID
 
 #### **Reply to Post**
+
 - **What it does:** Adds comment to existing discussion
 - **Method:** `POST /community/posts/{post_id}/replies`
 - **Input Required:** Reply content
@@ -394,6 +424,7 @@ This section is organized by feature domain, following RESTful conventions.
   3. Reply counter on parent post is incremented
 
 #### **Like/Unlike Post or Reply**
+
 - **What it does:** Expresses support or agreement
 - **Method:** `POST /community/posts/{post_id}/like`
 - **Method:** `DELETE /community/posts/{post_id}/like`
@@ -403,6 +434,7 @@ This section is organized by feature domain, following RESTful conventions.
   3. No notification (reduces noise)
 
 #### **Edit Post**
+
 - **What it does:** Allows author to modify their content
 - **Method:** `PATCH /community/posts/{post_id}`
 - **Authorization:** Only post author or admin
@@ -412,6 +444,7 @@ This section is organized by feature domain, following RESTful conventions.
   3. "Edited" flag and timestamp added
 
 #### **Delete Post**
+
 - **What it does:** Removes post from community
 - **Method:** `DELETE /community/posts/{post_id}`
 - **Authorization:** Post author, moderators, or admins
@@ -421,6 +454,7 @@ This section is organized by feature domain, following RESTful conventions.
   3. All replies also hidden
 
 #### **Report Content**
+
 - **What it does:** Flags inappropriate or harmful content
 - **Method:** `POST /community/reports`
 - **Input Required:**
@@ -441,6 +475,7 @@ This section is organized by feature domain, following RESTful conventions.
 **Purpose:** Provides access to vetted educational materials and advocacy toolkits.
 
 #### **List Resources**
+
 - **What it does:** Returns educational materials catalog
 - **Method:** `GET /resources`
 - **Filters:**
@@ -454,6 +489,7 @@ This section is organized by feature domain, following RESTful conventions.
   - Download/view counts
 
 #### **Get Resource Details**
+
 - **What it does:** Retrieves full information about educational material
 - **Method:** `GET /resources/{resource_id}`
 - **Output:**
@@ -466,6 +502,7 @@ This section is organized by feature domain, following RESTful conventions.
   - User ratings and reviews
 
 #### **Download/Access Resource**
+
 - **What it does:** Provides access to resource file
 - **Method:** `GET /resources/{resource_id}/download`
 - **What happens:**
@@ -476,12 +513,14 @@ This section is organized by feature domain, following RESTful conventions.
 - **Output:** File download or streaming URL
 
 #### **Rate Resource**
+
 - **What it does:** Allows users to provide feedback on quality
 - **Method:** `POST /resources/{resource_id}/rating`
 - **Input:** Star rating (1-5) + optional text review
 - **Output:** Updated average rating
 
 #### **Track Resource Progress** (for courses/multi-part content)
+
 - **What it does:** Saves user progress through educational materials
 - **Method:** `PATCH /resources/{resource_id}/progress`
 - **Input:** Completion percentage or module ID
@@ -494,6 +533,7 @@ This section is organized by feature domain, following RESTful conventions.
 **Purpose:** Manages educational events, webinars, and community gatherings.
 
 #### **List Events**
+
 - **What it does:** Returns upcoming and past events
 - **Method:** `GET /events`
 - **Filters:**
@@ -507,6 +547,7 @@ This section is organized by feature domain, following RESTful conventions.
   - Registration status for authenticated users
 
 #### **Get Event Details**
+
 - **What it does:** Retrieves complete event information
 - **Method:** `GET /events/{event_id}`
 - **Output:**
@@ -520,6 +561,7 @@ This section is organized by feature domain, following RESTful conventions.
   - Current registration count
 
 #### **Register for Event**
+
 - **What it does:** Signs user up for participation
 - **Method:** `POST /events/{event_id}/register`
 - **What happens:**
@@ -531,11 +573,13 @@ This section is organized by feature domain, following RESTful conventions.
 - **Output:** Registration confirmation + access details
 
 #### **Cancel Event Registration**
+
 - **What it does:** Removes user from event attendee list
 - **Method:** `DELETE /events/{event_id}/register`
 - **Output:** Cancellation confirmation
 
 #### **Get User's Registered Events**
+
 - **What it does:** Retrieves all events user is attending
 - **Method:** `GET /users/me/events`
 - **Output:** Array of events with access links
@@ -547,6 +591,7 @@ This section is organized by feature domain, following RESTful conventions.
 **Purpose:** Provides intelligent navigation assistance and answers common questions.
 
 #### **Send Chat Message**
+
 - **What it does:** Processes user query and returns helpful guidance
 - **Method:** `POST /ai/chat`
 - **Input Required:**
@@ -564,6 +609,7 @@ This section is organized by feature domain, following RESTful conventions.
 - **Important:** Always includes disclaimer that assistant doesn't provide medical advice
 
 #### **Get Suggested Questions**
+
 - **What it does:** Provides conversation starters
 - **Method:** `GET /ai/suggestions`
 - **Output:** Array of common questions contextual to user's profile
@@ -575,6 +621,7 @@ This section is organized by feature domain, following RESTful conventions.
 **Purpose:** Manages user alerts and system messages.
 
 #### **Get Notifications**
+
 - **What it does:** Retrieves user's notification inbox
 - **Method:** `GET /notifications`
 - **Filters:** Read/unread, type, date range
@@ -583,15 +630,18 @@ This section is organized by feature domain, following RESTful conventions.
   - Unread count
 
 #### **Mark as Read**
+
 - **What it does:** Updates notification status
 - **Method:** `PATCH /notifications/{notification_id}/read`
 - **Also supports:** `PATCH /notifications/mark-all-read`
 
 #### **Delete Notification**
+
 - **What it does:** Removes notification from user's inbox
 - **Method:** `DELETE /notifications/{notification_id}`
 
 #### **Get Notification Preferences**
+
 - **What it does:** Retrieves current notification settings
 - **Method:** `GET /notifications/preferences`
 - **Output:** Configuration for each notification type and channel
@@ -603,12 +653,14 @@ This section is organized by feature domain, following RESTful conventions.
 **Purpose:** Manages institutional partnerships and collaborative groups.
 
 #### **List Organizations**
+
 - **What it does:** Returns directory of partner organizations
 - **Method:** `GET /organizations`
 - **Filters:** Type (research institution, advocacy group, hospital network), country
 - **Output:** Organization profiles (name, type, description, country, website)
 
 #### **Get Organization Details**
+
 - **What it does:** Retrieves complete organization profile
 - **Method:** `GET /organizations/{org_id}`
 - **Output:**
@@ -619,6 +671,7 @@ This section is organized by feature domain, following RESTful conventions.
   - Resources contributed
 
 #### **Join Organization** (for verified HCPs/members)
+
 - **What it does:** Requests membership in organization's VOCE group
 - **Method:** `POST /organizations/{org_id}/join`
 - **What happens:**
@@ -634,17 +687,20 @@ This section is organized by feature domain, following RESTful conventions.
 **Purpose:** Collects user feedback and research data with consent.
 
 #### **List Available Surveys**
+
 - **What it does:** Returns surveys user is eligible to complete
 - **Method:** `GET /surveys`
 - **Filters:** Status (active, completed), relevance to user profile
 - **Output:** Survey metadata (title, description, estimated time, incentive if applicable)
 
 #### **Get Survey Questions**
+
 - **What it does:** Retrieves full survey instrument
 - **Method:** `GET /surveys/{survey_id}`
 - **Output:** Ordered array of questions with response types
 
 #### **Submit Survey Response**
+
 - **What it does:** Records user's survey answers
 - **Method:** `POST /surveys/{survey_id}/responses`
 - **Input:** Array of question-answer pairs
@@ -662,6 +718,7 @@ This section is organized by feature domain, following RESTful conventions.
 **Purpose:** Platform management, content moderation, and system monitoring.
 
 #### **Submit Feedback**
+
 - **What it does:** Allows users to report bugs or suggest features
 - **Method:** `POST /system/feedback`
 - **Input:**
@@ -671,6 +728,7 @@ This section is organized by feature domain, following RESTful conventions.
 - **Output:** Ticket number for tracking
 
 #### **Get System Metadata**
+
 - **What it does:** Provides structured data for dropdowns and filters
 - **Method:** `GET /system/metadata`
 - **Output:**
@@ -683,22 +741,26 @@ This section is organized by feature domain, following RESTful conventions.
 - **Purpose:** Ensures frontend and backend always aligned on valid values
 
 #### **Health Check**
+
 - **What it does:** Verifies API is operational
 - **Method:** `GET /health`
 - **Output:** Service status, version, database connectivity
 
 #### **Admin: Content Moderation Queue** (Restricted)
+
 - **What it does:** Shows flagged content requiring review
 - **Method:** `GET /admin/moderation/queue`
 - **Authorization:** Admin or moderator role only
 - **Output:** Pending reports with context
 
 #### **Admin: Approve/Reject Content**
+
 - **Method:** `POST /admin/moderation/{report_id}/resolve`
 - **Input:** Decision (approve, remove, warn user)
 - **What happens:** Content status updated, user may be notified
 
 #### **Admin: Verify HCP**
+
 - **What it does:** Approves healthcare professional verification
 - **Method:** `POST /admin/users/{user_id}/verify`
 - **Input:** Verification decision + notes
@@ -713,6 +775,7 @@ This section is organized by feature domain, following RESTful conventions.
 ## 3. Database Design (High-Level)
 
 The database is the **system's memory**—it stores all persistent information in an organized, secure, and queryable format. Our design prioritizes:
+
 - **Data integrity** (relationships enforced)
 - **Privacy** (sensitive data isolated)
 - **Performance** (optimized for common queries)
@@ -721,6 +784,7 @@ The database is the **system's memory**—it stores all persistent information i
 ### Design Principles
 
 **Relational Structure:** We use PostgreSQL, a relational database, because VOCE's data has clear relationships:
+
 - Users participate in trials
 - Users create forum posts
 - Posts belong to communities
@@ -737,9 +801,11 @@ The database is the **system's memory**—it stores all persistent information i
 ### Core Tables & Relationships
 
 #### **`users`** - Identity & Authentication
+
 **Purpose:** Stores core user identity and authentication credentials
 
 **Key Information:**
+
 - Unique identifier (UUID)
 - Email (login credential, unique)
 - Password (hashed with Argon2—never plain text)
@@ -755,6 +821,7 @@ The database is the **system's memory**—it stores all persistent information i
 - Last login timestamp
 
 **Relationships:**
+
 - One user → Many saved trials
 - One user → Many forum posts
 - One user → Many notifications
@@ -764,11 +831,13 @@ The database is the **system's memory**—it stores all persistent information i
 ---
 
 #### **`user_profiles`** - Extended User Information
+
 **Purpose:** Stores detailed, optional user information separate from core identity
 
 **Why separate?** Reduces load on authentication queries; allows flexible profile updates without touching sensitive credentials table.
 
 **Key Information:**
+
 - Profile identifier (UUID)
 - Link to user (foreign key to `users.id`)
 - Medical condition (for patients—used in trial matching)
@@ -782,14 +851,17 @@ The database is the **system's memory**—it stores all persistent information i
 - Privacy settings
 
 **Relationships:**
+
 - One-to-one with `users` table
 
 ---
 
 #### **`clinical_trials`** - Trial Registry
+
 **Purpose:** Central repository of all clinical trial information
 
 **Key Information:**
+
 - Trial identifier (UUID - internal)
 - NCT ID (official ClinicalTrials.gov identifier)
 - Title
@@ -809,6 +881,7 @@ The database is the **system's memory**—it stores all persistent information i
 - Last updated timestamp (for sync tracking)
 
 **Relationships:**
+
 - One trial → Many trial saves (by users)
 - One trial → Many trial alerts (user subscriptions)
 - One trial → Many sites (trial_sites table)
@@ -818,9 +891,11 @@ The database is the **system's memory**—it stores all persistent information i
 ---
 
 #### **`trial_saves`** - User Bookmarks
+
 **Purpose:** Tracks which users have saved which trials
 
 **Key Information:**
+
 - Relationship identifier
 - User ID (foreign key)
 - Trial ID (foreign key)
@@ -828,14 +903,17 @@ The database is the **system's memory**—it stores all persistent information i
 - Notes (optional user notes about why they saved it)
 
 **Relationships:**
+
 - Many-to-many bridge between `users` and `clinical_trials`
 
 ---
 
 #### **`trial_alerts`** - Trial Notifications
+
 **Purpose:** User subscriptions to be notified about new matching trials
 
 **Key Information:**
+
 - Alert identifier
 - User ID (foreign key)
 - Trial ID (foreign key, nullable—can be for general criteria)
@@ -845,15 +923,18 @@ The database is the **system's memory**—it stores all persistent information i
 - Active status (enable/disable without deleting)
 
 **Relationships:**
+
 - Many alerts per user
 - Can be associated with specific trial or general search criteria
 
 ---
 
 #### **`communities`** - Forum Categories
+
 **Purpose:** Organizes forum discussions into topical communities
 
 **Key Information:**
+
 - Community identifier
 - Name (e.g., "HIV Support", "Clinical Trial Experiences")
 - Description
@@ -865,14 +946,17 @@ The database is the **system's memory**—it stores all persistent information i
 - Icon/image
 
 **Relationships:**
+
 - One community → Many forum posts
 
 ---
 
 #### **`forum_posts`** - Discussion Threads
+
 **Purpose:** User-generated discussion content
 
 **Key Information:**
+
 - Post identifier
 - User ID (foreign key—author)
 - Community ID (foreign key)
@@ -890,6 +974,7 @@ The database is the **system's memory**—it stores all persistent information i
 - Is locked (prevents new replies)
 
 **Relationships:**
+
 - One post → Many comments/replies
 - Author is a user
 - Belongs to one community
@@ -897,9 +982,11 @@ The database is the **system's memory**—it stores all persistent information i
 ---
 
 #### **`comments`** - Post Replies
+
 **Purpose:** Responses to forum posts
 
 **Key Information:**
+
 - Comment identifier
 - Post ID (foreign key)
 - User ID (foreign key—author)
@@ -910,15 +997,18 @@ The database is the **system's memory**—it stores all persistent information i
 - Moderation status
 
 **Relationships:**
+
 - Many comments belong to one post
 - Author is a user
 
 ---
 
 #### **`organizations`** - Institutional Partners
+
 **Purpose:** Directory of partner organizations and institutions
 
 **Key Information:**
+
 - Organization identifier
 - Organization name
 - Organization type (hospital, research institution, advocacy group, pharma)
@@ -931,15 +1021,18 @@ The database is the **system's memory**—it stores all persistent information i
 - Logo image
 
 **Relationships:**
+
 - One organization → Many members (users)
 - One organization → Many sponsored trials
 
 ---
 
 #### **`working_groups`** - Collaborative Groups
+
 **Purpose:** Specialized groups for research collaboration or advocacy
 
 **Key Information:**
+
 - Group identifier
 - Name
 - Organization ID (foreign key, nullable)
@@ -950,15 +1043,18 @@ The database is the **system's memory**—it stores all persistent information i
 - Created date
 
 **Relationships:**
+
 - One group → Many members
 - May be associated with an organization
 
 ---
 
 #### **`resources`** - Educational Materials
+
 **Purpose:** Library of vetted educational content
 
 **Key Information:**
+
 - Resource identifier
 - Title
 - Type (video, document, toolkit, course)
@@ -976,15 +1072,18 @@ The database is the **system's memory**—it stores all persistent information i
 - Tags (array)
 
 **Relationships:**
+
 - One resource → Many ratings
 - May be associated with organization
 
 ---
 
 #### **`events`** - Webinars & Gatherings
+
 **Purpose:** Calendar of educational and networking events
 
 **Key Information:**
+
 - Event identifier
 - Title
 - Description
@@ -1001,14 +1100,17 @@ The database is the **system's memory**—it stores all persistent information i
 - Status (upcoming, ongoing, completed, cancelled)
 
 **Relationships:**
+
 - One event → Many registered users (via registration table)
 
 ---
 
 #### **`event_registrations`** - Attendance Tracking
+
 **Purpose:** Tracks which users are registered for which events
 
 **Key Information:**
+
 - Registration identifier
 - Event ID (foreign key)
 - User ID (foreign key)
@@ -1017,14 +1119,17 @@ The database is the **system's memory**—it stores all persistent information i
 - Confirmation sent boolean
 
 **Relationships:**
+
 - Many-to-many bridge between `users` and `events`
 
 ---
 
 #### **`notifications`** - User Alerts
+
 **Purpose:** In-app notification system
 
 **Key Information:**
+
 - Notification identifier
 - User ID (foreign key—recipient)
 - Type (trial, community, event, system)
@@ -1036,14 +1141,17 @@ The database is the **system's memory**—it stores all persistent information i
 - Expiration date (optional)
 
 **Relationships:**
+
 - Many notifications per user
 
 ---
 
 #### **`surveys`** - Research Instruments
+
 **Purpose:** Stores survey definitions and metadata
 
 **Key Information:**
+
 - Survey identifier
 - Title
 - Description
@@ -1056,15 +1164,18 @@ The database is the **system's memory**—it stores all persistent information i
 - Closing date
 
 **Relationships:**
+
 - One survey → Many questions
 - One survey → Many responses
 
 ---
 
 #### **`survey_questions`** - Survey Items
+
 **Purpose:** Individual questions within surveys
 
 **Key Information:**
+
 - Question identifier
 - Survey ID (foreign key)
 - Question text
@@ -1074,14 +1185,17 @@ The database is the **system's memory**—it stores all persistent information i
 - Options (for multiple choice—stored as JSON array)
 
 **Relationships:**
+
 - Many questions belong to one survey
 
 ---
 
 #### **`survey_responses`** - User Answers
+
 **Purpose:** Collected survey data from users
 
 **Key Information:**
+
 - Response identifier
 - Survey ID (foreign key)
 - User ID (foreign key, nullable if anonymous)
@@ -1090,15 +1204,18 @@ The database is the **system's memory**—it stores all persistent information i
 - Submitted timestamp
 
 **Relationships:**
+
 - Many responses per survey
 - User may be anonymous based on survey design
 
 ---
 
 #### **`content_reports`** - Moderation Queue
+
 **Purpose:** User-flagged content requiring review
 
 **Key Information:**
+
 - Report identifier
 - Reporter user ID (foreign key)
 - Target type (post, comment, user)
@@ -1112,15 +1229,18 @@ The database is the **system's memory**—it stores all persistent information i
 - Resolved timestamp
 
 **Relationships:**
+
 - Many reports can target same content
 - Assigned to admin for resolution
 
 ---
 
 #### **`password_reset_tokens`** - Secure Password Recovery
+
 **Purpose:** Manages password reset workflow
 
 **Key Information:**
+
 - Token identifier
 - User ID (foreign key)
 - Secure token string (cryptographically random)
@@ -1129,9 +1249,11 @@ The database is the **system's memory**—it stores all persistent information i
 - Used status (boolean)
 
 **Relationships:**
+
 - Many tokens per user (historical)
 
 **Security Notes:**
+
 - Tokens are single-use only
 - Automatically expire after time limit
 - Previous tokens invalidated when new one generated
@@ -1185,31 +1307,37 @@ SURVEYS
 While this document avoids technical implementation, these non-negotiable principles guide all backend development:
 
 ### **Data Privacy**
+
 - **Principle:** Users own their data and control its usage
 - **Implementation:** Explicit consent flows, granular privacy settings, right to data export and deletion
 - **Standard:** GDPR Article 7 (Consent), HIPAA Privacy Rule
 
 ### **Authentication Security**
+
 - **Principle:** Passwords never stored in recoverable format
 - **Implementation:** Argon2 hashing, JWT tokens with expiration, secure session management
 - **Protection against:** Brute force attacks (rate limiting), credential stuffing, session hijacking
 
 ### **Data Encryption**
+
 - **At Rest:** Database encryption for sensitive fields (license numbers, health data)
 - **In Transit:** HTTPS/TLS for all API communication
 - **Purpose:** Protects data even if physical storage compromised
 
 ### **Access Control**
+
 - **Principle:** Users can only access data they're authorized to see
 - **Implementation:** Role-based permissions (patient, HCP, admin), resource ownership verification
 - **Example:** Users can only edit their own posts, admins can moderate any content
 
 ### **Content Moderation**
+
 - **Principle:** Platform must not become vector for misinformation or harm
 - **Implementation:** Automated filtering + human review queue, medical advice disclaimers
 - **Balance:** Enable free expression while protecting vulnerable users
 
 ### **Audit Logging**
+
 - **Principle:** Critical actions must be traceable
 - **Implementation:** Log authentication attempts, data changes, admin actions
 - **Purpose:** Security investigations, compliance reporting, debugging
@@ -1219,21 +1347,25 @@ While this document avoids technical implementation, these non-negotiable princi
 ## 5. Technical Constraints & Non-Functional Requirements
 
 ### **Performance Targets**
+
 - API response time: < 200ms for 95% of requests
 - Database query optimization for trials search (most frequent operation)
 - Pagination for all list endpoints to prevent data overload
 
 ### **Scalability Preparation**
+
 - Database connection pooling
 - Stateless API design (enables horizontal scaling)
 - Background job queue for heavy operations (email sending, data imports)
 
 ### **Error Handling**
+
 - Graceful degradation (API returns meaningful error messages)
 - Never expose internal system details in errors
 - Consistent error format for frontend parsing
 
 ### **Monitoring & Observability**
+
 - Health check endpoints
 - Error rate tracking
 - Performance metrics (request duration, database query time)
@@ -1244,6 +1376,7 @@ While this document avoids technical implementation, these non-negotiable princi
 ## 6. MVP Scope & Future Roadmap
 
 ### **What's IN the MVP**
+
 ✅ User authentication and profiles  
 ✅ Clinical trial search and bookmarking  
 ✅ Community forums with basic moderation  
@@ -1251,9 +1384,10 @@ While this document avoids technical implementation, these non-negotiable princi
 ✅ Event calendar and registration  
 ✅ Basic notification system  
 ✅ Password reset flow  
-✅ HCP verification workflow  
+✅ HCP verification workflow
 
 ### **What's DEFERRED to Post-MVP**
+
 🔄 Real-time chat/messaging  
 🔄 Advanced AI-powered trial matching  
 🔄 Multi-language support (beyond English)  
@@ -1261,7 +1395,7 @@ While this document avoids technical implementation, these non-negotiable princi
 🔄 Payment processing (for premium tiers)  
 🔄 Direct trial enrollment (requires regulatory compliance)  
 🔄 Electronic consent management  
-🔄 Integration with EHR systems  
+🔄 Integration with EHR systems
 
 ---
 
@@ -1269,41 +1403,45 @@ While this document avoids technical implementation, these non-negotiable princi
 
 This backend design directly supports all current frontend pages:
 
-| Frontend Page | Backend APIs Used |
-|--------------|-------------------|
-| **Login/Register** | `/auth/login`, `/auth/register` |
-| **Dashboard** | `/users/me`, `/trials` (recommendations), `/notifications` |
-| **Trial Search** | `/trials` (with filters) |
-| **Trial Details** | `/trials/{id}`, `/trials/{id}/save` |
-| **Community** | `/community/posts`, `/community/posts/{id}/like` |
-| **Post Details** | `/community/posts/{id}`, `/community/posts/{id}/replies` |
-| **Events** | `/events`, `/events/{id}/register` |
-| **Resources** | `/resources`, `/resources/{id}` |
-| **Profile** | `/users/me`, `/users/me/saved-trials` |
-| **Notifications** | `/notifications`, `/notifications/{id}/read` |
-| **Assistant** | `/ai/chat` |
-| **Admin Panel** | `/admin/*` endpoints |
+| Frontend Page      | Backend APIs Used                                          |
+| ------------------ | ---------------------------------------------------------- |
+| **Login/Register** | `/auth/login`, `/auth/register`                            |
+| **Dashboard**      | `/users/me`, `/trials` (recommendations), `/notifications` |
+| **Trial Search**   | `/trials` (with filters)                                   |
+| **Trial Details**  | `/trials/{id}`, `/trials/{id}/save`                        |
+| **Community**      | `/community/posts`, `/community/posts/{id}/like`           |
+| **Post Details**   | `/community/posts/{id}`, `/community/posts/{id}/replies`   |
+| **Events**         | `/events`, `/events/{id}/register`                         |
+| **Resources**      | `/resources`, `/resources/{id}`                            |
+| **Profile**        | `/users/me`, `/users/me/saved-trials`                      |
+| **Notifications**  | `/notifications`, `/notifications/{id}/read`               |
+| **Assistant**      | `/ai/chat`                                                 |
+| **Admin Panel**    | `/admin/*` endpoints                                       |
 
 ---
 
 ## 8. Success Metrics (How We'll Measure Backend Quality)
 
 ### **Reliability**
+
 - Uptime target: 99.9% (less than 43 minutes downtime per month)
 - Zero data loss incidents
 - Successful database backup verification
 
 ### **Performance**
+
 - 95th percentile API response time < 200ms
 - Search results returned in < 500ms
 - Database query optimization achieving target response times
 
 ### **Security**
+
 - Zero successful authentication bypasses
 - All security headers properly configured
 - Regular dependency vulnerability scans passing
 
 ### **Developer Experience**
+
 - API documentation 100% accurate and up-to-date
 - All endpoints covered by automated tests
 - Clear error messages enable frontend debugging
@@ -1313,6 +1451,7 @@ This backend design directly supports all current frontend pages:
 ## 9. Conclusion & Next Steps
 
 This backend conception provides the foundation for VOCE's technical implementation. It balances:
+
 - **Simplicity** (MVP-focused, avoiding over-engineering)
 - **Security** (HIPAA/GDPR-compliant from day one)
 - **Scalability** (architecture supports future growth)

@@ -1,7 +1,5 @@
-from typing import Optional, Dict, Any, List
-from datetime import datetime, timezone
+from typing import Optional, Dict, Any
 from app.models.base_model import DBModel
-from app.core.security import verify_password, hash_password
 
 class UserModel(DBModel):
     """
