@@ -1,4 +1,5 @@
 import Navigation from './Navigation';
+import Footer from './Footer.tsx'
 import { Outlet } from "react-router-dom";
 
 export default function Layout() {
@@ -8,6 +9,7 @@ export default function Layout() {
         <main className="app-container">
         <Outlet/>
       </main>
+      <Footer />
     </div>
   );
 }
