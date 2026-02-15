@@ -66,6 +66,10 @@ CREATE TABLE users (
     -- Profile
     avatar TEXT,
     
+    -- Preferences and verification
+    notification_preferences JSONB DEFAULT '{"emailAlerts": true, "pushNotifications": true, "frequency": "instant"}'::jsonb,
+    verification JSONB DEFAULT '{"status": "not_submitted"}'::jsonb,
+    
     -- Timestamps
     created_at TIMESTAMPTZ DEFAULT NOW(),
     last_login TIMESTAMPTZ,

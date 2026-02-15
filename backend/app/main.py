@@ -9,8 +9,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.db.postgres import PostgresDB
 from app.db.redis import connect_redis, disconnect_redis
+from app.db.init_db import init_db
 from app.api.v1.auth import router as auth_router
 from app.api.v1.users import router as users_router
+from app.api.v1.clinical import router as clinical_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -22,9 +24,9 @@ async def lifespan(app: FastAPI):
     try:
         await PostgresDB.connect()
         logger.info("Database connected.")
+        await init_db()
     except Exception as e:
-        logger.error(f"Database connection failed: {e}")
-        
+        logger.exception("Database connection or initialization failed")
     try:
         await connect_redis()
     except Exception as e:
@@ -59,6 +61,7 @@ app.add_middleware(
 
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(users_router, prefix="/api/v1")
+app.include_router(clinical_router, prefix="/api/v1")
 
 
 @app.get("/api/v1/", tags=["Status"])

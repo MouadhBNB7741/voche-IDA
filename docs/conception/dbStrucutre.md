@@ -78,6 +78,8 @@
 | 📅 `created_at`        | `TIMESTAMP`       | `DEFAULT NOW()`   | Account creation timestamp (UTC)          |
 | 🕒 `last_login`        | `TIMESTAMP`       | `NULL`            | Security audit trail                      |
 | 🔄 `updated_at`        | `TIMESTAMP`       | `DEFAULT NOW()`   | Last profile update                       |
+| 🔔 `notification_preferences` | `JSONB`    | `DEFAULT '{"emailAlerts": true, "pushNotifications": true, "frequency": "instant"}'` | Notification settings |
+| 🆔 `verification`      | `JSONB`           | `DEFAULT '{"status": "not_submitted"}'`| HCP verification data & documents |
 
 **Indexes:**
 - `idx_users_email` on `email` (unique, for fast login lookup)

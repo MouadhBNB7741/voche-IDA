@@ -1,6 +1,23 @@
 from datetime import datetime
-from typing import Optional, List, Dict, Union, Any
+from typing import Optional, List, Dict, Union, Any, Literal
 from pydantic import BaseModel, EmailStr
+
+class NotificationTypes(BaseModel):
+    trialMatches: bool = True
+    communityReplies: bool = True
+    events: bool = True
+    system: bool = True
+
+class NotificationPreferences(BaseModel):
+    emailAlerts: bool = True
+    pushNotifications: bool = True
+    notificationTypes: NotificationTypes = NotificationTypes()
+    frequency: Literal["instant", "daily_digest", "weekly"] = "instant"
+
+class VerificationPayload(BaseModel):
+    licenseNumber: str
+    issuingRegion: str
+    expirationDate: datetime
 
 class UserProfileUpdate(BaseModel):
     first_name: Optional[str] = None
@@ -41,6 +58,8 @@ class UserDetailsResponse(BaseModel):
     is_verified: bool = False
     is_active: bool = True
     created_at: datetime
+    notification_preferences: Optional[Dict[str, Any]] = None
+    verification: Optional[Dict[str, Any]] = None
 
     class Config:
         from_attributes = True

@@ -32,6 +32,11 @@ CREATE INDEX idx_users_status ON users(status);
 CREATE INDEX idx_users_is_active ON users(is_active) WHERE is_active = TRUE;
 CREATE INDEX idx_users_created_at ON users(created_at DESC); -- Recent users
 
+-- JSONB indexes for preferences and verification
+CREATE INDEX idx_users_notification_preferences ON users USING GIN (notification_preferences);
+CREATE INDEX idx_users_verification ON users USING GIN (verification);
+CREATE INDEX idx_users_verification_status ON users ((verification->>'status'));
+
 COMMENT ON INDEX idx_users_email IS 'Fast login credential lookup';
 COMMENT ON INDEX idx_users_user_type IS 'Filter users by role (patient, hcp, admin)';
 COMMENT ON INDEX idx_users_status IS 'Query active, suspended, or deleted users';
@@ -182,7 +187,7 @@ COMMENT ON INDEX idx_forum_posts_title_search IS 'Search posts by title';
 -- Purpose: Replies to posts, nested threading, user activity
 CREATE INDEX idx_comments_post_id ON comments(post_id);
 CREATE INDEX idx_comments_user_id ON comments(user_id);
-CREATE INDEX idx_comments_parent_comment_id ON comments(parent comment_id);
+CREATE INDEX idx_comments_parent_comment_id ON comments(parent_comment_id);
 CREATE INDEX idx_comments_created_at ON comments(post_id, created_at ASC); -- Chronological order
 CREATE INDEX idx_comments_is_deleted ON comments(is_deleted) WHERE is_deleted = FALSE;
 

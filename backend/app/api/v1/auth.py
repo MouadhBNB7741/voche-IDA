@@ -15,9 +15,9 @@ from app.models.user_model import UserModel
 from app.models.password_reset_model import PasswordResetModel
 from app.models.profile_model import ProfileModel
 from app.core.security import hash_password, verify_password, create_jwt
-from app.api.dependencies.jwt_auth import get_current_user
 from app.api.dependencies.connections import get_connection, get_transaction
 from app.services.email import EmailService
+from app.api.middleware.auth_middleware import auth_middleware
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -95,15 +95,18 @@ async def login(data: LoginRequest, conn=Depends(get_connection)):
         user_type=user['user_type']
     )
 
+
+
 @router.get("/me", response_model=UserDetailsResponse)
 async def get_me(
-    current_user: dict = Depends(get_current_user), 
+    current_user: dict = Depends(auth_middleware), 
     conn=Depends(get_connection)
 ):
     """
     Get current user details using ProfileModel (joins data).
     """
     profile_model = ProfileModel(conn)
+    # The middleware now returns the user dict directly
     user_details = await profile_model.get_profile_by_user_id(current_user["id"])
     
     if not user_details:
@@ -114,7 +117,7 @@ async def get_me(
 @router.put("/update-password")
 async def update_password(
     data: PasswordUpdateRequest, 
-    current_user: dict = Depends(get_current_user), 
+    current_user: dict = Depends(auth_middleware), 
     conn=Depends(get_connection)
 ):
     """
