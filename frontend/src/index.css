@@ -1,1 +1,47 @@
 @import "tailwindcss";
+
+
+.voce-nav-item {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.7rem 0.85rem;
+  border-radius: 0.5rem;
+  color: #476952; 
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.voce-nav-item:hover {
+  background-color: #f1f5f9; 
+  color: #2b5541; 
+}
+
+.voce-nav-item.active {
+  background-color: #e0f2fe; 
+  color: #08a103; 
+  font-weight: 600;
+}
+
+
+.bg-card {
+  background-color: #ffffff;
+}
+
+.border-border {
+  border-color: #e5e7eb; /* gray-200 */
+}
+
+.text-foreground {
+  color: #0f172a; /* slate-900 */
+}
+
+.text-muted-foreground {
+  color: #64748b; /* slate-500 */
+}
+
+.text-primary-foreground {
+  color: #ffffff;
+}
+
+
+
