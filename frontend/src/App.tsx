@@ -8,7 +8,8 @@ import Community from './pages/Community';
 import ResourceLibrary from './pages/ResourceLibrary';
 import EventsHub from './pages/EventsHub';
 import Assistant from './pages/Assistant';
-import UserProfile from './pages/UserProfile';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
 
 export default function App() {
 
@@ -23,7 +24,8 @@ export default function App() {
         <Route path="/resourcelibrary" element={<ResourceLibrary />} />
         <Route path="/eventshub" element={<EventsHub />} />
         <Route path="/assistant" element={<Assistant />} />
-        <Route path="/userprofile" element={<UserProfile />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
       </Route>
     </Routes>
     </BrowserRouter>
