@@ -114,8 +114,12 @@ async def submit_verification(
         raise HTTPException(status_code=403, detail="Only HCP users can submit verification.")
         
     # File Validation
-    if file.content_type not in ["application/pdf", "image/jpeg", "image/png"]:
-        raise HTTPException(status_code=400, detail="Invalid file type. Allowed: PDF, JPEG, PNG.")
+    if file.content_type not in ["application/pdf", "image/jpeg", "image/jpg", "image/webp", "image/png"]:
+        raise HTTPException(status_code=400, detail="Invalid file type. Allowed: PDF, JPEG, JPG, WEBP, PNG.")
+    
+    # File Size Validation
+    if file.size > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File size exceeds the maximum limit of 5MB.")
         
     user_model = UserModel(conn)
     
@@ -144,7 +148,7 @@ async def submit_verification(
     }
     
     try:
-        await user_model.submit_verification(current_user['id'], payload)
+        result = await user_model.submit_verification(current_user['id'], payload)
     except ValueError as e:
         # Clean up file if validation failed
         if os.path.exists(file_path):
@@ -154,8 +158,128 @@ async def submit_verification(
     return {
         "success": True,
         "message": "Verification submitted successfully",
-        "data": {
-            "status": "pending_verification",
-            "expectedReviewTime": "3-5 business days"
-        }
+        "data": result.get("verification")
+    }
+
+@router.delete("/me/verification")
+async def delete_verification(
+    current_user: dict = Depends(auth_middleware),
+    conn=Depends(get_connection)
+):
+    """
+    Delete verification data (Withdraw submission).
+    """
+    if current_user.get('user_type') != 'hcp' or current_user.get('user_type') != 'admin':
+        raise HTTPException(status_code=403, detail="Only HCP users can access verification.")
+
+    user_model = UserModel(conn)
+    
+    # Delete from DB
+    old_data = await user_model.delete_verification(current_user['id'])
+    
+    # Delete file if exists
+    if old_data and "documentUrl" in old_data:
+        doc_url = old_data["documentUrl"]
+        if doc_url.startswith("/"):
+            doc_url = doc_url[1:]
+            
+        if os.path.exists(doc_url):
+            try:
+                os.remove(doc_url)
+            except Exception:
+                pass 
+                
+    return {
+        "success": True,
+        "message": "Verification data deleted successfully"
+    }
+
+@router.patch("/me/verification")
+async def update_verification(
+    licenseNumber: Optional[str] = Form(None),
+    issuingRegion: Optional[str] = Form(None),
+    expirationDate: Optional[str] = Form(None),
+    file: Optional[UploadFile] = File(None),
+    current_user: dict = Depends(auth_middleware),
+    conn=Depends(get_connection)
+):
+    """
+    Update verification data.
+    """
+    if current_user.get('user_type') != 'hcp' :
+        raise HTTPException(status_code=403, detail="Only HCP users can access verification.")
+
+    if current_user.get('status') != 'pending_verification':
+        raise HTTPException(status_code=403, detail="You can only update verification data if your status is pending_verification.")
+        
+    user_model = UserModel(conn)
+    
+    import json
+    # Fetch current data to handle old file deletion later
+    user_data = await user_model.get_by_id(current_user['id'])
+    old_verification = user_data.get('verification', {})
+    if isinstance(old_verification, str):
+        old_verification = json.loads(old_verification)
+        
+    updates = {}
+    if licenseNumber is not None:
+        updates["licenseNumber"] = licenseNumber
+    if issuingRegion is not None:
+        updates["issuingRegion"] = issuingRegion
+    if expirationDate is not None:
+        updates["expirationDate"] = expirationDate
+    
+    # Handle File Update
+    new_file_path = None
+    if file:
+        if file.content_type not in ["application/pdf", "image/jpeg", "image/jpg", "image/webp", "image/png"]:
+            raise HTTPException(status_code=400, detail="Invalid file type. Allowed: PDF, JPEG, JPG, WEBP, PNG.")
+        if file.size > 5 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="File size exceeds the maximum limit of 5MB.")
+            
+        upload_dir = "uploads/verification"
+        os.makedirs(upload_dir, exist_ok=True)
+        timestamp = int(datetime.now().timestamp())
+        filename = f"{current_user['id']}_{timestamp}_{file.filename}"
+        new_file_path = os.path.join(upload_dir, filename)
+        
+        try:
+            with open(new_file_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+        except Exception:
+            raise HTTPException(status_code=500, detail="File upload failed")
+            
+        updates["documentUrl"] = f"/uploads/verification/{filename}"
+    
+    if not updates and not file:
+         raise HTTPException(status_code=400, detail="No field to update")
+
+    # Update timestamp and status
+    updates["updatedAt"] = datetime.now().isoformat()
+    updates["status"] = "pending_verification" # Re-trigger verification on update
+
+    try:
+        result = await user_model.update_verification(current_user['id'], updates)
+    except Exception as e:
+        # Cleanup new file if DB update fails
+        if new_file_path and os.path.exists(new_file_path):
+            os.remove(new_file_path)
+        raise HTTPException(status_code=500, detail="Update failed")
+
+    # Cleanup old file if we verified a new one was uploaded and saved
+    if file and old_verification and "documentUrl" in old_verification:
+        old_url = old_verification["documentUrl"]
+        if old_url != updates.get("documentUrl"):
+             if old_url.startswith("/"):
+                 old_url = old_url[1:]
+             if os.path.exists(old_url):
+                 try:
+                     os.remove(old_url)
+                 except:
+                     pass
+
+    return {
+        "success": True,
+        "message": "Verification updated successfully",
+        "data": result.get("verification")
     }

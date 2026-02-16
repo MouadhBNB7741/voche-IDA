@@ -43,9 +43,19 @@ async def setup_test_db():
         pool = PostgresDB.get_pool()
         async with pool.acquire() as conn:
             # Apply Schema
-            schema_path = BASE_DIR / "db" / "schema.sql"
+            schema_path = BASE_DIR / "app" / "db" / "schema.sql"
             if schema_path.exists():
                 async with conn.transaction():
+                    await conn.execute("""
+                        DO $$ 
+                        DECLARE 
+                            r RECORD; 
+                        BEGIN 
+                            FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP 
+                                EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(r.tablename) || ' CASCADE'; 
+                            END LOOP; 
+                        END $$;
+                    """)
                     await conn.execute(schema_path.read_text(encoding="utf-8"))
             
             # Truncate

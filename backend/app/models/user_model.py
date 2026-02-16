@@ -114,7 +114,10 @@ class UserModel(DBModel):
         # Converting to json string to be safe with asyncpg default jsonb handling
         new_prefs = await self.conn.fetchval(update_query, json.dumps(updated_dict), user_id)
         
-        return self._record_to_dict({"notification_preferences": new_prefs}) if new_prefs else {}
+        if new_prefs and isinstance(new_prefs, str):
+            new_prefs = json.loads(new_prefs)
+        
+        return {"notification_preferences": new_prefs} if new_prefs else {}
 
     async def submit_verification(self, user_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Submit verification documents."""
@@ -131,18 +134,13 @@ class UserModel(DBModel):
         if current_ver.get("status") == "pending_verification":
              raise ValueError("Verification already pending")
              
-        # Update Schema
-        # payload should verify schema matches expected verification dict
-        # payload includes: status, licenseNumber, issuingRegion, expirationDate, documentUrl, submittedAt
-        
         update_query = "UPDATE users SET verification = $1 WHERE id = $2 RETURNING verification"
         new_ver_raw = await self.conn.fetchval(update_query, json.dumps(payload), user_id)
         
-        # Identify Admins and Notify
-        # We try to create notifications if the table exists.
-        # Check if table exists?
-        # We assume table exists per DB structure.
+        if new_ver_raw and isinstance(new_ver_raw, str):
+            new_ver_raw = json.loads(new_ver_raw)
         
+        # Identify Admins and Notify
         try:
              admin_query = "SELECT id FROM users WHERE user_type = 'admin'"
              admins = await self.conn.fetch(admin_query)
@@ -154,8 +152,50 @@ class UserModel(DBModel):
              for admin in admins:
                   await self.conn.execute(notif_query, admin['id'])
         except Exception as e:
-             # Log warning but don't fail the verification submission if notif fails
              print(f"Failed to notify admins: {e}")
              pass
 
-        return self._record_to_dict({"verification": new_ver_raw}) if new_ver_raw else {}
+        return {"verification": new_ver_raw} if new_ver_raw else {}
+
+    async def delete_verification(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Delete verification data."""
+        import json
+        
+        # Get current to return it
+        query_get = "SELECT verification FROM users WHERE id = $1"
+        current_raw = await self.conn.fetchval(query_get, user_id)
+        
+        current_ver = {}
+        if current_raw:
+             current_ver = json.loads(current_raw) if isinstance(current_raw, str) else dict(current_raw)
+        
+        # Reset to not_submitted
+        reset_payload = {"status": "not_submitted"}
+        query_update = "UPDATE users SET verification = $1 WHERE id = $2"
+        await self.conn.execute(query_update, json.dumps(reset_payload), user_id)
+        
+        return current_ver
+
+    async def update_verification(self, user_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
+        """Update verification data."""
+        import json
+        
+        # Get current
+        query_get = "SELECT verification FROM users WHERE id = $1"
+        current_raw = await self.conn.fetchval(query_get, user_id)
+        
+        current_ver = {}
+        if current_raw:
+             current_ver = json.loads(current_raw) if isinstance(current_raw, str) else dict(current_raw)
+             
+        # Merge updates
+        current_ver.update(updates)
+        
+        # Save
+        query_update = "UPDATE users SET verification = $1 WHERE id = $2 RETURNING verification"
+        new_ver_raw = await self.conn.fetchval(query_update, json.dumps(current_ver), user_id)
+        
+        if new_ver_raw and isinstance(new_ver_raw, str):
+            new_ver_raw = json.loads(new_ver_raw)
+            
+        return {"verification": new_ver_raw} if new_ver_raw else {}
