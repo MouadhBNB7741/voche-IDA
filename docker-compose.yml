@@ -44,6 +44,7 @@ services:
       - SECRET_KEY=${SECRET_KEY}
       - SMTP_USER=${SMTP_USER}
       - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - PYTHONPATH=/app
     depends_on:
       db:
         condition: service_healthy

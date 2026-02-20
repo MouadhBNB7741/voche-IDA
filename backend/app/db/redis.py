@@ -31,4 +31,4 @@ async def connect_redis():
 
 async def disconnect_redis():
     if redis:
-        await redis.close()
+        await redis.aclose()

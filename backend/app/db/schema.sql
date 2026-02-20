@@ -445,8 +445,7 @@ CREATE TABLE forum_posts (
     -- Engagement Metrics
     views_count INTEGER DEFAULT 0,
     replies_count INTEGER DEFAULT 0,
-    upvotes_count INTEGER DEFAULT 0,
-    downvotes_count INTEGER DEFAULT 0,
+    likes_count INTEGER DEFAULT 0,
     
     -- Post Flags
     is_pinned BOOLEAN DEFAULT FALSE,              -- Pinned to top of community
@@ -805,6 +804,65 @@ CREATE TABLE resources (
 
 COMMENT ON TABLE resources IS 'Educational materials, videos, documents, and toolkits';
 COMMENT ON COLUMN resources.rating IS 'Calculated average rating from resource_ratings table';
+
+
+-- ============================================================================
+-- 7. DOCTOR VERIFICATION
+-- ============================================================================
+
+-- -----------------------------------------------------------------------------
+-- doctor_verifications: Verification requests for HCPs
+-- -----------------------------------------------------------------------------
+-- Purpose: Vet doctors before allowing them access to restricted features
+-- Workflow: User submits -> Admin reviews -> Approved/Rejected
+-- -----------------------------------------------------------------------------
+
+CREATE TABLE doctor_verifications (
+    verification_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    license_number VARCHAR(100) NOT NULL,
+    institution VARCHAR(255) NOT NULL,
+    country VARCHAR(100) NOT NULL,
+    specialization VARCHAR(100) NOT NULL,
+    status VARCHAR(50) DEFAULT 'pending', -- pending, approved, rejected
+    reviewed_by UUID REFERENCES users(id),
+    reviewed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    rejection_reason TEXT,
+    
+    CONSTRAINT check_verification_status CHECK (status IN ('pending', 'approved', 'rejected'))
+);
+
+COMMENT ON TABLE doctor_verifications IS 'Verification requests submitted by HCP users';
+
+
+-- ============================================================================
+-- 8. CLINICAL OBSERVATIONS
+-- ============================================================================
+
+-- -----------------------------------------------------------------------------
+-- clinical_observations: Trial feedback from verified doctors
+-- -----------------------------------------------------------------------------
+-- Purpose: Allow verified HCPs to submit clinical observations on trials
+-- Access: Restricted to verified doctors only
+-- Flags: Critical observations are auto-flagged for review
+-- -----------------------------------------------------------------------------
+
+CREATE TABLE clinical_observations (
+    observation_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    trial_id UUID NOT NULL REFERENCES clinical_trials(trial_id) ON DELETE CASCADE,
+    doctor_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    summary TEXT NOT NULL,
+    feedback_data JSONB DEFAULT '{}', -- structured feedback fields
+    severity_level VARCHAR(50) NOT NULL, -- low, medium, high, critical
+    flagged BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    
+    CONSTRAINT check_severity_level CHECK (severity_level IN ('low', 'medium', 'high', 'critical'))
+);
+
+COMMENT ON TABLE clinical_observations IS 'Clinical observations submitted by verified doctors for specific trials';
 
 
 -- -----------------------------------------------------------------------------

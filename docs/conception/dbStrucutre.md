@@ -10,7 +10,6 @@
 | Feature         | Standard                            |
 | :-------------- | :---------------------------------- |
 | **Database**    | PostgreSQL 16+                      |
-| **ORM**         | SQLAlchemy (Python) / Prisma (Node) |
 | **Identity**    | UUID v4                             |
 | **Timezone**    | UTC                                 |
 | **Flexibility** | JSONB for unstructured AI data      |
@@ -23,8 +22,10 @@
    - users
    - user_profiles
    - password_reset_tokens
+   - doctor_verifications
 2. [Clinical Trials](#clinical-trials)
    - clinical_trials
+   - clinical_observations
    - trial_sites
    - trial_saves
    - trial_alerts
@@ -122,6 +123,26 @@
 - `CHECK (profile_visibility IN ('public', 'community_only', 'private'))`
 
 ---
+
+### `doctor_verifications`
+*Verification requests for Healthcare Professionals.*
+
+| Field                | Type              | Constraints       | Notes                                     |
+| :------------------- | :---------------- | :---------------- | :---------------------------------------- |
+| 🔑 `verification_id` | `UUID`            | `PRIMARY KEY`     | Request identifier                        |
+| 👤 `user_id`         | `UUID`            | `FOREIGN KEY`     | References `users(id)`                    |
+| 🆔 `license_number`  | `VARCHAR(100)`    | `NOT NULL`        | Medical license                           |
+| 🏥 `institution`     | `VARCHAR(255)`    | `NOT NULL`        | Current workplace                         |
+| 🌍 `country`         | `VARCHAR(100)`    | `NOT NULL`        | Issuing country                           |
+| 👨‍⚕️ `specialization` | `VARCHAR(100)`    | `NOT NULL`        | Medical specialty                         |
+| 📊 `status`          | `VARCHAR(50)`     | `DEFAULT 'pending'`| `pending`, `approved`, `rejected`        |
+| 👮 `reviewed_by`     | `UUID`            | `FOREIGN KEY`     | Admin who reviewed                        |
+| 📅 `reviewed_at`     | `TIMESTAMPTZ`     | `NULL`            | Review timestamp                          |
+| 📝 `rejection_reason`| `TEXT`            | `NULL`            | Reason for rejection                      |
+| 📅 `created_at`      | `TIMESTAMPTZ`     | `DEFAULT NOW()`   | Submission timestamp                      |
+
+**Constraints:**
+- `CHECK (status IN ('pending', 'approved', 'rejected'))`
 
 ### `password_reset_tokens`
 *Secure password recovery management.*
@@ -251,6 +272,23 @@
 
 ---
 
+### `clinical_observations`
+*Feedback from verified doctors on trials.*
+
+| Field                | Type              | Constraints       | Notes                                     |
+| :------------------- | :---------------- | :---------------- | :---------------------------------------- |
+| 🔑 `observation_id`  | `UUID`            | `PRIMARY KEY`     | Observation identifier                    |
+| 🔬 `trial_id`        | `UUID`            | `FOREIGN KEY`     | References `clinical_trials`              |
+| 👨‍⚕️ `doctor_id`       | `UUID`            | `FOREIGN KEY`     | References `users(id)` (Verified HCP only)|
+| 📝 `summary`         | `TEXT`            | `NOT NULL`        | Observation summary                       |
+| 📦 `feedback_data`   | `JSONB`           | `DEFAULT '{}'`    | Structured data                           |
+| ⚠️ `severity_level`  | `VARCHAR(50)`     | `NOT NULL`        | `low`, `medium`, `high`, `critical`       |
+| 🚩 `flagged`         | `BOOLEAN`         | `DEFAULT FALSE`   | Auto-flagged if critical                  |
+| 📅 `created_at`      | `TIMESTAMPTZ`     | `DEFAULT NOW()`   |                                           |
+
+**Constraints:**
+- `CHECK (severity_level IN ('low', 'medium', 'high', 'critical'))`
+
 ## 3. Community & Forums
 
 ### `communities`
@@ -296,8 +334,7 @@
 | 🔄 `updated_at`        | `TIMESTAMP`       | `DEFAULT NOW()`   | Last edit timestamp                       |
 | 👁️ `views_count`       | `INTEGER`         | `DEFAULT 0`       | Total views                               |
 | 💬 `replies_count`     | `INTEGER`         | `DEFAULT 0`       | Total replies/comments                    |
-| 👍 `upvotes_count`     | `INTEGER`         | `DEFAULT 0`       | Total likes/upvotes                       |
-| 👎 `downvotes_count`   | `INTEGER`         | `DEFAULT 0`       | Total downvotes (optional)                |
+| 👍 `likes_count`       | `INTEGER`         | `DEFAULT 0`       | Total likes                               |
 | 📌 `is_pinned`         | `BOOLEAN`         | `DEFAULT FALSE`   | Pinned to top of community                |
 | 🔒 `is_locked`         | `BOOLEAN`         | `DEFAULT FALSE`   | Prevents new replies                      |
 | 🗑️ `is_deleted`        | `BOOLEAN`         | `DEFAULT FALSE`   | Soft delete flag                          |
@@ -721,10 +758,13 @@ users (1) ←→ (N) resource_ratings
 users (1) ←→ (N) survey_responses
 users (1) ←→ (N) organization_members
 users (1) ←→ (N) working_group_members
+users (1) ←→ (N) doctor_verifications
+users (1) ←→ (N) clinical_observations
 
 clinical_trials (1) ←→ (N) trial_sites
 clinical_trials (1) ←→ (N) trial_saves
 clinical_trials (1) ←→ (N) trial_alerts
+clinical_trials (1) ←→ (N) clinical_observations
 
 communities (1) ←→ (N) forum_posts
 forum_posts (1) ←→ (N) comments
@@ -781,7 +821,7 @@ surveys (1) ←→ (N) survey_responses
 - **Time-Series:** Descending indexes on timestamp fields for "recent items" queries
 
 ### Denormalization
-- **Counter Caches:** `replies_count`, `upvotes_count`, `member_count` reduce join overhead
+- **Counter Caches:** `replies_count`, `likes_count`, `member_count` reduce join overhead
   - Updated via triggers or application logic
 - **JSONB Fields:** `metadata`, `filter_criteria`, `interests` allow flexible data without schema changes
 

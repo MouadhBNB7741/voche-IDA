@@ -48,15 +48,6 @@
 
 ---
 
-## Pending Tasks
-
-* ✅ Implementation of Clinical Trials Domain (Search, Details, Saves, Alerts)
-* ⬜ Implementation of Community, Events, etc.
-* ⬜ Integration with centralized Email Service
-* ⬜ Rate limiting implementation
-* ⬜ Run tests in CI/CD pipeline
-
----
 
 ## Clinical Domain Implementation (Completed)
 
@@ -140,6 +131,70 @@
 
 ---
 
+## Community & Forums Module (Completed)
+Status: ✅ Implemented
+
+### Endpoints (all under `/api/v1/community`)
+| Method | URL | Auth | Description |
+|--------|-----|------|-------------|
+| GET | `/` | Public | List active communities (paginated, filterable, sortable) |
+| GET | `/{community_id}` | Public | Get single community |
+| GET | `/feed` | Required | Global feed across all communities |
+| GET | `/{community_id}/posts` | Required | List posts in a community |
+| POST | `/{community_id}/posts` | Required | Create post in community |
+| GET | `/{community_id}/posts/{post_id}` | Required | Get post details + replies |
+| PATCH | `/{community_id}/posts/{post_id}` | Required | Edit post (author/admin) |
+| DELETE | `/{community_id}/posts/{post_id}` | Required | Soft delete post (author/admin) |
+| POST | `/{community_id}/posts/{post_id}/replies` | Required | Reply to post |
+| PATCH | `/{community_id}/replies/{id}` | Required | Edit reply (author/admin) |
+| DELETE | `/{community_id}/replies/{id}` | Required | Delete reply (author/admin) |
+| POST | `/{community_id}/posts/{post_id}/like` | Required | Like post |
+| POST | `/{community_id}/replies/{id}/like` | Required | Like reply |
+| POST | `/{community_id}/report` | Required | Report content (auto-flag at ≥10) |
+| GET | `/admin/reports` | Admin | List reports globally (paginated, status filter) |
+| PATCH | `/admin/reports/{id}` | Admin | Resolve/review report |
+| DELETE | `/admin/reports/{id}` | Admin | Delete report |
+
+### Design Decisions
+- **Community-scoped URLs**: All post/reply/like/report endpoints are nested under `/{community_id}/...` for data isolation
+- **Likes-only system**: Both `forum_posts` and `comments` use `likes_count` (no upvotes/downvotes)
+- **community_id in URL, not body**: `CreatePostRequest` doesn't include `community_id` — it's a path param
+- **Admin reports are global**: Admin moderation endpoints don't include community_id (platform-level concern); optional `?community_id=` filter available
+- **Route ordering**: Admin routes (`/admin/...`) defined before `/{community_id}/...` routes to prevent UUID matching conflicts
+- **Auth**: Uses `auth_middleware` from `app/api/middleware/auth_middleware.py`
+- **Auto-flag threshold**: 10 reports on same target → moderation_status = 'flagged'
+
+### Files
+- Model: `app/models/community_model.py`
+- Schema: `app/schemas/community.py`
+- Route: `app/api/v1/community.py`
+- Tests: `app/tests/test_community.py`
+
+---
+
+
+## Healthcare Features Implementation (Completed)
+Status: ✅ Implemented
+
+### 🩺 Doctor Verification
+*   **Endpoints**: `POST /doctors/verification`, `GET /doctors/verification`, `GET /doctors/admin/verifications`, `PATCH /doctors/admin/verifications/{id}`.
+*   **Logic**: `DoctorModel` handles role promotion (to `hcp`) and verification status (JSONB update).
+*   **Tests**: `test_doctor_verification.py` - Full flow verified.
+
+### 📋 Clinical Observations
+*   **Endpoints**: `POST /clinical-observations/`, `GET /clinical-observations/trial/{id}`.
+*   **Logic**: `ClinicalModel` handles observation creation and auto-flagging of critical issues.
+*   **Schema**: `clinical_observations` table linked to trials and doctors.
+*   **Tests**: `test_clinical_observations.py` - Verified permissions and data integrity.
+
+### 🛡️ Reports & Moderation
+*   **Audit**: Confirmed `CommunityModel` and `content_reports` table support robust reporting (posts/comments/users).
+*   **System**: Re-usable `target_type` polymorphism.
+
+### 🔧 Improvements
+*   **User Profile**: Fixed JSONB merging bug in `ProfileModel` and `get_me` endpoint.
+*   **Testing**: Improved test reliability and fixed payload issues.
+---
 ## Guidance for Azzedine
 
 Hi! Here’s a **simple, detailed explanation** of how the backend is structured :
@@ -177,3 +232,4 @@ Hi! Here’s a **simple, detailed explanation** of how the backend is structured
    * Use `pytest -v` to run tests and see detailed results.
    * Use `mypy` for type checking if unsure about types.
    * For any data returned from the DB that is JSONB, always **deserialize it** before using in Pydantic models.
+

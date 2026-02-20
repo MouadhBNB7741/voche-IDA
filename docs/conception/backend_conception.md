@@ -246,20 +246,9 @@ This section is organized by feature domain, following RESTful conventions.
   3. Profile completion percentage recalculated
   4. Updated profile returned
 
-#### **Upload Verification Documents (HCP Only)**
+#### **[MOVED] Upload Verification Documents**
 
-- **What it does:** Allows healthcare professionals to submit medical license for verification
-- **Method:** `POST /users/me/verification`
-- **Input Required:**
-  - Medical license document (PDF/JPG)
-  - License number
-  - Issuing country/state
-  - Expiration date
-- **What happens:**
-  1. Document is securely stored
-  2. Admin notification is created for review
-  3. User status set to "pending_verification"
-- **Output:** Upload confirmation + expected review timeframe
+> This endpoint has been moved to the **Doctor Verification** domain (`/api/v1/doctors`). See section below.
 
 #### **Manage Notification Preferences**
 
@@ -273,6 +262,78 @@ This section is organized by feature domain, following RESTful conventions.
 - **Output:** Updated preferences
 
 ---
+
+### 🩺 **Doctor Verification** (`/api/v1/doctors`)
+
+**Purpose:** Vets healthcare professionals to ensure platform integrity and grant access to restricted features.
+
+#### **Submit Verification Request**
+
+- **What it does:** Submits HCP credentials for admin review
+- **Method:** `POST /doctors/verification`
+- **Input Required:**
+  - License number
+  - Institution/Hospital name
+  - Country
+  - Specialization
+  - Supporting documents (if applicable)
+- **What happens:**
+  1. Checks for existing pending requests
+  2. Creates verification record with "pending" status
+  3. Admin is notified (system alert)
+- **Output:** Verification ID and status
+
+#### **Get Verification Status**
+
+- **What it does:** Checks current status of user's verification
+- **Method:** `GET /doctors/verification`
+- **Output:** Current status (pending, approved, rejected) and details
+
+#### **Admin: List Verifications**
+
+- **What it does:** Lists all pending verification requests
+- **Method:** `GET /doctors/admin/verifications`
+- **Authorization:** Admin only
+- **Output:** List of requests with user details
+
+#### **Admin: Review Verification**
+
+- **What it does:** Approves or rejects a doctor
+- **Method:** `PATCH /doctors/admin/verifications/{verification_id}`
+- **Authorization:** Admin only
+- **Input:** Status (approved/rejected), rejection reason (optional)
+- **What happens:**
+  1. Updates verification status
+  2. If approved: updates user role to `hcp`, sets `is_verified=True`, updates `verification` JSONB profile
+  3. User receives notification
+
+---
+
+### 📋 **Clinical Observations** (`/api/v1/clinical-observations`)
+
+**Purpose:** Allows verified HCPs to share real-world observations about clinical trials.
+
+#### **Submit Observation**
+
+- **What it does:** Records professional feedback on a trial
+- **Method:** `POST /clinical-observations/`
+- **Authorization:** Verified HCP only
+- **Input Required:**
+  - Trial ID
+  - Severity Level (low, medium, high, critical)
+  - Summary
+  - Structured feedback data
+- **What happens:**
+  1. Links observation to trial and doctor
+  2. Auto-flags observation if severity is "critical"
+- **Output:** Observation ID and status
+
+#### **Get Trial Observations**
+
+- **What it does:** Lists observations for a specific trial
+- **Method:** `GET /clinical-observations/trial/{trial_id}`
+- **Authorization:** Admin or relevant stakeholders (TBD)
+- **Output:** List of observations with doctor details (anonymized if configured)
 
 ### 🔬 **Clinical Trials** (`/api/v1/trials`)
 
@@ -366,107 +427,176 @@ This section is organized by feature domain, following RESTful conventions.
 
 **Purpose:** Facilitates peer support through discussion forums while maintaining safety and privacy.
 
-#### **List Forum Posts**
+#### **List Communities**
 
-- **What it does:** Retrieves community discussions
-- **Method:** `GET /community/posts`
-- **Filters:**
-  - Community/category (HIV Support, Malaria Research, General)
-  - Post type (question, story, discussion, announcement)
-  - Moderation status (for admins)
-  - Time period (last week, month, all time)
-- **Sorting:** Recent, popular (likes), most replied, trending
-- **What happens:**
-  1. Posts filtered by category and status
-  2. For each post, calculate engagement metrics
-  3. For authenticated users: check if user has liked
+- **What it does:** Retrieves all active communities
+- **Method:** `GET /community/`
+- **Filters:** Community type (disease_specific, general, hcp_only)
+- **Sorting:** Most members, most posts, newest, name
+- **Pagination:** `page` and `limit` parameters
 - **Output:**
-  - Array of post summaries (title, author, timestamp, likes, replies count, excerpt)
+  - Array of communities (name, description, type, member_count, post_count)
   - Pagination metadata
+- **Authorization:** Public (no auth required)
+
+#### **Get Community Details**
+
+- **What it does:** Retrieves single community info
+- **Method:** `GET /community/{community_id}`
+- **Authorization:** Public
+- **Output:** Community object with all details
+
+#### **Global Feed (Cross-Community)**
+
+- **What it does:** Retrieves posts across all communities
+- **Method:** `GET /community/feed`
+- **Filters:**
+  - Community/category (name or UUID)
+  - Sorting: Recent, popular (likes), most replied
+- **Pagination:** `page` and `limit` parameters
+- **Authorization:** Required
+- **Output:**
+  - Array of post summaries (title, author, timestamp, likes, replies count)
+  - Pagination metadata
+
+#### **List Posts in a Community**
+
+- **What it does:** Retrieves posts scoped to one community
+- **Method:** `GET /community/{community_id}/posts`
+- **Sorting:** Recent, popular, most replied
+- **Pagination:** `page` and `limit` parameters
+- **Authorization:** Required
+- **Output:** Same as global feed, filtered to community
 
 #### **Get Post Details & Replies**
 
 - **What it does:** Retrieves full post content and all comments/replies
-- **Method:** `GET /community/posts/{post_id}`
+- **Method:** `GET /community/{community_id}/posts/{post_id}`
 - **Output:**
   - Complete post content
-  - Author info (username, role, avatar)
-  - Timestamp and edit history
-  - Engagement metrics
-  - Array of replies/comments (threaded if applicable)
-  - User's like status
+  - Author info (display name, avatar)
+  - Engagement metrics (likes_count, replies_count, views_count)
+  - Array of replies/comments (threaded via parent_comment_id)
 - **Privacy:** Author's email never exposed, only display name
+- **Authorization:** Required
 
 #### **Create New Post**
 
-- **What it does:** Publishes new discussion thread
-- **Method:** `POST /community/posts`
+- **What it does:** Publishes new discussion thread in a community
+- **Method:** `POST /community/{community_id}/posts`
 - **Input Required:**
   - Title
   - Content (text, supports markdown)
-  - Community/category selection
-  - Tags (optional, for organization)
+  - Post type (optional: question, story, discussion, announcement)
+  - Tags (optional)
+- **Note:** `community_id` comes from the URL path, not the request body
 - **What happens:**
   1. Content validated (length, format)
-  2. Automatic content moderation (profanity filter, spam detection)
-  3. Post created with "approved" or "pending" status
-  4. Community members may be notified based on preferences
+  2. Automatic content moderation (profanity filter)
+  3. Post created with "approved" or "pending" status based on community moderation_level
+  4. Community post_count incremented
+- **Authorization:** Required
 - **Output:** Created post object with ID
+
+#### **Edit Post**
+
+- **What it does:** Allows author or admin to modify post content
+- **Method:** `PATCH /community/{community_id}/posts/{post_id}`
+- **Authorization:** Post author or admin only
+- **Input:** Updated title and/or content
+- **Output:** Updated post object
+
+#### **Delete Post**
+
+- **What it does:** Soft deletes post from community
+- **Method:** `DELETE /community/{community_id}/posts/{post_id}`
+- **Authorization:** Post author or admin only
+- **What happens:**
+  1. Soft delete (is_deleted = TRUE)
+  2. Community post_count decremented
 
 #### **Reply to Post**
 
 - **What it does:** Adds comment to existing discussion
-- **Method:** `POST /community/posts/{post_id}/replies`
-- **Input Required:** Reply content
+- **Method:** `POST /community/{community_id}/posts/{post_id}/replies`
+- **Input Required:** Reply content, optional parent_comment_id for nested threading
 - **What happens:**
-  1. Reply is created and linked to parent post
-  2. Post author is notified (if enabled in preferences)
-  3. Reply counter on parent post is incremented
+  1. Reply created and linked to post
+  2. Post replies_count incremented
+- **Authorization:** Required
 
-#### **Like/Unlike Post or Reply**
+#### **Edit Reply**
 
-- **What it does:** Expresses support or agreement
-- **Method:** `POST /community/posts/{post_id}/like`
-- **Method:** `DELETE /community/posts/{post_id}/like`
+- **What it does:** Allows author or admin to modify reply content
+- **Method:** `PATCH /community/{community_id}/replies/{comment_id}`
+- **Authorization:** Reply author or admin only
+- **Output:** Updated comment object
+
+#### **Delete Reply**
+
+- **What it does:** Soft deletes a reply
+- **Method:** `DELETE /community/{community_id}/replies/{comment_id}`
+- **Authorization:** Reply author or admin only
 - **What happens:**
-  1. Like relationship created/removed
-  2. Like counter updated
-  3. No notification (reduces noise)
+  1. Soft delete (is_deleted = TRUE)
+  2. Post replies_count decremented
 
-#### **Edit Post**
+#### **Like Post**
 
-- **What it does:** Allows author to modify their content
-- **Method:** `PATCH /community/posts/{post_id}`
-- **Authorization:** Only post author or admin
-- **What happens:**
-  1. Original content stored in edit history
-  2. Updated content saved
-  3. "Edited" flag and timestamp added
+- **What it does:** Increments like counter on a post
+- **Method:** `POST /community/{community_id}/posts/{post_id}/like`
+- **Authorization:** Required
+- **What happens:** `likes_count` incremented by 1
 
-#### **Delete Post**
+#### **Like Reply**
 
-- **What it does:** Removes post from community
-- **Method:** `DELETE /community/posts/{post_id}`
-- **Authorization:** Post author, moderators, or admins
-- **What happens:**
-  1. Soft delete (marked as deleted, but retained for audit)
-  2. Content no longer displayed
-  3. All replies also hidden
+- **What it does:** Increments like counter on a reply
+- **Method:** `POST /community/{community_id}/replies/{comment_id}/like`
+- **Authorization:** Required
+- **What happens:** `likes_count` incremented by 1
 
 #### **Report Content**
 
-- **What it does:** Flags inappropriate or harmful content
-- **Method:** `POST /community/reports`
+- **What it does:** Flags inappropriate or harmful content within a community
+- **Method:** `POST /community/{community_id}/report`
 - **Input Required:**
-  - Target type (post or reply)
+  - Target type (post, comment, user)
   - Target ID
-  - Reason (misinformation, harassment, spam, medical advice)
+  - Reason (misinformation, harassment, spam, medical_advice, other)
   - Optional description
 - **What happens:**
-  1. Report created and queue for moderator review
-  2. Content auto-hidden if multiple reports received
+  1. Report created with snapshot of target content
+  2. Content auto-flagged if ≥10 reports received on same target
   3. No notification to reported user (prevents gaming)
-- **Output:** Confirmation that report was received
+- **Authorization:** Required
+- **Output:** Report confirmation with report_id
+
+#### **Admin: List Reports (Global)**
+
+- **What it does:** Lists all content reports across communities for moderation
+- **Method:** `GET /community/admin/reports`
+- **Authorization:** Admin only
+- **Parameters:** `page`, `limit`, optional `status` filter (pending, reviewed, resolved), optional `community_id` filter
+- **Output:** Paginated list of reports with target content snapshots
+
+#### **Admin: Resolve Report**
+
+- **What it does:** Reviews and resolves a content report
+- **Method:** `PATCH /community/admin/reports/{report_id}`
+- **Authorization:** Admin only
+- **Input:** Status (reviewed, resolved), action_taken (approved, removed, warned, banned), resolution_notes
+- **What happens:**
+  1. Report status updated
+  2. Action applied to target content if needed
+  3. Moderator ID and resolution timestamp recorded
+
+#### **Admin: Delete Report**
+
+- **What it does:** Deletes a report record
+- **Method:** `DELETE /community/admin/reports/{report_id}`
+- **Authorization:** Admin only
+- **Output:** Confirmation
+
 
 ---
 
@@ -968,8 +1098,7 @@ The database is the **system's memory**—it stores all persistent information i
 - Updated timestamp
 - Views count
 - Replies count
-- Upvotes/likes count
-- Downvotes count (future consideration)
+- Likes count
 - Is pinned (for important announcements)
 - Is locked (prevents new replies)
 

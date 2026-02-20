@@ -426,3 +426,49 @@ class ClinicalModel(DBModel):
             except:
                 pass
         return data
+
+    # ------------------------------------------------------------------
+    # 6. OBSERVATIONS
+    # ------------------------------------------------------------------
+    async def create_observation(self, trial_id: str, doctor_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
+        severity = data.get('severity_level')
+        flagged = True if severity == 'critical' else False
+        
+        query = """
+            INSERT INTO clinical_observations (
+                trial_id, doctor_id, summary, feedback_data, 
+                severity_level, flagged, created_at, updated_at
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+            RETURNING observation_id, trial_id, doctor_id, summary, 
+                      feedback_data, severity_level, flagged, created_at
+        """
+        row = await self.conn.fetchrow(
+            query,
+            trial_id,
+            doctor_id,
+            data['summary'],
+            json.dumps(data.get('feedback_data', {})),
+            severity,
+            flagged
+        )
+        result = dict(row)
+        if isinstance(result['feedback_data'], str):
+             result['feedback_data'] = json.loads(result['feedback_data'])
+        return result
+
+    async def get_observations(self, trial_id: str) -> List[Dict[str, Any]]:
+        query = """
+            SELECT * FROM clinical_observations 
+            WHERE trial_id = $1 
+            ORDER BY created_at DESC
+        """
+        rows = await self.conn.fetch(query, trial_id)
+        results = []
+        for r in rows:
+            d = dict(r)
+            if isinstance(d.get('feedback_data'), str):
+                try: d['feedback_data'] = json.loads(d['feedback_data'])
+                except: pass
+            results.append(d)
+        return results

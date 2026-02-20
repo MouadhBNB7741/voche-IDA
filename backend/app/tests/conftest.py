@@ -16,12 +16,6 @@ from app.db.redis import connect_redis, disconnect_redis, get_redis_client
 from app.core.config import settings
 
 # --- 2. EVENT LOOP ---
-@pytest.fixture(scope="function")
-def event_loop():
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
-
 @pytest.fixture(scope="session")
 def anyio_backend():
     return "asyncio"

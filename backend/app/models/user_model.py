@@ -1,5 +1,6 @@
 from typing import Optional, Dict, Any
 from app.models.base_model import DBModel
+import json
 
 class UserModel(DBModel):
     """
@@ -27,7 +28,17 @@ class UserModel(DBModel):
             WHERE id = $1
         """
         user = await self.conn.fetchrow(query, user_id)
-        return self._record_to_dict(user) if user else None
+        if not user:
+            return None
+            
+        data = self._record_to_dict(user)
+        for field in ['notification_preferences', 'verification']:
+            if isinstance(data.get(field), str):
+                try:
+                    data[field] = json.loads(data[field])
+                except:
+                    pass
+        return data
 
     async def create_user(
         self, 

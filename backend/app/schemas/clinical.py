@@ -2,7 +2,7 @@ from datetime import date, datetime
 from typing import List, Optional, Dict, Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 # ----------------------------------------------------------------------
@@ -31,9 +31,7 @@ class TrialSite(BaseModel):
     contact_phone: Optional[str] = None
     is_recruiting: bool
 
-    class Config:
-        populate_by_name = True
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 
 class TrialSummary(BaseModel):
@@ -47,9 +45,7 @@ class TrialSummary(BaseModel):
     is_saved: bool = False
     rank: Optional[float] = None
 
-    class Config:
-        populate_by_name = True
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 class TrialDetail(BaseModel):
     """Full trial details for GET /trials/{trial_id}"""
@@ -75,9 +71,7 @@ class TrialDetail(BaseModel):
     location: Optional[str] = None
     is_saved: bool = False  # If user is authenticated
 
-    class Config:
-        populate_by_name = True
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 
 class SavedTrialItem(BaseModel):
@@ -90,9 +84,7 @@ class SavedTrialItem(BaseModel):
     enrollment: Optional[int] = Field(None, alias="enrollment_count")
     saved_at: datetime
 
-    class Config:
-        populate_by_name = True
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 
 class TrialSaveRequest(BaseModel):

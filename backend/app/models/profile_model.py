@@ -20,6 +20,7 @@ class ProfileModel(DBModel):
                 u.id, u.email, u.user_type, u.display_name, u.first_name, u.last_name, 
                 u.country, u.language_preference, u.avatar, u.is_verified, 
                 u.profile_completed, u.created_at, u.is_active,
+                u.verification, u.notification_preferences,
                 up.bio, up.interests, up.location, up.profile_visibility,
                 up.notification_enabled, up.email_alerts, up.push_notifications
             FROM users u
@@ -41,6 +42,13 @@ class ProfileModel(DBModel):
                 data["interests"] = json.loads(data["interests"])
             except json.JSONDecodeError:
                 data["interests"] = []
+                
+        for field in ['verification', 'notification_preferences']:
+             if data.get(field) and isinstance(data[field], str):
+                try:
+                    data[field] = json.loads(data[field])
+                except:
+                    pass
                 
         # Handle defaults for missing profile row (LEFT JOIN)
         if data.get("profile_visibility") is None:

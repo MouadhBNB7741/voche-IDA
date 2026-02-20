@@ -61,6 +61,11 @@ CREATE INDEX idx_user_profiles_location ON user_profiles(location); -- Trial mat
 
 COMMENT ON INDEX idx_user_profiles_location IS 'Geographic matching for trial site proximity';
 
+-- Indexes for Doctor Verifications
+CREATE INDEX IF NOT EXISTS idx_doctor_verify_user_id ON doctor_verifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_doctor_verify_status ON doctor_verifications(status);
+CREATE INDEX IF NOT EXISTS idx_doctor_verify_created_at ON doctor_verifications(created_at);
+
 
 -- ============================================================================
 -- 2. ORGANIZATIONS INDEXES
@@ -89,6 +94,13 @@ COMMENT ON INDEX idx_organization_members_user_id IS 'Find all organizations a u
 -- ============================================================================
 -- 3. CLINICAL TRIALS INDEXES
 -- ============================================================================
+
+-- Indexes for Clinical Observations
+CREATE INDEX IF NOT EXISTS idx_clinical_obs_trial_id ON clinical_observations(trial_id);
+CREATE INDEX IF NOT EXISTS idx_clinical_obs_doctor_id ON clinical_observations(doctor_id);
+CREATE INDEX IF NOT EXISTS idx_clinical_obs_severity ON clinical_observations(severity_level);
+CREATE INDEX IF NOT EXISTS idx_clinical_obs_flagged ON clinical_observations(flagged);
+CREATE INDEX IF NOT EXISTS idx_clinical_obs_created_at ON clinical_observations(created_at DESC);
 
 -- clinical_trials table
 -- Purpose: Search, filter by disease/status/phase, NCT ID lookup
@@ -345,6 +357,7 @@ CREATE INDEX idx_user_activity_log_metadata ON user_activity_log USING GIN (meta
 
 COMMENT ON INDEX idx_user_activity_log_created_at IS 'Time-series analytics queries';
 COMMENT ON INDEX idx_user_activity_log_metadata IS 'Analytics on flexible metadata (e.g., search terms)';
+
 
 
 -- ============================================================================

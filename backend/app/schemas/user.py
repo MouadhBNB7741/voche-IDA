@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional, List, Dict, Union, Any, Literal
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 
 class NotificationTypes(BaseModel):
     trialMatches: bool = True
@@ -61,5 +61,4 @@ class UserDetailsResponse(BaseModel):
     notification_preferences: Optional[Dict[str, Any]] = None
     verification: Optional[Dict[str, Any]] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

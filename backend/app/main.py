@@ -13,6 +13,9 @@ from app.db.init_db import init_db
 from app.api.v1.auth import router as auth_router
 from app.api.v1.users import router as users_router
 from app.api.v1.clinical import router as clinical_router
+from app.api.v1.community import router as community_router
+from app.api.v1.doctors import router as doctor_verification_router
+from app.api.v1.clinical_observations import router as clinical_observations_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -62,6 +65,9 @@ app.add_middleware(
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(users_router, prefix="/api/v1")
 app.include_router(clinical_router, prefix="/api/v1")
+app.include_router(community_router, prefix="/api/v1")
+app.include_router(doctor_verification_router, prefix="/api/v1")
+app.include_router(clinical_observations_router, prefix="/api/v1")
 
 
 @app.get("/api/v1/", tags=["Status"])
