@@ -5,7 +5,7 @@ import { Home,FlaskConical, Users, BookOpen, Calendar, Bot } from "lucide-react"
 
 const navItems = [
     { path: "/", label: "Home", icon: Home},
-    { path: "/trialsearch", label: "Trials", icon: FlaskConical},
+    { path: "/trials", label: "Trials", icon: FlaskConical},
     { path: "/community", label: "Community", icon: Users },
     { path: "/resourcelibrary", label: "Resources", icon: BookOpen },
     { path: "/eventshub", label: "Events", icon: Calendar},

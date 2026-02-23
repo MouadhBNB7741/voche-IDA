@@ -1,52 +1,70 @@
 @import "tailwindcss";
 
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 142 71% 45%;
+
+    /* Primary: green */
+    --primary: 147 70% 28%;
+    --primary-foreground: 0 0% 100%;
+    --primary-muted: 142 60% 35%;
+
+    /* Primary: soft green */
+    --secondary: 142 40% 92%;
+    --secondary-foreground: 142 60% 25%;
+
+    /* Orange accent */
+    --accent: 24 94% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    --muted: 220 14% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    --success: 142 71% 45%;
+    --warning: 38 92% 50%;
+    --info: 217 91% 60%;
+    --radius: 0.75rem;
+  }
+
+   body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+}
+
+/* Navigation */
 
 .voce-nav-item {
   display: inline-flex;
   align-items: center;
-  padding: 0.7rem 0.85rem;
+  gap: 0.4rem;
+  padding: 0.65rem 0.9rem;
   border-radius: 0.5rem;
-  color: #0f172a; 
+  color: hsl(var(--muted-foreground));
   text-decoration: none;
   transition: all 0.2s ease;
 }
 
 .voce-nav-item:hover {
-  background-color: #f1f5f9; 
-  color: #08a103; 
+  background-color: hsl(var(--muted));
+  color: hsl(var(--foreground));
 }
 
 .voce-nav-item.active {
-  background-color: #e6f7ec; 
-  color: #08a103; 
+  background-color: hsl(var(--secondary));
+  color: hsl(var(--primary));
   font-weight: 600;
 }
 
 .voce-nav-item svg {
-  transition: color 0.2s ease;
   color: currentColor;
 }
-
-
-.bg-card {
-  background-color: #ffffff;
-}
-
-.border-border {
-  border-color: #e5e7eb; 
-}
-
-.text-foreground {
-  color: #0f172a; 
-}
-
-.text-muted-foreground {
-  color: #64748b; 
-}
-
-.text-primary-foreground {
-  color: #ffffff;
-}
-
-
 
