@@ -10,7 +10,14 @@ export default function Assistant() {
     <PageHeader
     title="VOCE AI Assistant"
     description="Your intelligent companion for navigating health research and clinical trials."
-    variant="green" />
+    variant="green"
+    action= {
+    <div className="hidden md:block">
+        <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md shadow-lg">
+        <Bot size={32} className="text-white" />
+        </div>
+    </div>
+    } />
   </div>
 );
 }
