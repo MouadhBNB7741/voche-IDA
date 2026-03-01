@@ -294,6 +294,15 @@ CREATE INDEX idx_resource_ratings_rating ON resource_ratings(rating);
 COMMENT ON INDEX idx_resource_ratings_resource_id IS 'Calculate average rating per resource';
 
 
+-- resource_progress table
+-- Purpose: Track learning completion progress of users
+CREATE INDEX idx_resource_progress_resource_id ON resource_progress(resource_id);
+CREATE INDEX idx_resource_progress_user_id ON resource_progress(user_id);
+CREATE INDEX idx_resource_progress_composite ON resource_progress(resource_id, user_id);
+
+COMMENT ON INDEX idx_resource_progress_user_id IS 'Retrieve all progress made by a user quickly';
+
+
 -- ============================================================================
 -- 7. SURVEYS & RESEARCH INDEXES
 -- ============================================================================

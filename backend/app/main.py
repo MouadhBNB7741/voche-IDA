@@ -16,6 +16,7 @@ from app.api.v1.clinical import router as clinical_router
 from app.api.v1.community import router as community_router
 from app.api.v1.doctors import router as doctor_verification_router
 from app.api.v1.clinical_observations import router as clinical_observations_router
+from app.api.v1.resources import router as resources_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -68,6 +69,7 @@ app.include_router(clinical_router, prefix="/api/v1")
 app.include_router(community_router, prefix="/api/v1")
 app.include_router(doctor_verification_router, prefix="/api/v1")
 app.include_router(clinical_observations_router, prefix="/api/v1")
+app.include_router(resources_router, prefix="/api/v1")
 
 
 @app.get("/api/v1/", tags=["Status"])

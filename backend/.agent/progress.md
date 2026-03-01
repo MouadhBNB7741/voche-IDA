@@ -195,6 +195,28 @@ Status: ✅ Implemented
 *   **User Profile**: Fixed JSONB merging bug in `ProfileModel` and `get_me` endpoint.
 *   **Testing**: Improved test reliability and fixed payload issues.
 ---
+
+## Resources & Education Module (Completed)
+Status: ✅ Implemented
+
+### Endpoints (under `/api/v1/resources`)
+| Method | URL | Auth | Description |
+|--------|-----|------|-------------|
+| GET | `/` | Public | List resources (filterable, sortable, paginated) |
+| GET | `/{id}` | Public | Get resource details, ratings, and related items |
+| GET | `/{id}/download` | Optional | Get mockup download URL (increments downloads) |
+| POST | `/{id}/rating` | Required | Create or update resource rating (updates avg) |
+| PATCH | `/{id}/progress` | Required | Update usage progress |
+
+### Details
+- **Tests coverage**: ✅ ALL PASS (List, Details, Download Auth/Public, Rating CRUD + Avg, Progress)
+- **Security validation**: Enforced auth strictly using `auth_middleware`
+- **DB changes**: 
+  - Created dedicated `resource_progress` table
+  - Added composite PK (resource_id, user_id)
+  - Added indexes
+  - Added CHECK constraint
+---
 ## Guidance for Azzedine
 
 Hi! Here’s a **simple, detailed explanation** of how the backend is structured :

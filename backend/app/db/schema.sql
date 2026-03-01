@@ -898,6 +898,35 @@ CREATE TABLE resource_ratings (
 COMMENT ON TABLE resource_ratings IS 'User ratings and reviews for educational resources';
 
 
+-- -----------------------------------------------------------------------------
+-- resource_progress: Track user progress for educational resources
+-- -----------------------------------------------------------------------------
+-- Purpose: Track learning progression (e.g. video watch time, course completion)
+-- Updates: Frequently updated via PATCH requests
+-- -----------------------------------------------------------------------------
+
+CREATE TABLE resource_progress (
+    -- References
+    resource_id UUID NOT NULL REFERENCES resources(resource_id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    
+    -- Progress Data
+    progress INTEGER NOT NULL DEFAULT 0,          -- 0 to 100
+    last_position VARCHAR(50),                    -- For video timestamp or page marker
+    
+    -- Timestamps
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    
+    -- Composite Primary Key (1 progress per user/resource)
+    PRIMARY KEY (resource_id, user_id),
+    
+    -- Constraints
+    CONSTRAINT check_progress_value CHECK (progress >= 0 AND progress <= 100)
+);
+
+COMMENT ON TABLE resource_progress IS 'Track user progress for educational resources such as courses and videos';
+
+
 -- ============================================================================
 -- 7. SURVEYS & RESEARCH
 -- ============================================================================

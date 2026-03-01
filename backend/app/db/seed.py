@@ -295,4 +295,152 @@ async def seed_db(conn):
             )
             
     logger.info("✅ Clinical Observations seeded.")
+    # ------------------------------------------------------------------
+    # 5. SEED RESOURCES, RATINGS & PROGRESS
+    # ------------------------------------------------------------------
+    resources_data = [
+        {
+            "title": "Understanding Clinical Trials",
+            "type": "video",
+            "category": "education",
+            "description": "An introductory video on how clinical trials work.",
+            "url": "https://example.com/video1.mp4",
+            "language": "en",
+            "duration": "12:30",
+            "author": "VOCE Medical Team",
+            "tags": ["clinical", "trials", "beginner"],
+            "published_date": "2024-01-01",
+            "downloads": 12,
+            "rating": 4.50,
+            "featured": False,
+            "requires_auth": False
+        },
+        {
+            "title": "Patient Rights in Research",
+            "type": "document",
+            "category": "patient_rights",
+            "description": "A comprehensive guide on patient rights during clinical studies.",
+            "url": "https://example.com/doc1.pdf",
+            "language": "en",
+            "duration": "15 pages",
+            "author": "Jane Doe",
+            "tags": ["rights", "ethics"],
+            "published_date": "2024-02-15",
+            "downloads": 45,
+            "rating": 4.80,
+            "featured": True,
+            "requires_auth": False
+        },
+        {
+            "title": "Oncology Toolkit 2024",
+            "type": "toolkit",
+            "category": "tools",
+            "description": "Tools and resources for oncology practitioners.",
+            "url": "https://example.com/toolkit1.zip",
+            "language": "en",
+            "duration": "N/A",
+            "author": "Dr. Smith",
+            "tags": ["oncology", "tools", "hcp"],
+            "published_date": "2024-03-10",
+            "downloads": 89,
+            "rating": 4.20,
+            "featured": True,
+            "requires_auth": True
+        },
+        {
+            "title": "Managing Diabetes Daily",
+            "type": "course",
+            "category": "disease_management",
+            "description": "Interactive course on daily habits for managing type 2 diabetes.",
+            "url": "https://example.com/course1",
+            "language": "es",
+            "duration": "2 hours",
+            "author": "BioMed Education",
+            "tags": ["diabetes", "lifestyle", "spanish"],
+            "published_date": "2024-04-05",
+            "downloads": 150,
+            "rating": 4.60,
+            "featured": False,
+            "requires_auth": True
+        },
+        {
+            "title": "Alzheimer's Early Symptoms Guide",
+            "type": "document",
+            "category": "education",
+            "description": "Checklist and guide on recognizing early signs of Alzheimer's.",
+            "url": "https://example.com/doc2.pdf",
+            "language": "en",
+            "duration": "10 pages",
+            "author": "Neuro Sciences",
+            "tags": ["neurology", "aging"],
+            "published_date": "2024-05-20",
+            "downloads": 200,
+            "rating": 4.90,
+            "featured": True,
+            "requires_auth": False
+        }
+    ]
+
+    resource_ids = []
+    for r in resources_data:
+        rid = await conn.fetchval("""
+            INSERT INTO resources (
+                title, type, category, description, url, language, duration, author,
+                tags, published_date, downloads, rating, featured, requires_auth
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+            RETURNING resource_id
+        """,
+        r["title"], r["type"], r["category"], r["description"], r["url"], r["language"],
+        r["duration"], r["author"], json.dumps(r["tags"]), datetime.strptime(r["published_date"], "%Y-%m-%d").date(),
+        r["downloads"], r["rating"], r["featured"], r["requires_auth"])
+        resource_ids.append(rid)
+
+    logger.info("✅ Resources seeded.")
+
+    # Seed Ratings & Progress (using generated users and resources)
+    if user_ids and resource_ids:
+        patient_id = user_ids.get("patient")
+        hcp_id = user_ids.get("hcp")
+
+        # Ratings
+        ratings_data = [
+            (resource_ids[0], patient_id, 4, "Good intro video."),
+            (resource_ids[1], patient_id, 5, "Very detailed and helpful."),
+            (resource_ids[2], hcp_id, 4, "Useful tools for the clinic."),
+            (resource_ids[3], patient_id, 5, "Great manageable course!"),
+            (resource_ids[4], hcp_id, 5, "Excellent guide for patients.")
+        ]
+        
+        for resource_id, user_id, rating, review in ratings_data:
+            if user_id:
+                await conn.execute("""
+                    INSERT INTO resource_ratings (resource_id, user_id, rating, review)
+                    VALUES ($1, $2, $3, $4)
+                    ON CONFLICT (resource_id, user_id) DO NOTHING
+                """, resource_id, user_id, rating, review)
+
+        logger.info("✅ Resource Ratings seeded.")
+
+        # Progress
+        progress_data = [
+            (resource_ids[0], patient_id, 100, "12:30"),
+            (resource_ids[1], patient_id, 50, "Page 7"),
+            (resource_ids[2], hcp_id, 100, "Completed"),
+            (resource_ids[3], patient_id, 25, "Module 1"),
+            (resource_ids[4], hcp_id, 80, "Page 8")
+        ]
+
+        for resource_id, user_id, progress, last_pos in progress_data:
+            if user_id:
+                await conn.execute("""
+                    INSERT INTO resource_progress (resource_id, user_id, progress, last_position)
+                    VALUES ($1, $2, $3, $4)
+                    ON CONFLICT (resource_id, user_id) DO UPDATE SET 
+                        progress = EXCLUDED.progress, 
+                        last_position = EXCLUDED.last_position,
+                        updated_at = NOW()
+                """, resource_id, user_id, progress, last_pos)
+
+        logger.info("✅ Resource Progress seeded.")
+        
     logger.info("🌱 Database seeding complete.")
