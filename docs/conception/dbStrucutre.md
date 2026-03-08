@@ -44,6 +44,7 @@
    - event_registrations
    - resources
    - resource_ratings
+   - resource_progress
 6. [Surveys & Research](#surveys--research)
    - surveys
    - survey_questions
@@ -622,6 +623,27 @@
 
 ---
 
+### `resource_progress`
+*Track user progress for educational resources.*
+
+| Field                | Type              | Constraints       | Notes                                     |
+| :------------------- | :---------------- | :---------------- | :---------------------------------------- |
+| 📚 `resource_id`     | `UUID`            | `FOREIGN KEY, NOT NULL`| References `resources(resource_id)` ON DELETE CASCADE|
+| 👤 `user_id`         | `UUID`            | `FOREIGN KEY, NOT NULL`| References `users(id)` ON DELETE CASCADE|
+| 📈 `progress`        | `INTEGER`         | `NOT NULL`        | Progress percentage (0-100)               |
+| 📍 `last_position`   | `VARCHAR(50)`     | `NULL`            | Bookmark/timestamp                        |
+| 🔄 `updated_at`      | `TIMESTAMP`       | `DEFAULT NOW()`   | Last update timestamp                     |
+
+**Indexes:**
+- `idx_resource_progress_resource_id` on `resource_id`
+- `idx_resource_progress_user_id` on `user_id`
+- `PRIMARY KEY (resource_id, user_id)` - one progress record per user per resource
+
+**Constraints:**
+- `CHECK (progress >= 0 AND progress <= 100)`
+
+---
+
 ## 6. Surveys & Research
 
 ### `surveys`
@@ -779,6 +801,7 @@ working_groups (1) ←→ (N) working_group_members
 events (1) ←→ (N) event_registrations
 
 resources (1) ←→ (N) resource_ratings
+resources (1) ←→ (N) resource_progress
 
 surveys (1) ←→ (N) survey_questions
 surveys (1) ←→ (N) survey_responses

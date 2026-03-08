@@ -217,6 +217,56 @@ Status: ✅ Implemented
   - Added indexes
   - Added CHECK constraint
 ---
+
+
+## Organizations & Working Groups API — Audited & Secured
+Status: ✅ Implemented & Audited
+
+
+### 🏢 Organization Management (`/api/v1/organizations`)
+
+| Method | URL | Auth | Description |
+| --- | --- | --- | --- |
+| **GET** | `/` | Public | List organizations (filtered by type/country, paginated or "show all") |
+| **GET** | `/{org_id}` | Public | Detailed view: includes profile, member list, and active working groups |
+| **GET** | `/{org_id}/requests` | Admin | **View Requests** List pending/approved join requests (Admin/Moderator only) |
+| **POST** | `/{org_id}/join` | Required | Request to join an organization (requires verified user) |
+| **POST** | `/{org_id}/members/{user_id}/decide` | Admin | **Accept/Refuse** membership (Platform Admin, Org Admin, or Moderator) |
+
+---
+
+### 👥 Working Groups (`/api/v1/organizations/working-groups`)
+
+| Method | URL | Auth | Description |
+| --- | --- | --- | --- |
+| **GET** | `/` | Public | List groups (filtered by org, type, or privacy level, supports "show all") |
+| **GET** | `/{group_id}` | Public | Detailed view: includes group details and its approved member list |
+| **GET** | `/{group_id}/requests` | Admin | **View Requests** List pending/approved join requests (Admin/Moderator only) |
+| **POST** | `/{group_id}/join` | Required | Join group (Auto-approve if **Public**; set to **Pending** if Private) |
+| **POST** | `/{group_id}/members/{user_id}/decide` | Admin | **Accept/Refuse** group access (Platform Admin, associated Org Admin, or Moderator) |
+
+
+### 🛡️ Security & Architecture Fixes (Audit)
+*   **Role Logic Validation**: Extracted logic into `app/api/middleware/org_admin_middleware.py`.
+    *   Fully validates `admin` user_type OR standard `org_member` with active admin (`role='admin'`) permissions tied to the specific `org_id`.
+    *   Inherently blocked non-admin types (`patient`, `hcp`).
+*   **Duplicate Membership Protection**: DB-level and query-level rejection of multiple join requests.
+*   **Data Restrictions**: Correctly implemented constraints preventing injection attacks. Used direct `$1` parameterized queries across models.
+
+### 🧪 Testing
+*   Created and refined `app/tests/test_organizations.py`.
+*   **Coverage**:
+    *   ✅ List organizations (with filters)
+    *   ✅ Get organization details
+    *   ✅ Join organization (success, duplicate, unverified checks)
+    *   ✅ Decide organization join (Platform Admin / Org Admin / Unauthorized bypass tested)
+    *   ✅ List working groups (with filters)
+    *   ✅ Join working groups (public auto-approve, private pending)
+    *   ✅ Decide working group join (Platform Admin / Org Admin / Unauthorized bypass tested)
+*   **Result**: ✅ ALL PASS (14/14 tests)
+
+---
+
 ## Guidance for Azzedine
 
 Hi! Here’s a **simple, detailed explanation** of how the backend is structured :
@@ -254,4 +304,3 @@ Hi! Here’s a **simple, detailed explanation** of how the backend is structured
    * Use `pytest -v` to run tests and see detailed results.
    * Use `mypy` for type checking if unsure about types.
    * For any data returned from the DB that is JSONB, always **deserialize it** before using in Pydantic models.
-

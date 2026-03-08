@@ -34,8 +34,7 @@ async def init_db():
                 try:
                     await seed_db(conn)
                 except Exception as e:
-                    logger.error(f"❌ Seeding failed: {e}")
-                
+                    logger.error(f"❌ Seeding failed: {e}")  
             else:
                 logger.error(f"❌ SQL files not found at {schema_path} or {indexes_path}")
         else:

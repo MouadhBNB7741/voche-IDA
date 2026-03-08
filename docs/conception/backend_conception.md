@@ -651,7 +651,7 @@ This section is organized by feature domain, following RESTful conventions.
 
 #### **Track Resource Progress** (for courses/multi-part content)
 
-- **What it does:** Saves user progress through educational materials
+- **What it does:** Saves user progress through educational materials in the `resource_progress` table
 - **Method:** `PATCH /resources/{resource_id}/progress`
 - **Input:** Completion percentage or module ID
 - **Output:** Updated progress status
@@ -737,13 +737,6 @@ This section is organized by feature domain, following RESTful conventions.
   - Suggested actions (buttons/links to trials, resources, community)
   - Related FAQs
 - **Important:** Always includes disclaimer that assistant doesn't provide medical advice
-
-#### **Get Suggested Questions**
-
-- **What it does:** Provides conversation starters
-- **Method:** `GET /ai/suggestions`
-- **Output:** Array of common questions contextual to user's profile
-
 ---
 
 ### 🔔 **Notifications** (`/api/v1/notifications`)
@@ -1422,7 +1415,8 @@ ORGANIZATIONS
 
 RESOURCES
   ├─→ created by ORGANIZATIONS or USERS
-  └─→ rated by USERS
+  ├─→ rated by USERS
+  └─→ progress tracked by USERS (via resource_progress)
 
 SURVEYS
   ├─→ contains many QUESTIONS

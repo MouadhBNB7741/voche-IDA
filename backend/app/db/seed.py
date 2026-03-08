@@ -442,5 +442,88 @@ async def seed_db(conn):
                 """, resource_id, user_id, progress, last_pos)
 
         logger.info("✅ Resource Progress seeded.")
+
+    # ------------------------------------------------------------------
+    # 6. SEED ORGANIZATIONS AND WORKING GROUPS
+    # ------------------------------------------------------------------
+    logger.info("🌱 Seeding Organizations and Working Groups...")
+
+    # Clear previous seeds for organizations related tables
+    await conn.execute("DELETE FROM working_group_members")
+    await conn.execute("DELETE FROM organization_members")
+    await conn.execute("DELETE FROM working_groups")
+    await conn.execute("DELETE FROM organizations")
+
+    orgs_data = [
+        {"name": "VOCE Research Institute", "type": "research_institution", "country": "USA", "description": "Leading research center for oncology.", "website": "https://voce-research.org", "email": "contact@voce-research.org", "membership_status": "verified"},
+        {"name": "Global Health Pharma", "type": "pharma", "country": "UK", "description": "Global pharmaceutical company.", "website": "https://globalhealth.com", "email": "info@globalhealth.com", "membership_status": "partner"},
+        {"name": "National Cancer Foundation", "type": "advocacy_group", "country": "Canada", "description": "Advocating for patient rights.", "website": "https://ncf.ca", "email": "advocacy@ncf.ca", "membership_status": "affiliated"},
+        {"name": "Advanced Oncology Clinics", "type": "hospital", "country": "Germany", "description": "Top tier oncology hospital.", "website": "https://advancedoncology.de", "email": "contact@advancedoncology.de", "membership_status": "verified"},
+        {"name": "Euro Data Consortium", "type": "research_institution", "country": "France", "description": "European data sharing consortium.", "website": "https://eurodata.eu", "email": "hello@eurodata.eu", "membership_status": "partner"},
+    ]
+
+    org_ids = []
+    for o in orgs_data:
+        oid = await conn.fetchval("""
+            INSERT INTO organizations (org_id, org_name, org_type, country, description, website, contact_email, membership_status, member_count)
+            VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, 0)
+            RETURNING org_id
+        """, o["name"], o["type"], o["country"], o["description"], o["website"], o["email"], o["membership_status"])
+        org_ids.append(oid)
+
+    wg_data = [
+        {"name": "Genomics Protocol", "org_idx": 0, "type": "research", "privacy": "public", "desc": "Public research group for genomics."},
+        {"name": "Trial Compliance", "org_idx": 0, "type": "research", "privacy": "private", "desc": "Internal compliance review board."},
+        {"name": "Patient Advisory Board", "org_idx": 1, "type": "patient_support", "privacy": "public", "desc": "Advisory board comprising patients and advocates."},
+        {"name": "Data Standards", "org_idx": 2, "type": "research", "privacy": "private", "desc": "Developing data standards for clinical reporting."},
+        {"name": "Clinical Innovations", "org_idx": 3, "type": "research", "privacy": "public", "desc": "Group focused on clinical innovations."},
+    ]
+
+    wg_ids = []
+    for wg in wg_data:
+        wgid = await conn.fetchval("""
+            INSERT INTO working_groups (group_id, name, organization_id, type, privacy_level, description, member_count, is_active)
+            VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, 0, TRUE)
+            RETURNING group_id
+        """, wg["name"], org_ids[wg["org_idx"]], wg["type"], wg["privacy"], wg["desc"])
+        wg_ids.append(wgid)
+
+    # Org Members Seed (5 records)
+    org_members = [
+        (org_ids[0], user_ids.get("org_member"), 'admin', 'approved'),
+        (org_ids[0], user_ids.get("hcp"), 'member', 'approved'),
+        (org_ids[0], user_ids.get("patient"), 'member', 'pending'),
+        (org_ids[1], user_ids.get("admin"), 'admin', 'approved'),
+        (org_ids[1], user_ids.get("patient"), 'member', 'pending'),
+    ]
+
+    for org_id, user_id, role, status in org_members:
+        if user_id:
+            await conn.execute("""
+                INSERT INTO organization_members (id, org_id, user_id, role, status)
+                VALUES (gen_random_uuid(), $1, $2, $3, $4)
+            """, org_id, user_id, role, status)
+            if status == 'approved':
+                await conn.execute("UPDATE organizations SET member_count = member_count + 1 WHERE org_id = $1", org_id)
+
+    # Working Group Members Seed (5 records)
+    wg_members = [
+        (wg_ids[0], user_ids.get("org_member"), 'admin', 'approved'),
+        (wg_ids[0], user_ids.get("patient"), 'member', 'approved'),
+        (wg_ids[1], user_ids.get("hcp"), 'member', 'pending'),
+        (wg_ids[2], user_ids.get("admin"), 'admin', 'approved'),
+        (wg_ids[3], user_ids.get("patient"), 'member', 'pending'),
+    ]
+
+    for wg_id, user_id, role, status in wg_members:
+        if user_id:
+            await conn.execute("""
+                INSERT INTO working_group_members (id, group_id, user_id, role, status)
+                VALUES (gen_random_uuid(), $1, $2, $3, $4)
+            """, wg_id, user_id, role, status)
+            if status == 'approved':
+                await conn.execute("UPDATE working_groups SET member_count = member_count + 1 WHERE group_id = $1", wg_id)
+
+    logger.info("✅ Organizations & Working Groups seeded.")
         
     logger.info("🌱 Database seeding complete.")
