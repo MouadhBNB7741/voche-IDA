@@ -1,7 +1,7 @@
 import { NavLink, Link } from "react-router-dom";
 import idaLogo from '../assets/ida.webp';
 import { Button } from "./ui/button";
-import { Home,FlaskConical, Users, BookOpen, Calendar, Bot } from "lucide-react";
+import { Home,FlaskConical, Users, BookOpen, Calendar, MessageCircle } from "lucide-react";
 
 const navItems = [
     { path: "/", label: "Home", icon: Home},
@@ -9,7 +9,7 @@ const navItems = [
     { path: "/community", label: "Community", icon: Users },
     { path: "/resourcelibrary", label: "Resources", icon: BookOpen },
     { path: "/eventshub", label: "Events", icon: Calendar},
-    { path: "/assistant", label: "Assistant", icon: Bot}
+    { path: "/assistant", label: "Assistant", icon: MessageCircle}
 ];
 
 
