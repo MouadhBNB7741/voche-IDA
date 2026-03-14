@@ -505,145 +505,455 @@
 
 ---
 
-## 5. Events & Resources
+You are acting as:
 
-### `events`
-*Educational events, webinars, and conferences.*
+• Senior QA Engineer
+• Staff Backend Engineer
+• FastAPI Architecture Auditor
+• PostgreSQL Performance Reviewer
+• Security Reviewer
+• Test Automation Engineer
 
-| Field                  | Type              | Constraints       | Notes                                     |
-| :--------------------- | :---------------- | :---------------- | :---------------------------------------- |
-| 🔑 `event_id`          | `UUID`            | `PRIMARY KEY`     | Event identifier                          |
-| 📌 `title`             | `VARCHAR(500)`    | `NOT NULL`        | Event title                               |
-| 📝 `description`       | `TEXT`            | `NOT NULL`        | Event description and agenda              |
-| 📅 `event_date`        | `DATE`            | `NOT NULL`        | Event date                                |
-| 🕒 `event_time`        | `TIME`            | `NOT NULL`        | Event start time                          |
-| 🌍 `timezone`          | `VARCHAR(50)`     | `DEFAULT 'UTC'`   | Event timezone                            |
-| 🏷️ `type`              | `VARCHAR(50)`     | `NOT NULL`        | `webinar`, `conference`, `training`, `roundtable`|
-| 🏢 `organizer`         | `VARCHAR(255)`    | `NOT NULL`        | Organizing entity                         |
-| 🌐 `location`          | `VARCHAR(255)`    | `NULL`            | Physical location or "Virtual"            |
-| 🔗 `virtual_link`      | `VARCHAR(500)`    | `NULL`            | Virtual meeting link                      |
-| 👥 `participants`      | `INTEGER`         | `DEFAULT 0`       | Current registrations                     |
-| 🎯 `max_participants`  | `INTEGER`         | `NULL`            | Maximum capacity                          |
-| ⏰ `registration_deadline`| `TIMESTAMP`    | `NULL`            | Last date to register                     |
-| 📊 `status`            | `VARCHAR(50)`     | `DEFAULT 'upcoming'`| `upcoming`, `ongoing`, `completed`, `cancelled`|
-| 🏷️ `tags`              | `JSONB`           | `DEFAULT '[]'`    | Event tags/topics                         |
-| 🖼️ `banner_image`      | `VARCHAR(255)`    | `NULL`            | Event banner URL                          |
-| 📅 `created_at`        | `TIMESTAMP`       | `DEFAULT NOW()`   | Event creation timestamp                  |
-| 🔄 `updated_at`        | `TIMESTAMP`       | `DEFAULT NOW()`   | Last update timestamp                     |
+Your mission is to audit, evaluate, fix, and finalize the Events & Webinars API module that has already been implemented.
 
-**Indexes:**
-- `idx_events_event_date` on `event_date`
-- `idx_events_type` on `type`
-- `idx_events_status` on `status`
+This is not an implementation task.
 
-**Constraints:**
-- `CHECK (type IN ('webinar', 'conference', 'training', 'roundtable'))`
-- `CHECK (status IN ('upcoming', 'ongoing', 'completed', 'cancelled'))`
+This is a production-grade QA audit.
 
----
+🎯 Audit Target
 
-### `event_registrations`
-*User registrations for events.*
+Module:
 
-| Field                | Type              | Constraints       | Notes                                     |
-| :------------------- | :---------------- | :---------------- | :---------------------------------------- |
-| 🔑 `registration_id` | `UUID`            | `PRIMARY KEY`     | Registration identifier                   |
-| 📅 `event_id`        | `UUID`            | `FOREIGN KEY, NOT NULL`| References `events(event_id)` ON DELETE CASCADE|
-| 👤 `user_id`         | `UUID`            | `FOREIGN KEY, NOT NULL`| References `users(id)` ON DELETE CASCADE|
-| 📊 `status`          | `VARCHAR(50)`     | `DEFAULT 'registered'`| `registered`, `attended`, `no_show`, `cancelled`|
-| ✅ `confirmation_sent`| `BOOLEAN`        | `DEFAULT FALSE`   | Confirmation email sent                   |
-| 📅 `registered_at`   | `TIMESTAMP`       | `DEFAULT NOW()`   | Registration timestamp                    |
-| 🔄 `updated_at`      | `TIMESTAMP`       | `DEFAULT NOW()`   | Last update timestamp                     |
+/api/v1/events
 
-**Indexes:**
-- `idx_event_registrations_event_id` on `event_id`
-- `idx_event_registrations_user_id` on `user_id`
-- `unique_event_user_registration` UNIQUE(`event_id`, `user_id`)
 
-**Constraints:**
-- `CHECK (status IN ('registered', 'attended', 'no_show', 'cancelled'))`
+Files involved:
 
----
+app/models/event_model.py
+app/schemas/events.py
+app/api/v1/events.py
+app/tests/test_events.py
+backend/.agent/progress.md
 
-### `resources`
-*Educational materials and toolkits.*
 
-| Field                | Type              | Constraints       | Notes                                     |
-| :------------------- | :---------------- | :---------------- | :---------------------------------------- |
-| 🔑 `resource_id`     | `UUID`            | `PRIMARY KEY`     | Resource identifier                       |
-| 📌 `title`           | `VARCHAR(500)`    | `NOT NULL`        | Resource title                            |
-| 🏷️ `type`            | `VARCHAR(50)`     | `NOT NULL`        | `video`, `document`, `toolkit`, `course`  |
-| 📚 `category`        | `VARCHAR(100)`    | `NOT NULL`        | Resource category/topic                   |
-| 📝 `description`     | `TEXT`            | `NOT NULL`        | Resource description                      |
-| 🔗 `url`             | `VARCHAR(500)`    | `NULL`            | External URL or file path                 |
-| ⏱️ `duration`        | `VARCHAR(50)`     | `NULL`            | Duration (for videos) or page count       |
-| 🗣️ `language`        | `VARCHAR(10)`     | `DEFAULT 'en'`    | Resource language (ISO 639-1)             |
-| 📥 `downloads`       | `INTEGER`         | `DEFAULT 0`       | Total downloads                           |
-| ⭐ `rating`          | `DECIMAL(3,2)`    | `DEFAULT 0.00`    | Average rating (0.00-5.00)                |
-| 🏆 `featured`        | `BOOLEAN`         | `DEFAULT FALSE`   | Featured resource flag                    |
-| 🔒 `requires_auth`   | `BOOLEAN`         | `DEFAULT FALSE`   | Authentication required                   |
-| 👤 `author`          | `VARCHAR(255)`    | `NULL`            | Author or source organization             |
-| 🏢 `organization_id` | `UUID`            | `FOREIGN KEY, NULL`| References `organizations(org_id)`       |
-| 🏷️ `tags`            | `JSONB`           | `DEFAULT '[]'`    | Resource tags                             |
-| 📅 `published_date`  | `DATE`            | `NULL`            | Publication date                          |
-| 📅 `created_at`      | `TIMESTAMP`       | `DEFAULT NOW()`   | Record creation timestamp                 |
-| 🔄 `updated_at`      | `TIMESTAMP`       | `DEFAULT NOW()`   | Last update timestamp                     |
+Database tables:
 
-**Indexes:**
-- `idx_resources_type` on `type`
-- `idx_resources_category` on `category`
-- `idx_resources_language` on `language`
-- `idx_resources_featured` on `featured`
+events
+event_registrations
 
-**Constraints:**
-- `CHECK (type IN ('video', 'document', 'toolkit', 'course'))`
-- `CHECK (rating >= 0 AND rating <= 5)`
+🚨 CRITICAL PROJECT RULES (Must be enforced)
 
----
+You must verify the implementation follows all project rules.
 
-### `resource_ratings`
-*User ratings and reviews for resources.*
+Architecture Rules
 
-| Field                | Type              | Constraints       | Notes                                     |
-| :------------------- | :---------------- | :---------------- | :---------------------------------------- |
-| 🔑 `rating_id`       | `UUID`            | `PRIMARY KEY`     | Rating identifier                         |
-| 📚 `resource_id`     | `UUID`            | `FOREIGN KEY, NOT NULL`| References `resources(resource_id)` ON DELETE CASCADE|
-| 👤 `user_id`         | `UUID`            | `FOREIGN KEY, NOT NULL`| References `users(id)` ON DELETE CASCADE|
-| ⭐ `rating`          | `INTEGER`         | `NOT NULL`        | Rating (1-5 stars)                        |
-| 📝 `review`          | `TEXT`            | `NULL`            | Optional text review                      |
-| 📅 `created_at`      | `TIMESTAMP`       | `DEFAULT NOW()`   | Rating creation timestamp                 |
+Routes must NOT access the database.
 
-**Indexes:**
-- `idx_resource_ratings_resource_id` on `resource_id`
-- `idx_resource_ratings_user_id` on `user_id`
-- `unique_resource_user_rating` UNIQUE(`resource_id`, `user_id`) - one rating per user per resource
+Routes must only:
 
-**Constraints:**
-- `CHECK (rating >= 1 AND rating <= 5)`
+1 Validate input
+2 Call model functions
+3 Return schema responses
 
----
 
-### `resource_progress`
-*Track user progress for educational resources.*
+Database logic must exist ONLY inside models.
 
-| Field                | Type              | Constraints       | Notes                                     |
-| :------------------- | :---------------- | :---------------- | :---------------------------------------- |
-| 📚 `resource_id`     | `UUID`            | `FOREIGN KEY, NOT NULL`| References `resources(resource_id)` ON DELETE CASCADE|
-| 👤 `user_id`         | `UUID`            | `FOREIGN KEY, NOT NULL`| References `users(id)` ON DELETE CASCADE|
-| 📈 `progress`        | `INTEGER`         | `NOT NULL`        | Progress percentage (0-100)               |
-| 📍 `last_position`   | `VARCHAR(50)`     | `NULL`            | Bookmark/timestamp                        |
-| 🔄 `updated_at`      | `TIMESTAMP`       | `DEFAULT NOW()`   | Last update timestamp                     |
+app/models/
 
-**Indexes:**
-- `idx_resource_progress_resource_id` on `resource_id`
-- `idx_resource_progress_user_id` on `user_id`
-- `PRIMARY KEY (resource_id, user_id)` - one progress record per user per resource
+Database Rules
 
-**Constraints:**
-- `CHECK (progress >= 0 AND progress <= 100)`
+Database layer must follow:
 
----
+• asyncpg
+• Raw SQL only
+• Parameterized queries
 
+Example:
+
+WHERE event_id = $1
+
+
+Never allow:
+
+f"SELECT * FROM events WHERE id = {id}"
+
+JSONB Rule
+
+Columns such as:
+
+events.tags
+
+
+Must be deserialized before returning to Pydantic.
+
+Example:
+
+json.loads(record["tags"])
+
+Testing Rules
+
+Tests must exist for every endpoint.
+
+Test file:
+
+app/tests/test_events.py
+
+
+Run:
+
+pytest -v
+
+
+All tests must pass.
+
+STEP 1 — READ PROJECT CONTEXT
+
+Before auditing code, read the following documents:
+
+docs/conception/backend_conception.md
+docs/conception/dbStrucutre.md
+docs/conception/mvp.md
+docs/conception/actions.md
+backend/.agent/progress.md
+
+
+Understand:
+
+• Architecture pattern
+• Model layer structure
+• Route conventions
+• Pagination format
+• Error handling strategy
+• Auth middleware usage
+
+You must evaluate implementation against these standards.
+
+STEP 2 — VERIFY IMPLEMENTATION
+
+Audit these files:
+
+app/models/event_model.py
+app/schemas/events.py
+app/api/v1/events.py
+
+
+Check the following.
+
+Architecture Compliance
+
+Verify:
+
+✔ Routes do not run SQL
+✔ Models contain all DB logic
+✔ Schemas correctly validate inputs
+✔ Dependency injection is correct
+
+SQL Quality
+
+Verify queries:
+
+✔ Use parameterized placeholders $1, $2
+✔ No SQL injection risk
+✔ Correct JOIN usage
+✔ Correct indexes usage
+✔ Efficient queries (no N+1 queries)
+
+Example improvement if needed:
+
+WHERE event_id = ANY($1)
+
+
+instead of repeated queries.
+
+Transactions
+
+Verify that multi-step operations use:
+
+async with self.conn.transaction():
+
+
+Required for:
+
+register_for_event
+cancel_registration
+
+Edge Case Handling
+
+Verify handling of:
+
+Case	Expected
+Event not found	404
+Duplicate registration	409
+Event full	409
+Deadline passed	400
+Cancel not registered	404
+Unauthorized	403
+Pagination Pattern
+
+Ensure consistency with project standard.
+
+Expected pattern:
+
+?page=
+&limit=
+
+
+Response format:
+
+{
+  "data": [],
+  "meta": {
+     "total": 100,
+     "page": 1,
+     "limit": 20,
+     "pages": 5
+  }
+}
+
+Authentication
+
+Verify usage of:
+
+auth_middleware
+auth_middleware_optional
+
+
+Rules:
+
+Endpoint	Auth
+GET /events	optional
+GET /events/{id}	optional
+POST register	required
+DELETE register	required
+GET /users/me/events	required
+STEP 3 — FIND ISSUES
+
+If you find issues:
+
+Fix them.
+
+Possible categories:
+
+Architecture violation
+
+Move SQL from routes to models.
+
+Security issues
+
+Fix SQL injection risks.
+
+Performance problems
+
+Batch queries.
+
+Schema mismatch
+
+Align Pydantic with DB schema.
+
+Naming inconsistencies
+
+Match project naming style.
+
+STEP 4 — RUN TESTS
+
+Run:
+
+pytest -v
+
+
+File:
+
+app/tests/test_events.py
+
+
+Verify:
+
+22 tests
+
+
+If any test fails:
+
+You must:
+
+1 Diagnose the issue
+2 Fix the code
+3 Rerun tests
+4 Repeat until ALL tests pass
+
+
+Final result required:
+
+22/22 PASSED
+
+
+No warnings.
+
+STEP 5 — ADD QA AUDIT DOCUMENT
+
+Create new file:
+
+docs/audits/events_api_qa_audit.md
+
+
+The document must contain:
+
+Events API QA Audit
+Overview
+
+Module audited:
+
+/api/v1/events
+
+Architecture Compliance
+
+Score /10
+
+Example:
+
+Architecture: 9/10
+
+SQL Quality
+
+Score /10
+
+Security
+
+Score /10
+
+Performance
+
+Score /10
+
+Code Quality
+
+Score /10
+
+Test Coverage
+
+Score /10
+
+Final Score
+Total Score: 9.3 / 10
+
+
+Rating scale:
+
+Score	Rating
+9–10	Excellent
+7–8	Good
+5–6	Acceptable
+<5	Failed
+Issues Found
+
+List issues discovered.
+
+Fixes Applied
+
+List improvements made.
+
+Final Verdict
+PASS / FAIL
+
+STEP 6 — CREATE POSTMAN COLLECTION
+
+Generate file:
+
+docs/postman/events_api_collection.json
+
+
+Include all endpoints:
+
+List Events
+GET /api/v1/events
+
+
+Query params:
+
+type
+date_from
+date_to
+location
+organizer
+status
+page
+limit
+
+Get Event Details
+GET /api/v1/events/{event_id}
+
+Register Event
+POST /api/v1/events/{event_id}/register
+
+
+Headers:
+
+Authorization: Bearer {{token}}
+
+Cancel Registration
+DELETE /api/v1/events/{event_id}/register
+
+
+Headers:
+
+Authorization: Bearer {{token}}
+
+My Events
+GET /api/v1/users/me/events
+
+
+Headers:
+
+Authorization: Bearer {{token}}
+
+STEP 7 — UPDATE PROGRESS.MD
+
+File:
+
+backend/.agent/progress.md
+
+
+You must:
+
+✔ keep the existing Events API endpoint table
+✔ append QA audit results below it
+
+Example:
+
+## Events & Webinars API — QA Audit
+
+Status: ✅ Passed QA Audit
+
+Score: 9.4 / 10 (Excellent)
+
+Audit Findings:
+- Architecture compliant
+- No SQL injection risk
+- Proper transactions implemented
+- Full test coverage (22 tests)
+- Performance optimized queries
+
+STEP 8 — FINAL OUTPUT
+
+Your response must contain:
+
+1️⃣ Full audit report
+2️⃣ List of improvements made
+3️⃣ Fixed code snippets (if changes were required)
+4️⃣ Test execution results
+5️⃣ QA audit document
+6️⃣ Postman collection JSON
+7️⃣ Updated progress.md section
+
+FINAL GOAL
+
+A production-grade audited Events API that is:
+
+✔ Clean architecture compliant
+✔ Secure
+✔ Efficient
+✔ Fully tested
+✔ Properly documented
+✔ Ready for production deployment.
 ## 6. Surveys & Research
 
 ### `surveys`

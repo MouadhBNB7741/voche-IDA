@@ -525,5 +525,148 @@ async def seed_db(conn):
                 await conn.execute("UPDATE working_groups SET member_count = member_count + 1 WHERE group_id = $1", wg_id)
 
     logger.info("✅ Organizations & Working Groups seeded.")
+    
+    # ------------------------------------------------------------------
+    # 7. SEED EVENTS & REGISTRATIONS
+    # ------------------------------------------------------------------
+    logger.info("🌱 Seeding Events & Webinars...")
+    
+    from datetime import time, timedelta, timezone as tz_dt
+    
+    # Clear existing events
+    await conn.execute("DELETE FROM event_registrations")
+    await conn.execute("DELETE FROM events")
+
+    tomorrow = date.today() + timedelta(days=1)
+    next_week = date.today() + timedelta(days=7)
+    last_week = date.today() - timedelta(days=7)
+    next_month = date.today() + timedelta(days=30)
+    
+    # For registration deadline (timestamptz)
+    future_deadline = datetime.now(tz_dt.utc) + timedelta(days=5)
+    past_deadline = datetime.now(tz_dt.utc) - timedelta(days=1)
+
+    events_data = [
+        {
+            "title": "Global TB Strategy Webinar",
+            "description": "Deep dive into the 2024 WHO TB prevention roadmap.",
+            "type": "webinar",
+            "organizer": "WHO",
+            "date": tomorrow,
+            "time": time(14, 0),
+            "timezone": "UTC",
+            "location": "Virtual",
+            "virtual_link": "https://zoom.us/tb-strategy",
+            "max": 500,
+            "deadline": future_deadline,
+            "status": "upcoming",
+            "tags": ["tb", "prevention", "who"]
+        },
+        {
+            "title": "HIV Research Conference 2024",
+            "description": "Annual gathering of top HIV researchers and patient advocates.",
+            "type": "conference",
+            "organizer": "UNAIDS",
+            "date": next_week,
+            "time": time(9, 0),
+            "timezone": "CET",
+            "location": "Geneva, Switzerland",
+            "virtual_link": None,
+            "max": 200,
+            "deadline": future_deadline,
+            "status": "upcoming",
+            "tags": ["hiv", "research", "geneva"]
+        },
+        {
+            "title": "Community Advocacy Training",
+            "description": "Practical skills for local healthcare advocacy in LMICs.",
+            "type": "training",
+            "organizer": "MSF",
+            "date": last_week,
+            "time": time(10, 0),
+            "timezone": "UTC",
+            "location": "Virtual",
+            "virtual_link": "https://meet.google.com/advocacy-training",
+            "max": 50,
+            "deadline": past_deadline,
+            "status": "completed",
+            "tags": ["advocacy", "msf", "training"]
+        },
+        {
+            "title": "Clinical Policy Roundtable",
+            "description": "Invite-only discussion on new clinical trial regulations.",
+            "type": "roundtable",
+            "organizer": "VOCE",
+            "date": next_month,
+            "time": time(16, 0),
+            "timezone": "UTC",
+            "location": "Virtual",
+            "virtual_link": "https://teams.microsoft.com/roundtable",
+            "max": 20,
+            "deadline": past_deadline, # Testing deadline passed
+            "status": "upcoming",
+            "tags": ["policy", "regulations"]
+        },
+        {
+            "title": "Pediatric Health Seminar",
+            "description": "A seminar on newborn healthcare initiatives.",
+            "type": "webinar",
+            "organizer": "UNICEF",
+            "date": next_week,
+            "time": time(11, 0),
+            "timezone": "EST",
+            "location": "Virtual",
+            "virtual_link": "https://zoom.us/pediatric-health",
+            "max": 100,
+            "deadline": future_deadline,
+            "status": "cancelled",
+            "tags": ["pediatrics", "unicef"]
+        }
+    ]
+
+    event_ids = []
+    for e in events_data:
+        eid = await conn.fetchval("""
+            INSERT INTO events (
+                title, description, type, organizer, 
+                event_date, event_time, timezone, location, virtual_link,
+                participants, max_participants, registration_deadline,
+                status, tags
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0, $10, $11, $12, $13)
+            RETURNING event_id
+        """, e["title"], e["description"], e["type"], e["organizer"], 
+           e["date"], e["time"], e["timezone"], e["location"], e["virtual_link"],
+           e["max"], e["deadline"], e["status"], json.dumps(e["tags"]))
+        event_ids.append(eid)
+
+    # Seed some registrations
+    if user_ids and event_ids:
+        patient_id = user_ids.get("patient")
+        hcp_id = user_ids.get("hcp")
+        org_id = user_ids.get("org_member")
+
+        registrations = [
+            (event_ids[0], patient_id), # Global TB - Patient
+            (event_ids[0], hcp_id),     # Global TB - HCP
+            (event_ids[1], hcp_id),     # HIV Conf - HCP
+            (event_ids[2], patient_id), # Training - Patient
+            (event_ids[2], org_id),     # Training - Org Member
+        ]
+
+        for ev_id, u_id in registrations:
+            if u_id:
+                await conn.execute("""
+                    INSERT INTO event_registrations (event_id, user_id, status, registered_at)
+                    VALUES ($1, $2, 'registered', NOW())
+                    ON CONFLICT (event_id, user_id) DO NOTHING
+                """, ev_id, u_id)
+                
+                # Increment participant count
+                await conn.execute("""
+                    UPDATE events SET participants = participants + 1
+                    WHERE event_id = $1
+                """, ev_id)
+
+    logger.info("✅ Events & Registrations seeded.")
         
     logger.info("🌱 Database seeding complete.")

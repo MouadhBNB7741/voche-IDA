@@ -18,6 +18,8 @@ from app.api.v1.doctors import router as doctor_verification_router
 from app.api.v1.clinical_observations import router as clinical_observations_router
 from app.api.v1.resources import router as resources_router
 from app.api.v1.organizations import router as organizations_router
+from app.api.v1.events import router as events_router
+from app.api.v1.events import user_events_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -72,6 +74,8 @@ app.include_router(doctor_verification_router, prefix="/api/v1")
 app.include_router(clinical_observations_router, prefix="/api/v1")
 app.include_router(resources_router, prefix="/api/v1")
 app.include_router(organizations_router, prefix="/api/v1")
+app.include_router(events_router, prefix="/api/v1")
+app.include_router(user_events_router, prefix="/api/v1")
 
 
 @app.get("/api/v1/", tags=["Status"])

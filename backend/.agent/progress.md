@@ -264,6 +264,50 @@ Status: ✅ Implemented & Audited
     *   ✅ Join working groups (public auto-approve, private pending)
     *   ✅ Decide working group join (Platform Admin / Org Admin / Unauthorized bypass tested)
 *   **Result**: ✅ ALL PASS (14/14 tests)
+---
+
+## Events & Webinars API — Completed
+Status: ✅ Implemented & Audited
+
+### Endpoints
+
+| Method | URL | Auth | Description |
+|--------|-----|------|-------------|
+| **GET** | `/api/v1/events/` | Public (optional auth) | List events (filterable by type, date range, location, organizer, status; paginated; sorted upcoming-first) |
+| **GET** | `/api/v1/events/{event_id}` | Public (optional auth) | Get full event details with tags and registration_status |
+| **POST** | `/api/v1/events/{event_id}/register` | Required | Register for an event (transactional: validates deadline, capacity, duplicates) |
+| **DELETE** | `/api/v1/events/{event_id}/register` | Required | Cancel registration (transactional: decrements participants) |
+| **GET** | `/api/v1/users/me/events` | Required | Get all events the user is registered for (excludes cancelled) |
+
+### Tables Used
+- `events` — Event metadata (title, dates, type, capacity, JSONB tags, status)
+- `event_registrations` — User registrations with unique constraint `(event_id, user_id)`
+
+### Design Decisions
+- **Optional auth on public endpoints**: `list_events` and `get_event_details` use `auth_middleware_optional` to include `registration_status` when user is authenticated
+- **Transactional registration/cancellation**: Uses `async with self.conn.transaction()` to atomically update both `event_registrations` and `events.participants`
+- **Re-registration support**: Cancelled registrations can be re-activated without violating unique constraint
+- **Pagination**: Optional — if `page`/`limit` params are present, paginate; otherwise return all
+- **JSONB deserialization**: `events.tags` is deserialized from JSONB to Python list before Pydantic serialization
+- **Separate router for `/users/me/events`**: `user_events_router` mounted under `/users` prefix to keep event logic in one module
+
+### Files
+- Model: `app/models/event_model.py`
+- Schema: `app/schemas/events.py`
+- Route: `app/api/v1/events.py`
+- Tests: `app/tests/test_events.py`
+
+### 🧪 Testing
+- Created `app/tests/test_events.py`
+- **Result**: ✅ ALL PASS (22/22 tests)
+- **Coverage**:
+  - ✅ List Events (success, filter by type, filter by date range, sorting, pagination)
+  - ✅ Event Details (valid ID, invalid ID)
+  - ✅ Register Event (success, duplicate → 409, event full → 409, not found → 404, deadline passed → 400, auth required → 403)
+  - ✅ Cancel Registration (success, not registered → 404)
+  - ✅ My Events (success, excludes cancelled, pagination, auth required)
+  - ✅ Registration Status (appears in list and details for authenticated users)
+  - ✅ Re-registration after cancellation
 
 ---
 
@@ -304,3 +348,5 @@ Hi! Here’s a **simple, detailed explanation** of how the backend is structured
    * Use `pytest -v` to run tests and see detailed results.
    * Use `mypy` for type checking if unsure about types.
    * For any data returned from the DB that is JSONB, always **deserialize it** before using in Pydantic models.
+
+
