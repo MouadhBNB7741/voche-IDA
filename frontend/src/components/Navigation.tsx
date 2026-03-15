@@ -18,15 +18,16 @@ export default function Navigation() {
   const { theme, toggleTheme } = useTheme();
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-    `flex items-center gap-2 px-3 py-2 rounded-full text-sm transition-all duration-200
-    ${isActive
-      ? "bg-primary/10 text-primary"
-      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+  `flex items-center gap-2 px-3 py-2 rounded-full text-sm
+  transition-all duration-200
+  ${isActive
+      ? "bg-primary text-primary-foreground shadow-sm"
+      : "text-muted-foreground hover:text-primary hover:bg-primary/10"
     }`;
 
   return (
 
-    <header className="flex items-center justify-between px-6 py-3 bg-background/80 backdrop-blur-md sticky top-0 z-50 shadow-sm">
+    <header className="flex-shrink-0 flex items-center justify-between px-6 py-3 bg-background/80 backdrop-blur-md sticky top-0 z-50 shadow-sm">
 
       {/* Logo */}
       <div className="flex items-center gap-4">
@@ -41,19 +42,15 @@ export default function Navigation() {
           </div>
 
           <div>
-            <h1 className="font-bold text-lg text-foreground">
-              VOCE
-            </h1>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-              Platform
-            </p>
+            <h1 className="font-bold text-xl text-foreground tracking-tight">VOCE</h1>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">Platform</p>
           </div>
 
         </div>
       </div>
 
       {/* Navigation Links */}
-      <nav className="flex items-center gap-1">
+      <nav className="flex items-center gap-1 justify-center">
         {navItems.map(({ path, label, icon: Icon }) => (
           <NavLink
             key={path}
@@ -88,18 +85,18 @@ export default function Navigation() {
           variant="ghost"
           size="sm"
           asChild
-          className="hidden lg:flex hover:bg-muted"
+          className="hidden lg:flex hover:bg-primary/10 hover:text-primary transition-all cursor-pointer"
         >
           <Link to="/login">
             Log in
           </Link>
         </Button>
 
-        {/* Sign Up CTA */}
+        {/* Sign Up */}
         <Button
           asChild
           size="sm"
-          className="gap-2 rounded-full px-5 font-semibold bg-[#08a103] text-white shadow-md hover:bg-[#079702] hover:shadow-lg transition-all duration-200"
+          className="gap-2 rounded-full px-5 font-semibold bg-[#08a103] text-white shadow-md hover:bg-[#079702] hover:shadow-lg transition-all duration-200 cursor-pointer"
         >
           <Link to="/signup">
             Sign up
