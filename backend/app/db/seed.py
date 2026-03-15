@@ -669,4 +669,45 @@ async def seed_db(conn):
 
     logger.info("✅ Events & Registrations seeded.")
         
+    # ------------------------------------------------------------------
+    # 8. SEED SURVEYS
+    # ------------------------------------------------------------------
+    logger.info("🌱 Seeding Surveys...")
+    
+    # Clear existing surveys
+    await conn.execute("DELETE FROM survey_completions")
+    await conn.execute("DELETE FROM survey_responses")
+    await conn.execute("DELETE FROM survey_questions")
+    await conn.execute("DELETE FROM surveys")
+
+    survey_id = await conn.fetchval("""
+        INSERT INTO surveys (
+            survey_id, title, description, consent_text, target_audience, 
+            estimated_time, status, published_date
+        ) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7)
+        RETURNING survey_id
+    """, 
+    "Patient Experience 2024", 
+    "Help us improve care by sharing your recent hospital experience.",
+    "I agree to participate in this survey and for my data to be used for research purposes.",
+    json.dumps([]), 
+    "10 mins", 
+    "active",
+    date.today())
+
+    questions = [
+        ("Overall, how satisfied were you with your care?", "scale", 1, True, None),
+        ("Would you recommend our hospital to others?", "yes_no", 2, True, None),
+        ("What could we have done better?", "open_text", 3, False, None),
+        ("Which departments did you visit?", "multiple_choice", 4, True, json.dumps(["Oncology", "Cardiology", "ER", "General Medicine"]))
+    ]
+
+    for q_text, q_type, pos, req, opts in questions:
+        await conn.execute("""
+            INSERT INTO survey_questions (question_id, survey_id, question_text, question_type, order_position, required, options)
+            VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6)
+        """, survey_id, q_text, q_type, pos, req, opts)
+
+    logger.info("✅ Surveys seeded.")
+
     logger.info("🌱 Database seeding complete.")

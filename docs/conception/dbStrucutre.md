@@ -10,6 +10,7 @@
 | Feature         | Standard                            |
 | :-------------- | :---------------------------------- |
 | **Database**    | PostgreSQL 16+                      |
+| **ORM**         | SQLAlchemy (Python) / Prisma (Node) |
 | **Identity**    | UUID v4                             |
 | **Timezone**    | UTC                                 |
 | **Flexibility** | JSONB for unstructured AI data      |
@@ -22,10 +23,8 @@
    - users
    - user_profiles
    - password_reset_tokens
-   - doctor_verifications
 2. [Clinical Trials](#clinical-trials)
    - clinical_trials
-   - clinical_observations
    - trial_sites
    - trial_saves
    - trial_alerts
@@ -44,11 +43,11 @@
    - event_registrations
    - resources
    - resource_ratings
-   - resource_progress
 6. [Surveys & Research](#surveys--research)
    - surveys
    - survey_questions
    - survey_responses
+   - survey_completions
 7. [System & Engagement](#system--engagement)
    - notifications
    - user_activity_log
@@ -80,8 +79,6 @@
 | 📅 `created_at`        | `TIMESTAMP`       | `DEFAULT NOW()`   | Account creation timestamp (UTC)          |
 | 🕒 `last_login`        | `TIMESTAMP`       | `NULL`            | Security audit trail                      |
 | 🔄 `updated_at`        | `TIMESTAMP`       | `DEFAULT NOW()`   | Last profile update                       |
-| 🔔 `notification_preferences` | `JSONB`    | `DEFAULT '{"emailAlerts": true, "pushNotifications": true, "frequency": "instant"}'` | Notification settings |
-| 🆔 `verification`      | `JSONB`           | `DEFAULT '{"status": "not_submitted"}'`| HCP verification data & documents |
 
 **Indexes:**
 - `idx_users_email` on `email` (unique, for fast login lookup)
@@ -124,26 +121,6 @@
 - `CHECK (profile_visibility IN ('public', 'community_only', 'private'))`
 
 ---
-
-### `doctor_verifications`
-*Verification requests for Healthcare Professionals.*
-
-| Field                | Type              | Constraints       | Notes                                     |
-| :------------------- | :---------------- | :---------------- | :---------------------------------------- |
-| 🔑 `verification_id` | `UUID`            | `PRIMARY KEY`     | Request identifier                        |
-| 👤 `user_id`         | `UUID`            | `FOREIGN KEY`     | References `users(id)`                    |
-| 🆔 `license_number`  | `VARCHAR(100)`    | `NOT NULL`        | Medical license                           |
-| 🏥 `institution`     | `VARCHAR(255)`    | `NOT NULL`        | Current workplace                         |
-| 🌍 `country`         | `VARCHAR(100)`    | `NOT NULL`        | Issuing country                           |
-| 👨‍⚕️ `specialization` | `VARCHAR(100)`    | `NOT NULL`        | Medical specialty                         |
-| 📊 `status`          | `VARCHAR(50)`     | `DEFAULT 'pending'`| `pending`, `approved`, `rejected`        |
-| 👮 `reviewed_by`     | `UUID`            | `FOREIGN KEY`     | Admin who reviewed                        |
-| 📅 `reviewed_at`     | `TIMESTAMPTZ`     | `NULL`            | Review timestamp                          |
-| 📝 `rejection_reason`| `TEXT`            | `NULL`            | Reason for rejection                      |
-| 📅 `created_at`      | `TIMESTAMPTZ`     | `DEFAULT NOW()`   | Submission timestamp                      |
-
-**Constraints:**
-- `CHECK (status IN ('pending', 'approved', 'rejected'))`
 
 ### `password_reset_tokens`
 *Secure password recovery management.*
@@ -273,23 +250,6 @@
 
 ---
 
-### `clinical_observations`
-*Feedback from verified doctors on trials.*
-
-| Field                | Type              | Constraints       | Notes                                     |
-| :------------------- | :---------------- | :---------------- | :---------------------------------------- |
-| 🔑 `observation_id`  | `UUID`            | `PRIMARY KEY`     | Observation identifier                    |
-| 🔬 `trial_id`        | `UUID`            | `FOREIGN KEY`     | References `clinical_trials`              |
-| 👨‍⚕️ `doctor_id`       | `UUID`            | `FOREIGN KEY`     | References `users(id)` (Verified HCP only)|
-| 📝 `summary`         | `TEXT`            | `NOT NULL`        | Observation summary                       |
-| 📦 `feedback_data`   | `JSONB`           | `DEFAULT '{}'`    | Structured data                           |
-| ⚠️ `severity_level`  | `VARCHAR(50)`     | `NOT NULL`        | `low`, `medium`, `high`, `critical`       |
-| 🚩 `flagged`         | `BOOLEAN`         | `DEFAULT FALSE`   | Auto-flagged if critical                  |
-| 📅 `created_at`      | `TIMESTAMPTZ`     | `DEFAULT NOW()`   |                                           |
-
-**Constraints:**
-- `CHECK (severity_level IN ('low', 'medium', 'high', 'critical'))`
-
 ## 3. Community & Forums
 
 ### `communities`
@@ -335,7 +295,8 @@
 | 🔄 `updated_at`        | `TIMESTAMP`       | `DEFAULT NOW()`   | Last edit timestamp                       |
 | 👁️ `views_count`       | `INTEGER`         | `DEFAULT 0`       | Total views                               |
 | 💬 `replies_count`     | `INTEGER`         | `DEFAULT 0`       | Total replies/comments                    |
-| 👍 `likes_count`       | `INTEGER`         | `DEFAULT 0`       | Total likes                               |
+| 👍 `upvotes_count`     | `INTEGER`         | `DEFAULT 0`       | Total likes/upvotes                       |
+| 👎 `downvotes_count`   | `INTEGER`         | `DEFAULT 0`       | Total downvotes (optional)                |
 | 📌 `is_pinned`         | `BOOLEAN`         | `DEFAULT FALSE`   | Pinned to top of community                |
 | 🔒 `is_locked`         | `BOOLEAN`         | `DEFAULT FALSE`   | Prevents new replies                      |
 | 🗑️ `is_deleted`        | `BOOLEAN`         | `DEFAULT FALSE`   | Soft delete flag                          |
@@ -505,455 +466,124 @@
 
 ---
 
-You are acting as:
+## 5. Events & Resources
+
+### `events`
+*Educational events, webinars, and conferences.*
+
+| Field                  | Type              | Constraints       | Notes                                     |
+| :--------------------- | :---------------- | :---------------- | :---------------------------------------- |
+| 🔑 `event_id`          | `UUID`            | `PRIMARY KEY`     | Event identifier                          |
+| 📌 `title`             | `VARCHAR(500)`    | `NOT NULL`        | Event title                               |
+| 📝 `description`       | `TEXT`            | `NOT NULL`        | Event description and agenda              |
+| 📅 `event_date`        | `DATE`            | `NOT NULL`        | Event date                                |
+| 🕒 `event_time`        | `TIME`            | `NOT NULL`        | Event start time                          |
+| 🌍 `timezone`          | `VARCHAR(50)`     | `DEFAULT 'UTC'`   | Event timezone                            |
+| 🏷️ `type`              | `VARCHAR(50)`     | `NOT NULL`        | `webinar`, `conference`, `training`, `roundtable`|
+| 🏢 `organizer`         | `VARCHAR(255)`    | `NOT NULL`        | Organizing entity                         |
+| 🌐 `location`          | `VARCHAR(255)`    | `NULL`            | Physical location or "Virtual"            |
+| 🔗 `virtual_link`      | `VARCHAR(500)`    | `NULL`            | Virtual meeting link                      |
+| 👥 `participants`      | `INTEGER`         | `DEFAULT 0`       | Current registrations                     |
+| 🎯 `max_participants`  | `INTEGER`         | `NULL`            | Maximum capacity                          |
+| ⏰ `registration_deadline`| `TIMESTAMP`    | `NULL`            | Last date to register                     |
+| 📊 `status`            | `VARCHAR(50)`     | `DEFAULT 'upcoming'`| `upcoming`, `ongoing`, `completed`, `cancelled`|
+| 🏷️ `tags`              | `JSONB`           | `DEFAULT '[]'`    | Event tags/topics                         |
+| 🖼️ `banner_image`      | `VARCHAR(255)`    | `NULL`            | Event banner URL                          |
+| 📅 `created_at`        | `TIMESTAMP`       | `DEFAULT NOW()`   | Event creation timestamp                  |
+| 🔄 `updated_at`        | `TIMESTAMP`       | `DEFAULT NOW()`   | Last update timestamp                     |
+
+**Indexes:**
+- `idx_events_event_date` on `event_date`
+- `idx_events_type` on `type`
+- `idx_events_status` on `status`
+
+**Constraints:**
+- `CHECK (type IN ('webinar', 'conference', 'training', 'roundtable'))`
+- `CHECK (status IN ('upcoming', 'ongoing', 'completed', 'cancelled'))`
+
+---
+
+### `event_registrations`
+*User registrations for events.*
+
+| Field                | Type              | Constraints       | Notes                                     |
+| :------------------- | :---------------- | :---------------- | :---------------------------------------- |
+| 🔑 `registration_id` | `UUID`            | `PRIMARY KEY`     | Registration identifier                   |
+| 📅 `event_id`        | `UUID`            | `FOREIGN KEY, NOT NULL`| References `events(event_id)` ON DELETE CASCADE|
+| 👤 `user_id`         | `UUID`            | `FOREIGN KEY, NOT NULL`| References `users(id)` ON DELETE CASCADE|
+| 📊 `status`          | `VARCHAR(50)`     | `DEFAULT 'registered'`| `registered`, `attended`, `no_show`, `cancelled`|
+| ✅ `confirmation_sent`| `BOOLEAN`        | `DEFAULT FALSE`   | Confirmation email sent                   |
+| 📅 `registered_at`   | `TIMESTAMP`       | `DEFAULT NOW()`   | Registration timestamp                    |
+| 🔄 `updated_at`      | `TIMESTAMP`       | `DEFAULT NOW()`   | Last update timestamp                     |
+
+**Indexes:**
+- `idx_event_registrations_event_id` on `event_id`
+- `idx_event_registrations_user_id` on `user_id`
+- `unique_event_user_registration` UNIQUE(`event_id`, `user_id`)
+
+**Constraints:**
+- `CHECK (status IN ('registered', 'attended', 'no_show', 'cancelled'))`
+
+---
+
+### `resources`
+*Educational materials and toolkits.*
+
+| Field                | Type              | Constraints       | Notes                                     |
+| :------------------- | :---------------- | :---------------- | :---------------------------------------- |
+| 🔑 `resource_id`     | `UUID`            | `PRIMARY KEY`     | Resource identifier                       |
+| 📌 `title`           | `VARCHAR(500)`    | `NOT NULL`        | Resource title                            |
+| 🏷️ `type`            | `VARCHAR(50)`     | `NOT NULL`        | `video`, `document`, `toolkit`, `course`  |
+| 📚 `category`        | `VARCHAR(100)`    | `NOT NULL`        | Resource category/topic                   |
+| 📝 `description`     | `TEXT`            | `NOT NULL`        | Resource description                      |
+| 🔗 `url`             | `VARCHAR(500)`    | `NULL`            | External URL or file path                 |
+| ⏱️ `duration`        | `VARCHAR(50)`     | `NULL`            | Duration (for videos) or page count       |
+| 🗣️ `language`        | `VARCHAR(10)`     | `DEFAULT 'en'`    | Resource language (ISO 639-1)             |
+| 📥 `downloads`       | `INTEGER`         | `DEFAULT 0`       | Total downloads                           |
+| ⭐ `rating`          | `DECIMAL(3,2)`    | `DEFAULT 0.00`    | Average rating (0.00-5.00)                |
+| 🏆 `featured`        | `BOOLEAN`         | `DEFAULT FALSE`   | Featured resource flag                    |
+| 🔒 `requires_auth`   | `BOOLEAN`         | `DEFAULT FALSE`   | Authentication required                   |
+| 👤 `author`          | `VARCHAR(255)`    | `NULL`            | Author or source organization             |
+| 🏢 `organization_id` | `UUID`            | `FOREIGN KEY, NULL`| References `organizations(org_id)`       |
+| 🏷️ `tags`            | `JSONB`           | `DEFAULT '[]'`    | Resource tags                             |
+| 📅 `published_date`  | `DATE`            | `NULL`            | Publication date                          |
+| 📅 `created_at`      | `TIMESTAMP`       | `DEFAULT NOW()`   | Record creation timestamp                 |
+| 🔄 `updated_at`      | `TIMESTAMP`       | `DEFAULT NOW()`   | Last update timestamp                     |
+
+**Indexes:**
+- `idx_resources_type` on `type`
+- `idx_resources_category` on `category`
+- `idx_resources_language` on `language`
+- `idx_resources_featured` on `featured`
+
+**Constraints:**
+- `CHECK (type IN ('video', 'document', 'toolkit', 'course'))`
+- `CHECK (rating >= 0 AND rating <= 5)`
+
+---
+
+### `resource_ratings`
+*User ratings and reviews for resources.*
+
+| Field                | Type              | Constraints       | Notes                                     |
+| :------------------- | :---------------- | :---------------- | :---------------------------------------- |
+| 🔑 `rating_id`       | `UUID`            | `PRIMARY KEY`     | Rating identifier                         |
+| 📚 `resource_id`     | `UUID`            | `FOREIGN KEY, NOT NULL`| References `resources(resource_id)` ON DELETE CASCADE|
+| 👤 `user_id`         | `UUID`            | `FOREIGN KEY, NOT NULL`| References `users(id)` ON DELETE CASCADE|
+| ⭐ `rating`          | `INTEGER`         | `NOT NULL`        | Rating (1-5 stars)                        |
+| 📝 `review`          | `TEXT`            | `NULL`            | Optional text review                      |
+| 📅 `created_at`      | `TIMESTAMP`       | `DEFAULT NOW()`   | Rating creation timestamp                 |
+
+**Indexes:**
+- `idx_resource_ratings_resource_id` on `resource_id`
+- `idx_resource_ratings_user_id` on `user_id`
+- `unique_resource_user_rating` UNIQUE(`resource_id`, `user_id`) - one rating per user per resource
+
+**Constraints:**
+- `CHECK (rating >= 1 AND rating <= 5)`
+
+---
 
-• Senior QA Engineer
-• Staff Backend Engineer
-• FastAPI Architecture Auditor
-• PostgreSQL Performance Reviewer
-• Security Reviewer
-• Test Automation Engineer
-
-Your mission is to audit, evaluate, fix, and finalize the Events & Webinars API module that has already been implemented.
-
-This is not an implementation task.
-
-This is a production-grade QA audit.
-
-🎯 Audit Target
-
-Module:
-
-/api/v1/events
-
-
-Files involved:
-
-app/models/event_model.py
-app/schemas/events.py
-app/api/v1/events.py
-app/tests/test_events.py
-backend/.agent/progress.md
-
-
-Database tables:
-
-events
-event_registrations
-
-🚨 CRITICAL PROJECT RULES (Must be enforced)
-
-You must verify the implementation follows all project rules.
-
-Architecture Rules
-
-Routes must NOT access the database.
-
-Routes must only:
-
-1 Validate input
-2 Call model functions
-3 Return schema responses
-
-
-Database logic must exist ONLY inside models.
-
-app/models/
-
-Database Rules
-
-Database layer must follow:
-
-• asyncpg
-• Raw SQL only
-• Parameterized queries
-
-Example:
-
-WHERE event_id = $1
-
-
-Never allow:
-
-f"SELECT * FROM events WHERE id = {id}"
-
-JSONB Rule
-
-Columns such as:
-
-events.tags
-
-
-Must be deserialized before returning to Pydantic.
-
-Example:
-
-json.loads(record["tags"])
-
-Testing Rules
-
-Tests must exist for every endpoint.
-
-Test file:
-
-app/tests/test_events.py
-
-
-Run:
-
-pytest -v
-
-
-All tests must pass.
-
-STEP 1 — READ PROJECT CONTEXT
-
-Before auditing code, read the following documents:
-
-docs/conception/backend_conception.md
-docs/conception/dbStrucutre.md
-docs/conception/mvp.md
-docs/conception/actions.md
-backend/.agent/progress.md
-
-
-Understand:
-
-• Architecture pattern
-• Model layer structure
-• Route conventions
-• Pagination format
-• Error handling strategy
-• Auth middleware usage
-
-You must evaluate implementation against these standards.
-
-STEP 2 — VERIFY IMPLEMENTATION
-
-Audit these files:
-
-app/models/event_model.py
-app/schemas/events.py
-app/api/v1/events.py
-
-
-Check the following.
-
-Architecture Compliance
-
-Verify:
-
-✔ Routes do not run SQL
-✔ Models contain all DB logic
-✔ Schemas correctly validate inputs
-✔ Dependency injection is correct
-
-SQL Quality
-
-Verify queries:
-
-✔ Use parameterized placeholders $1, $2
-✔ No SQL injection risk
-✔ Correct JOIN usage
-✔ Correct indexes usage
-✔ Efficient queries (no N+1 queries)
-
-Example improvement if needed:
-
-WHERE event_id = ANY($1)
-
-
-instead of repeated queries.
-
-Transactions
-
-Verify that multi-step operations use:
-
-async with self.conn.transaction():
-
-
-Required for:
-
-register_for_event
-cancel_registration
-
-Edge Case Handling
-
-Verify handling of:
-
-Case	Expected
-Event not found	404
-Duplicate registration	409
-Event full	409
-Deadline passed	400
-Cancel not registered	404
-Unauthorized	403
-Pagination Pattern
-
-Ensure consistency with project standard.
-
-Expected pattern:
-
-?page=
-&limit=
-
-
-Response format:
-
-{
-  "data": [],
-  "meta": {
-     "total": 100,
-     "page": 1,
-     "limit": 20,
-     "pages": 5
-  }
-}
-
-Authentication
-
-Verify usage of:
-
-auth_middleware
-auth_middleware_optional
-
-
-Rules:
-
-Endpoint	Auth
-GET /events	optional
-GET /events/{id}	optional
-POST register	required
-DELETE register	required
-GET /users/me/events	required
-STEP 3 — FIND ISSUES
-
-If you find issues:
-
-Fix them.
-
-Possible categories:
-
-Architecture violation
-
-Move SQL from routes to models.
-
-Security issues
-
-Fix SQL injection risks.
-
-Performance problems
-
-Batch queries.
-
-Schema mismatch
-
-Align Pydantic with DB schema.
-
-Naming inconsistencies
-
-Match project naming style.
-
-STEP 4 — RUN TESTS
-
-Run:
-
-pytest -v
-
-
-File:
-
-app/tests/test_events.py
-
-
-Verify:
-
-22 tests
-
-
-If any test fails:
-
-You must:
-
-1 Diagnose the issue
-2 Fix the code
-3 Rerun tests
-4 Repeat until ALL tests pass
-
-
-Final result required:
-
-22/22 PASSED
-
-
-No warnings.
-
-STEP 5 — ADD QA AUDIT DOCUMENT
-
-Create new file:
-
-docs/audits/events_api_qa_audit.md
-
-
-The document must contain:
-
-Events API QA Audit
-Overview
-
-Module audited:
-
-/api/v1/events
-
-Architecture Compliance
-
-Score /10
-
-Example:
-
-Architecture: 9/10
-
-SQL Quality
-
-Score /10
-
-Security
-
-Score /10
-
-Performance
-
-Score /10
-
-Code Quality
-
-Score /10
-
-Test Coverage
-
-Score /10
-
-Final Score
-Total Score: 9.3 / 10
-
-
-Rating scale:
-
-Score	Rating
-9–10	Excellent
-7–8	Good
-5–6	Acceptable
-<5	Failed
-Issues Found
-
-List issues discovered.
-
-Fixes Applied
-
-List improvements made.
-
-Final Verdict
-PASS / FAIL
-
-STEP 6 — CREATE POSTMAN COLLECTION
-
-Generate file:
-
-docs/postman/events_api_collection.json
-
-
-Include all endpoints:
-
-List Events
-GET /api/v1/events
-
-
-Query params:
-
-type
-date_from
-date_to
-location
-organizer
-status
-page
-limit
-
-Get Event Details
-GET /api/v1/events/{event_id}
-
-Register Event
-POST /api/v1/events/{event_id}/register
-
-
-Headers:
-
-Authorization: Bearer {{token}}
-
-Cancel Registration
-DELETE /api/v1/events/{event_id}/register
-
-
-Headers:
-
-Authorization: Bearer {{token}}
-
-My Events
-GET /api/v1/users/me/events
-
-
-Headers:
-
-Authorization: Bearer {{token}}
-
-STEP 7 — UPDATE PROGRESS.MD
-
-File:
-
-backend/.agent/progress.md
-
-
-You must:
-
-✔ keep the existing Events API endpoint table
-✔ append QA audit results below it
-
-Example:
-
-## Events & Webinars API — QA Audit
-
-Status: ✅ Passed QA Audit
-
-Score: 9.4 / 10 (Excellent)
-
-Audit Findings:
-- Architecture compliant
-- No SQL injection risk
-- Proper transactions implemented
-- Full test coverage (22 tests)
-- Performance optimized queries
-
-STEP 8 — FINAL OUTPUT
-
-Your response must contain:
-
-1️⃣ Full audit report
-2️⃣ List of improvements made
-3️⃣ Fixed code snippets (if changes were required)
-4️⃣ Test execution results
-5️⃣ QA audit document
-6️⃣ Postman collection JSON
-7️⃣ Updated progress.md section
-
-FINAL GOAL
-
-A production-grade audited Events API that is:
-
-✔ Clean architecture compliant
-✔ Secure
-✔ Efficient
-✔ Fully tested
-✔ Properly documented
-✔ Ready for production deployment.
 ## 6. Surveys & Research
 
 ### `surveys`
@@ -1025,6 +655,26 @@ A production-grade audited Events API that is:
 
 ---
 
+### `survey_completions`
+*Tracks overall survey completion per user.*
+
+| Field                | Type              | Constraints       | Notes                                     |
+| :------------------- | :---------------- | :---------------- | :---------------------------------------- |
+| 🔑 `completion_id`   | `UUID`            | `PRIMARY KEY`     | Completion identifier                     |
+| 📊 `survey_id`       | `UUID`            | `FOREIGN KEY, NOT NULL`| References `surveys(survey_id)` ON DELETE CASCADE|
+| 👤 `user_id`         | `UUID`            | `FOREIGN KEY, NULL`| References `users(id)` (NULL if anonymous)|
+| 🔒 `is_anonymous`    | `BOOLEAN`         | `DEFAULT FALSE`   | Completion anonymity flag                 |
+| 📅 `submitted_at`    | `TIMESTAMP`       | `DEFAULT NOW()`   | Completion timestamp                      |
+
+**Indexes:**
+- `idx_survey_completions_survey_id` on `survey_id`
+- `idx_survey_completions_user_id` on `user_id`
+
+**Constraints:**
+- `UNIQUE(survey_id, user_id)` - Prevent duplicate completions for non-anonymous users
+
+---
+
 ## 7. System & Engagement
 
 ### `notifications`
@@ -1090,13 +740,10 @@ users (1) ←→ (N) resource_ratings
 users (1) ←→ (N) survey_responses
 users (1) ←→ (N) organization_members
 users (1) ←→ (N) working_group_members
-users (1) ←→ (N) doctor_verifications
-users (1) ←→ (N) clinical_observations
 
 clinical_trials (1) ←→ (N) trial_sites
 clinical_trials (1) ←→ (N) trial_saves
 clinical_trials (1) ←→ (N) trial_alerts
-clinical_trials (1) ←→ (N) clinical_observations
 
 communities (1) ←→ (N) forum_posts
 forum_posts (1) ←→ (N) comments
@@ -1111,7 +758,6 @@ working_groups (1) ←→ (N) working_group_members
 events (1) ←→ (N) event_registrations
 
 resources (1) ←→ (N) resource_ratings
-resources (1) ←→ (N) resource_progress
 
 surveys (1) ←→ (N) survey_questions
 surveys (1) ←→ (N) survey_responses
@@ -1154,7 +800,7 @@ surveys (1) ←→ (N) survey_responses
 - **Time-Series:** Descending indexes on timestamp fields for "recent items" queries
 
 ### Denormalization
-- **Counter Caches:** `replies_count`, `likes_count`, `member_count` reduce join overhead
+- **Counter Caches:** `replies_count`, `upvotes_count`, `member_count` reduce join overhead
   - Updated via triggers or application logic
 - **JSONB Fields:** `metadata`, `filter_criteria`, `interests` allow flexible data without schema changes
 

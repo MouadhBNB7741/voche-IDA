@@ -333,6 +333,9 @@ CREATE INDEX idx_survey_responses_survey_id ON survey_responses(survey_id);
 CREATE INDEX idx_survey_responses_user_id ON survey_responses(user_id);
 CREATE INDEX idx_survey_responses_question_id ON survey_responses(question_id);
 CREATE INDEX idx_survey_responses_submitted_at ON survey_responses(submitted_at DESC);
+CREATE INDEX IF NOT EXISTS idx_survey_completions_user ON survey_completions(user_id);
+CREATE INDEX IF NOT EXISTS idx_survey_completions_survey ON survey_completions(survey_id);
+CREATE INDEX IF NOT EXISTS idx_survey_responses_completion ON survey_responses(completion_id);
 
 COMMENT ON INDEX idx_survey_responses_survey_id IS 'Aggregate responses for survey analysis';
 

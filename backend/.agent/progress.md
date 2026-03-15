@@ -311,6 +311,62 @@ Status: ✅ Implemented & Audited
 
 ---
 
+## Surveys, Research & Completions API Module
+
+Status: ✅ Implemented & Audited
+
+### 🌐 Endpoints
+
+| Method | URL | Auth | Description |
+| --- | --- | --- | --- |
+| **GET** | `/api/v1/surveys/` | Required | List active surveys eligible for user (filter by status, paginated) |
+| **GET** | `/api/v1/surveys/{survey_id}` | Required | Get full survey details including questions and options |
+| **POST** | `/api/v1/surveys/{survey_id}/responses` | Required | Submit responses (validates required, types, consent; handles anonymization) |
+| **GET** | `/api/v1/surveys/completed` | Required | Returns a paginated history of surveys previously completed by the user |
+| **GET** | `/api/v1/surveys/completed/{completion_id}` | Required | Returns exact answers provided in a specific past session |
+
+### 🗄️ Database & Infrastructure
+
+* **`surveys`**: Survey metadata (title, dates, status, target_audience JSONB).
+* **`survey_questions`**: Survey instruments (text, type, required flag, options JSONB).
+* **`survey_completions`**: Tracks individual submission sessions.
+* **`survey_responses`**: User responses (linked to `completion_id` for atomic response grouping, JSONB answers).
+* **Performance & Schema**: Updated `app/db/schema.sql` with correct creation order. Added optimized indexes on `user_id`, `survey_id`, and `completion_id` for fast history retrieval.
+
+### 🏗️ Architecture, Design & Security
+
+* **Validation & Eligibility Engine**:
+* Checks `target_audience` using Postgres JSONB `?` operator matched to user profile types.
+* Evaluates boolean `already_completed` inline and prevents non-anonymous users from completing the same survey twice.
+* Rejects submissions with 400 if `consent_given` is false.
+* Deserializes `options` from JSONB into Python structures and dynamically validates JSONB answers before inserting.
+
+
+* **Privacy & Anonymization Engine**:
+* Sets `user_id = NULL` automatically if `anonymous=True`.
+* Anonymous completions are NOT retrievable via the `completed` endpoint, strictly preserving user privacy.
+
+
+* **Data Integrity & Security**:
+* Uses transactional bulk inserts (`executemany`) for speed and safety.
+* Enforces strict ownership checks: users can only retrieve their own completion details.
+
+
+
+### 🧪 Testing
+
+* Created `app/tests/test_surveys.py`
+* **Result**: ✅ ALL PASS (19/19 tests)
+* **Coverage**:
+* ✅ List Surveys (success, filter by status, pagination, eligibility)
+* ✅ Survey Details (valid returned with questions, invalid ID → 404)
+* ✅ Submit Responses (success, missing consent → 400, missing required → 400, invalid question ID → 400, handles anonymization)
+* ✅ Survey Completions Tracking (records session, links responses)
+* ✅ Completed Surveys List (paginated, user-specific, non-anonymous only)
+* ✅ Completion Details (security checks, responses retrieval)
+
+---
+
 ## Guidance for Azzedine
 
 Hi! Here’s a **simple, detailed explanation** of how the backend is structured :

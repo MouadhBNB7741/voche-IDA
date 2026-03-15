@@ -1007,6 +1007,28 @@ CREATE TABLE survey_questions (
 
 COMMENT ON TABLE survey_questions IS 'Individual questions within surveys with ordering';
 COMMENT ON COLUMN survey_questions.options IS 'JSONB array of choices for multiple_choice questions';
+-- -----------------------------------------------------------------------------
+-- survey_completions: Tracks overall survey completion
+-- -----------------------------------------------------------------------------
+-- Purpose: Track when a user completes a survey
+-- Benefits: Analytics, duplicate prevention, progress tracking
+-- -----------------------------------------------------------------------------
+
+CREATE TABLE survey_completions (
+    completion_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    survey_id UUID NOT NULL REFERENCES surveys(survey_id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    submitted_at TIMESTAMPTZ DEFAULT NOW(),
+    is_anonymous BOOLEAN DEFAULT FALSE,
+    
+    -- Prevent duplicate completions for non-anonymous users
+    CONSTRAINT unique_user_survey_completion UNIQUE(survey_id, user_id)
+);
+
+COMMENT ON TABLE survey_completions IS 'Tracks overall survey completion per user';
+
+CREATE INDEX idx_survey_completions_user ON survey_completions(user_id);
+CREATE INDEX idx_survey_completions_survey ON survey_completions(survey_id);
 
 
 -- -----------------------------------------------------------------------------
@@ -1025,6 +1047,7 @@ CREATE TABLE survey_responses (
     survey_id UUID NOT NULL REFERENCES surveys(survey_id) ON DELETE CASCADE,
     user_id UUID REFERENCES users(id) ON DELETE SET NULL, -- NULL for anonymous responses
     question_id UUID NOT NULL REFERENCES survey_questions(question_id) ON DELETE CASCADE,
+    completion_id UUID NOT NULL REFERENCES survey_completions(completion_id) ON DELETE CASCADE,
     
     -- Response Data
     answer JSONB NOT NULL,                         -- Flexible format for different question types
@@ -1036,6 +1059,8 @@ CREATE TABLE survey_responses (
 
 COMMENT ON TABLE survey_responses IS 'User responses to survey questions with anonymity support';
 COMMENT ON COLUMN survey_responses.answer IS 'JSONB flexible format to handle various answer types';
+
+CREATE INDEX idx_survey_responses_completion ON survey_responses(completion_id);
 
 
 -- ============================================================================
