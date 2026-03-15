@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useData } from '../contexts/DataContext';
-import { Card } from '../components/ui/card';
-import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
+import { useData } from '../../contexts/DataContext';
+import { Card } from '../../components/ui/card';
+import { Button } from '../../components/ui/button';
+import { Badge } from '../../components/ui/badge';
 import {
   ArrowLeft,
   Heart,
@@ -19,10 +19,10 @@ import {
   Activity,
   FlaskConical
 } from 'lucide-react';
-import { trialService } from '../services/TrialService';
-import type { Trial } from '../data/mockData';
+import { trialService } from '../../services/TrialService';
+import type { Trial } from '../../data/mockData';
 import { toast } from 'sonner';
-import { PageHeader } from '../components/ui/PageHeader';
+import { PageHeader } from '../../components/ui/PageHeader';
 
 // Eligibility Quiz Questions
 const eligibilityQuestions = [
