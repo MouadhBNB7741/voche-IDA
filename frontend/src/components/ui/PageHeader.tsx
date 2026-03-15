@@ -23,18 +23,15 @@ export function PageHeader({
     const isGreen = variant === 'green';
 
     return (
-        <div className={cn(
-            "relative overflow-hidden rounded-3xl text-white shadow-2xl mb-8 animate-in fade-in slide-in-from-top-4 duration-700",
-            isGreen ? "bg-green-600" : "bg-orange-600",
-            className
-        )}>
-            {/* Dynamic Background Gradients */}
-            <div className={cn(
-                "absolute inset-0 mix-blend-multiply opacity-50",
+        <div
+            className={cn(
+                "relative overflow-hidden rounded-3xl text-white shadow-2xl mb-8 animate-in fade-in slide-in-from-top-4 duration-700",
                 isGreen
-                    ? "bg-gradient-to-r from-secondary/50 via-primary to-primary"
-                    : "bg-gradient-to-r from-orange-600/80 via-accent to-amber-400/50"
-            )} />
+                    ? "bg-[linear-gradient(var(--gradient-primary))]"
+                    : "bg-[linear-gradient(var(--gradient-accent))]",
+                className
+            )}
+        >
 
             {/* Decorative Blur Orbs */}
             <div className={cn(

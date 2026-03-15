@@ -38,9 +38,28 @@
 
     --input: 220 13% 88%;
     --border: 220 13% 88%;
+
+    /* VOCE Green → Orange Gradients */
+    --gradient-primary: 135deg,
+      hsl(147 65% 32%),
+      /* deep emerald */
+      hsl(142 55% 45%),
+      /* bright green */
+      hsl(24 94% 52%);
+    /* warm orange accent */
+
+    --gradient-accent: 135deg,
+      hsl(142 40% 85%),
+      /* soft green tint */
+      hsl(147 45% 70%),
+      /* light green */
+      hsl(24 94% 52%);
+    /* orange highlight */
   }
 
-   body {
+
+
+  body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
   }
@@ -57,25 +76,24 @@
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.65rem 0.9rem;
-  border-radius: 0.5rem;
+  padding: 0.65rem 1rem;
+  border-radius: 999px;
   color: hsl(var(--muted-foreground));
   text-decoration: none;
-  transition: all 0.2s ease;
+  transition: color 0.2s ease, background-color 0.2s ease, transform 0.15s ease;
 }
 
 .voce-nav-item:hover {
-  background-color: hsl(var(--muted));
-  color: hsl(var(--foreground));
+  background-color: hsl(var(--secondary));
+  color: hsl(var(--primary));
 }
 
 .voce-nav-item.active {
   background-color: hsl(var(--secondary));
   color: hsl(var(--primary));
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .voce-nav-item svg {
   color: currentColor;
 }
-
