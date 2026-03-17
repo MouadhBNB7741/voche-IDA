@@ -2,7 +2,7 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    --background: 220 14% 94%;
     --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
@@ -12,26 +12,36 @@
     --input: 220 13% 91%;
     --ring: 142 71% 45%;
 
-    /* Primary: green */
-    --primary: 147 65% 32%;
+    /* Primary Green */
+    --primary: 142 70% 40%;
     --primary-foreground: 0 0% 100%;
-    --primary-muted: 142 60% 35%;
 
-    /* Primary: soft green */
+    /* Secondary (Soft Green Surface) */
     --secondary: 142 35% 94%;
     --secondary-foreground: 142 60% 22%;
 
-    /* Orange accent */
+    /* Teal */
+    --teal: 165 60% 35%;
+    --teal-foreground: 0 0% 100%;
+
+    /* Lime */
+    --lime: 85 65% 45%;
+    --lime-foreground: 0 0% 100%;
+
+    /* Blue */
+    --blue: 217 85% 55%;
+    --blue-foreground: 0 0% 100%;
+
+    /* Accent */
     --accent: 24 94% 52%;
     --accent-foreground: 0 0% 100%;
 
     --muted: 220 14% 96%;
     --muted-foreground: 215 16% 47%;
 
-    --success: 142 71% 45%;
+    --success: 142 70% 45%;
     --warning: 38 92% 50%;
-    --info: 217 91% 60%;
-    --radius: 0.75rem;
+    --info: 217 85% 55%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
@@ -39,25 +49,22 @@
     --input: 220 13% 88%;
     --border: 220 13% 88%;
 
-    /* VOCE Green → Orange Gradients */
     --gradient-primary: 135deg,
-      hsl(147 65% 32%),
-      /* deep emerald */
-      hsl(142 55% 45%),
-      /* bright green */
-      hsl(24 94% 52%);
-    /* warm orange accent */
+      hsl(142 70% 40%),
+      /* green */
+      hsl(165 60% 35%),
+      /* teal */
+      hsl(217 85% 55%);
+    /* blue */
 
     --gradient-accent: 135deg,
-      hsl(142 40% 85%),
-      /* soft green tint */
-      hsl(147 45% 70%),
-      /* light green */
-      hsl(24 94% 52%);
-    /* orange highlight */
+      hsl(85 65% 75%),
+      /* light lime */
+      hsl(142 50% 70%),
+      /* soft green */
+      hsl(217 85% 55%);
+    /* blue */
   }
-
-
 
   body {
     background-color: hsl(var(--background));
