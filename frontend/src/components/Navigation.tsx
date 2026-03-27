@@ -1,4 +1,4 @@
-import { NavLink, Link, useLocation, useNavigate } from "react-router-dom";
+import { NavLink, Link, useNavigate } from "react-router-dom";
 
 import idaLogo from "../assets/ida.webp";
 
@@ -37,14 +37,13 @@ const navItems = [
   { path: "/", label: "Home", icon: Home },
   { path: "/trials", label: "Trials", icon: FlaskConical },
   { path: "/community", label: "Community", icon: Users },
-  { path: "/resourcelibrary", label: "Resources", icon: BookOpen },
-  { path: "/eventshub", label: "Events", icon: Calendar },
+  { path: "/resources", label: "Resources", icon: BookOpen },
+  { path: "/events", label: "Events", icon: Calendar },
   { path: "/assistant", label: "Assistant", icon: MessageCircle }
 ];
 
 export default function Navigation() {
 
-  const location = useLocation();
   const navigate = useNavigate();
 
   const { isAuthenticated, user, logout } = useAuth();
@@ -78,10 +77,10 @@ export default function Navigation() {
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     `flex items-center gap-2 px-3 py-2 rounded-full text-sm
-     transition-all duration-200
-     ${isActive
-      ? "bg-primary text-primary-foreground shadow-sm"
-      : "text-muted-foreground hover:text-primary hover:bg-primary/10"
+   transition-all duration-200
+   ${isActive
+      ? "bg-primary text-primary-color shadow-sm"
+      : "text-muted-foreground hover:text-green-600 hover:bg-green-50"
     }`;
 
   return (
@@ -134,9 +133,22 @@ export default function Navigation() {
           variant="ghost"
           size="icon"
           onClick={toggleTheme}
-          className="rounded-full hover:bg-primary/10 hover:text-primary transition-all duration-300"
+          className="rounded-full transition-all duration-300"
         >
           {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
+        </Button>
+
+        {/* Notifications */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative rounded-full hover:bg-secondary-color/10 hover:text-secondary-color transition-all duration-300"
+          onClick={() => navigate('/notifications')}
+        >
+          <Bell size={20} />
+          {unreadCount > 0 && (
+            <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-destructive rounded-full border border-background animate-pulse" />
+          )}
         </Button>
 
         {/* User Profile / Login */}
@@ -150,7 +162,7 @@ export default function Navigation() {
               >
                 <Avatar className="h-9 w-9 border border-border">
                   <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground font-bold">
+                  <AvatarFallback className="bg-gradient-to-br from-primary to-secondary-foreground text-primary-foreground font-bold">
                     {getInitials(user.name)}
                   </AvatarFallback>
                 </Avatar>
@@ -177,6 +189,7 @@ export default function Navigation() {
                 <span>Profile</span>
               </DropdownMenuItem>
 
+              {/* Note: /notifications route should be added to App.tsx */}
               <DropdownMenuItem onClick={() => navigate("/notifications")}>
                 <Bell className="mr-2 h-4 w-4" />
                 <span>Notifications</span>
@@ -192,7 +205,7 @@ export default function Navigation() {
 
               <DropdownMenuItem
                 onClick={handleLogout}
-                className="text-red-500 focus:text-red-500 focus:bg-red-50 dark:focus:bg-red-950/20"
+                className="text-destructive focus:text-destructive focus:bg-destructive/10"
               >
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Log out</span>
@@ -206,7 +219,7 @@ export default function Navigation() {
               variant="ghost"
               size="sm"
               asChild
-              className="hidden lg:flex hover:bg-primary/10 hover:text-primary transition-all cursor-pointer"
+              className="hidden lg:flex cursor-pointer"
             >
               <Link to="/login">
                 Log in
@@ -214,9 +227,10 @@ export default function Navigation() {
             </Button>
 
             <Button
+              variant="green"
               asChild
               size="sm"
-              className="gap-2 rounded-full px-5 font-semibold bg-[#08a103] text-white shadow-md hover:bg-[#079702] hover:shadow-lg transition-all duration-200 cursor-pointer"
+              className="hidden lg:flex rounded-full cursor-pointer"
             >
               <Link to="/signup">
                 Sign up
