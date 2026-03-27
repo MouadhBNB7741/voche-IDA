@@ -141,13 +141,6 @@ export default function Community() {
         action={
           <Dialog open={isNewPostOpen} onOpenChange={setIsNewPostOpen}>
             <DialogTrigger asChild>
-              {/*
-                Using a plain <button> here intentionally.
-                The Button component's cva default variant hard-codes text-primary-foreground
-                (white), which overrides any text-primary className passed in — both classes
-                have equal Tailwind specificity so cva's compiled class wins at runtime.
-                A plain <button> has no conflicting defaults, so the text color is guaranteed.
-              */}
               <Button variant="hero" className="gap-2 font-semibold transition-transform hover:scale-105">
                 <Plus size={20} />
                 Start Discussion

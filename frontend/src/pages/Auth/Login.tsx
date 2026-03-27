@@ -44,9 +44,9 @@ export default function Login() {
       {/* Branding Section */}
       <div className="hidden lg:flex lg:w-1/2 relative bg-[#0f172a] text-white flex-col justify-between p-12 overflow-hidden">
         <div className="absolute inset-0 z-0">
-          <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-primary/20 rounded-full blur-3xl rounded-full"></div>
-          <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-secondary/20 rounded-full blur-3xl rounded-full"></div>
-          <div className="absolute top-[40%] left-[20%] w-[300px] h-[300px] bg-accent/20 rounded-full blur-3xl rounded-full"></div>
+          <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-primary-color/20 rounded-full blur-3xl rounded-full"></div>
+          <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-secondary-color/20 rounded-full blur-3xl rounded-full"></div>
+          <div className="absolute top-[40%] left-[20%] w-[300px] h-[300px] bg-accent-color/20 rounded-full blur-3xl rounded-full"></div>
         </div>
 
         <div className="z-10 relative">
@@ -58,7 +58,7 @@ export default function Login() {
 
         <div className="z-10 relative max-w-lg mb-20 space-y-6">
           <h1 className="text-5xl font-bold leading-tight tracking-tight">
-            Advancing Health <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">Equity</span> Together
+            Advancing Health <span className="gradient-text">Equity</span> Together
           </h1>
           <p className="text-lg text-slate-300 leading-relaxed">
             Join a global community dedicated to making clinical trials and health resources accessible to everyone, everywhere.
@@ -112,7 +112,7 @@ export default function Login() {
                   <Label htmlFor="password">Password</Label>
                   <Link
                     to="/forgot-password"
-                    className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                    className="text-sm font-medium text-primary-color hover:text-primary-color/80 transition-colors"
                   >
                     Forgot password?
                   </Link>
@@ -142,7 +142,7 @@ export default function Login() {
             </div>
 
             <div className="flex items-center space-x-2">
-              <Checkbox id="remember" />
+              <Checkbox id="remember" className="text-primary-color"/>
               <label
                 htmlFor="remember"
                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-muted-foreground"
@@ -167,7 +167,7 @@ export default function Login() {
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-muted" />
+              <span className="w-full" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
               <span className="bg-background px-2 text-muted-foreground">
@@ -177,7 +177,7 @@ export default function Login() {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <Button variant="outline" className="h-11 bg-card hover:text-primary border-input/60">
+            <Button variant="outline" className="h-11 bg-card hover:text-primary-color border-input/60">
               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                 <path
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -198,7 +198,7 @@ export default function Login() {
               </svg>
               Google
             </Button>
-            <Button variant="outline" className="h-11 bg-card hover:text-primary border-input/60">
+            <Button variant="outline" className="h-11 bg-card hover:text-primary-color border-input/60">
               <svg className="mr-2 h-4 w-4 fill-current" viewBox="0 0 24 24">
                 <path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.15-.04-.21.02-1.19.58-2.33 1.277-3.21.744-.89 1.978-1.58 2.893-1.58.103 0 .23.04.305.04l.03.04zm4.089 18.7c-1.472.54-2.949 1.43-4.225 1.83-.876.28-1.419.12-1.954-.76-.73-1.19-2.3-1.19-3.04 0-.58.91-1.07 1.09-1.975.75-1.562-.6-3.79-2.48-5.32-5.45-1.859-3.64.08-5.74 3.76-7.39.296-.13.568-.17.808-.17.9 0 1.554.49 2.03.49.569 0 1.562-.51 2.502-.51.93 0 1.764.57 2.28 1.1-.986.9-1.636 2.28-1.636 3.75 0 2.92 2.22 4.09 2.65 4.34-.144.5-.487 1.44-.9 2.02z" />
               </svg>
@@ -208,7 +208,7 @@ export default function Login() {
 
           <div className="text-center text-sm">
             <span className="text-muted-foreground">Don't have an account? </span>
-            <Link to="/register" className="font-semibold text-primary hover:text-primary/80 transition-colors">
+            <Link to="/register" className="font-semibold text-primary-color hover:text-primary-color/80 transition-colors">
               Sign up for free
             </Link>
           </div>

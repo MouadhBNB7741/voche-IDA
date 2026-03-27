@@ -60,6 +60,13 @@
   .category-active-red     { background-color: #ef4444; color: white; }
   .category-active-blue-bg     { background-color: #236f93; color: white; }
 
+  .gradient-text {
+    background-image: linear-gradient(to right, hsl(var(--primary)), hsl(var(--lime)));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
 }
 
 @layer base {
