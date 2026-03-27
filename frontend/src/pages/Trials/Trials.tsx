@@ -30,6 +30,7 @@ import {
   ChevronRight,
   Heart,
   FlaskConical,
+  Clock
 } from "lucide-react";
 
 export default function Trials() {
@@ -184,13 +185,13 @@ export default function Trials() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 
         {[
-          { label: "Total Trials", value: mockTrials.length },
-          { label: "Disease Areas", value: diseases.length - 1 },
-          { label: "Countries", value: 12 },
-          { label: "Saved Trials", value: savedTrials.length },
+          { label: "Total Trials",  value: mockTrials.length,    color: 'text-[hsl(var(--primary))]' },
+          { label: "Disease Areas", value: diseases.length - 1,  color: 'text-[hsl(var(--teal))]'    },
+          { label: "Countries",     value: 12,                   color: 'text-[hsl(var(--lime))]'    },
+          { label: "Saved Trials",  value: savedTrials.length,   color: 'text-[hsl(var(--blue))]'    },
         ].map((stat, i) => (
           <Card key={i} className="p-5 text-center rounded-xl border-0">
-            <div className="text-3xl font-bold text-primary">{stat.value}</div>
+            <div className={`text-3xl font-bold ${stat.color} mb-1`}>{stat.value}</div>
             <div className="text-xs uppercase text-muted-foreground tracking-wide mt-1">
               {stat.label}
             </div>
@@ -200,131 +201,125 @@ export default function Trials() {
       </div>
 
       {/* Trials */}
-
       <div className="space-y-4">
-
         {paginatedTrials.map((trial) => (
           <Card
             key={trial.id}
+            className="group p-6 hover:shadow-xl transition-all duration-300 cursor-pointer border-transparent hover:border-primary/20"
             onClick={() => navigate(`/trials/${trial.id}`)}
-            className="group p-6 rounded-2xl border-0 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer bg-background/70 backdrop-blur-sm"
           >
-            <div className="flex flex-col lg:flex-row gap-6">
-
+            <div className="flex flex-col lg:flex-row lg:items-start gap-6">
               <div className="flex-1 space-y-4">
-
-                <div className="flex justify-between">
-
+                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
                   <div className="flex flex-wrap gap-2">
-
-                    <Badge className="bg-emerald-100 text-emerald-700">
-                      {trial.disease}
+                    <Badge variant="default" className="bg-primary/90 hover:bg-primary">{trial.disease}</Badge>
+                    <Badge variant="outline" className="border-primary/20 text-primary">{trial.phase}</Badge>
+                    <Badge variant="secondary" className="bg-secondary/10 text-secondary hover:bg-secondary/20">
+                      Enrolling: {trial.enrollment}/{trial.maxEnrollment}
                     </Badge>
-
-                    <Badge variant="outline">
-                      {trial.phase}
-                    </Badge>
-
-                    <Badge className="bg-blue-100 text-blue-700">
-                      {trial.enrollment}/{trial.maxEnrollment} enrolled
-                    </Badge>
-
                   </div>
-
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={(e) => toggleSavedTrial(trial.id, e)}
+                    className="rounded-full hover:bg-muted"
                   >
                     <Heart
                       size={20}
-                      className={
-                        savedTrials.includes(trial.id)
-                          ? "fill-red-500 text-red-500"
-                          : "text-muted-foreground"
-                      }
+                      className={`transition-colors duration-300 ${savedTrials.includes(trial.id)
+                        ? 'fill-red-500 text-red-500' // Red when saved
+                        : 'text-muted-foreground group-hover:text-red-500' // Gray/Contrast when not, hover red
+                        }`}
                     />
                   </Button>
-
                 </div>
 
                 <div>
-                  <h3 className="text-xl font-semibold group-hover:text-primary transition-colors">
-                    {trial.title}
-                  </h3>
-
-                  <p className="text-sm text-muted-foreground line-clamp-2">
+                  <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">{trial.title}</h3>
+                  <p className="text-muted-foreground leading-relaxed">
                     {trial.description}
                   </p>
                 </div>
 
-                <div className="flex flex-wrap gap-6 text-sm text-muted-foreground">
-
-                  <div className="flex items-center gap-2">
-                    <Building size={16} />
-                    {trial.sponsor}
+                <div className="grid md:grid-cols-2 gap-4 pt-2">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 text-sm p-2 rounded-lg bg-muted/30">
+                      <Building size={16} className="text-primary-color" />
+                      <div>
+                        <span className="text-xs font-semibold text-muted-foreground uppercase block">Sponsor</span>
+                        <span className="font-medium">{trial.sponsor}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 text-sm p-2 rounded-lg bg-muted/30">
+                      <MapPin size={16} className="text-primary-color" />
+                      <div>
+                        <span className="text-xs font-semibold text-muted-foreground uppercase block">Location</span>
+                        <span className="font-medium">{trial.location}</span>
+                      </div>
+                    </div>
                   </div>
-
-                  <div className="flex items-center gap-2">
-                    <MapPin size={16} />
-                    {trial.location}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 text-sm p-2 rounded-lg bg-muted/30">
+                      <Calendar size={16} className="text-primary-color" />
+                      <div>
+                        <span className="text-xs font-semibold text-muted-foreground uppercase block">Started</span>
+                        <span className="font-medium">{new Date(trial.startDate).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 text-sm p-2 rounded-lg bg-muted/30">
+                      <Clock size={16} className="text-primary-color" />
+                      <div>
+                        <span className="text-xs font-semibold text-muted-foreground uppercase block">Est. Completion</span>
+                        <span className="font-medium">{new Date(trial.estimatedCompletion).toLocaleDateString()}</span>
+                      </div>
+                    </div>
                   </div>
-
-                  <div className="flex items-center gap-2">
-                    <Calendar size={16} />
-                    {new Date(trial.startDate).toLocaleDateString()}
-                  </div>
-
                 </div>
 
-                <div className="space-y-1">
-                  <div className="text-xs text-muted-foreground">
-                    Enrollment Progress
-                  </div>
-
-                  <div className="w-full bg-muted rounded-full h-2">
-                    <div
-                      className="bg-primary h-2 rounded-full"
-                      style={{
-                        width: `${(trial.enrollment / trial.maxEnrollment) * 100}%`,
-                      }}
-                    />
+                <div className="bg-muted/10 rounded-xl p-4 border border-dashed border-border">
+                  <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                    <FileText size={14} /> Key Eligibility
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {trial.eligibility.slice(0, 3).map((criteria, index) => (
+                      <Badge key={index} variant="outline" className="text-xs bg-background">
+                        {criteria}
+                      </Badge>
+                    ))}
+                    {trial.eligibility.length > 3 && (
+                      <Badge variant="outline" className="text-xs text-muted-foreground">
+                        +{trial.eligibility.length - 3} more
+                      </Badge>
+                    )}
                   </div>
                 </div>
-
               </div>
 
-              <div className="lg:w-52 flex flex-col gap-3">
-
-                <Button
-                  className="w-full"
+              <div className="lg:w-56 space-y-3 lg:border-l lg:pl-6 lg:border-border/50">
+                <Button className="w-full gap-2 shadow-md group-hover:bg-primary group-hover:text-primary-foreground transition-all" 
+                  style={{ backgroundColor: 'hsl(var(--primary))', color: 'white' }}
                   onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/trials/${trial.id}`);
-                  }}
-                >
+                  e.stopPropagation();
+                  navigate(`/trials/${trial.id}`);
+                }}>
                   View Details
                   <ChevronRight size={16} />
                 </Button>
-
-                <Button
-                  variant="outline"
-                  className="w-full border-0"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/trials/${trial.id}`);
-                  }}
-                >
+                <Button variant="outline" className="w-full gap-2 border-primary/20 text-primary hover:bg-primary/60" onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/trials/${trial.id}`);
+                }}>
                   <FileText size={16} />
                   Eligibility Quiz
                 </Button>
-
+                <div className="text-center pt-2">
+                  <div className="text-[10px] uppercase font-bold text-muted-foreground">Primary Contact</div>
+                  <div className="text-xs font-medium text-primary mt-1 break-words">{trial.contact.split(' - ')[0]}</div>
+                </div>
               </div>
-
             </div>
           </Card>
         ))}
-
       </div>
 
       {/* Pagination */}

@@ -153,7 +153,7 @@ export default function TrialDetail() {
     <div className="container mx-auto p-4 md:p-8 space-y-6 animate-in fade-in duration-500">
       {/* Back Button */}
       <div>
-        <Button variant="ghost" onClick={() => navigate('/trials')} className="gap-2 pl-0 hover:bg-transparent hover:text-primary transition-colors">
+        <Button variant="ghost" onClick={() => navigate('/trials')} className="gap-2 pl-0 hover:bg-transparent hover:text-primary-color transition-colors">
           <ArrowLeft size={16} />
           Back to Trials
         </Button>
@@ -169,8 +169,8 @@ export default function TrialDetail() {
           <div className="flex flex-col sm:flex-row gap-3 min-w-[200px] justify-center sm:justify-end">
             <Button
               className={`font-bold shadow-lg h-12 px-6 rounded-xl transition-all hover:scale-105 ${isConnected
-                ? 'bg-success hover:bg-success/90 text-success-foreground cursor-default'
-                : 'bg-white text-primary hover:bg-white/90'
+                ? 'text-success-color hover:text-success-color/90 text-success-foreground cursor-default'
+                : 'bg-white text-primary-color hover:bg-white/90'
                 }`}
               onClick={handleConnect}
               disabled={isConnected}
@@ -219,33 +219,33 @@ export default function TrialDetail() {
           {/* Overview */}
           < Card className="p-6 md:p-8 border-border/60 shadow-sm" >
             <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-              <Activity size={20} className="text-primary" />
+              <Activity size={20} className="text-primary-color" />
               Overview
             </h2>
             <div className="grid sm:grid-cols-2 gap-6">
               <div className="flex items-start gap-4 p-4 bg-muted/30 rounded-xl border border-transparent hover:border-primary/20 transition-colors">
-                <Building className="text-primary mt-1" size={20} />
+                <Building className="text-primary-color mt-1" size={20} />
                 <div>
                   <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Sponsor</div>
                   <div className="font-medium">{trial.sponsor}</div>
                 </div>
               </div>
               <div className="flex items-start gap-4 p-4 bg-muted/30 rounded-xl border border-transparent hover:border-primary/20 transition-colors">
-                <MapPin className="text-primary mt-1" size={20} />
+                <MapPin className="text-primary-color mt-1" size={20} />
                 <div>
                   <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Location</div>
                   <div className="font-medium">{trial.location}</div>
                 </div>
               </div>
               <div className="flex items-start gap-4 p-4 bg-muted/30 rounded-xl border border-transparent hover:border-primary/20 transition-colors">
-                <Calendar className="text-primary mt-1" size={20} />
+                <Calendar className="text-primary-color mt-1" size={20} />
                 <div>
                   <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Start Date</div>
                   <div className="font-medium">{new Date(trial.startDate).toLocaleDateString()}</div>
                 </div>
               </div>
               <div className="flex items-start gap-4 p-4 bg-muted/30 rounded-xl border border-transparent hover:border-primary/20 transition-colors">
-                <Clock className="text-primary mt-1" size={20} />
+                <Clock className="text-primary-color mt-1" size={20} />
                 <div>
                   <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Est. Completion</div>
                   <div className="font-medium">{new Date(trial.estimatedCompletion).toLocaleDateString()}</div>
@@ -257,11 +257,11 @@ export default function TrialDetail() {
             <div className="mt-8 pt-6 border-t border-dashed">
               <div className="flex justify-between text-sm mb-2 font-medium">
                 <span className="text-muted-foreground">Enrollment Progress</span>
-                <span className="text-primary font-bold">{trial.enrollment} / {trial.maxEnrollment} Participants</span>
+                <span className="text-primary-color font-bold">{trial.enrollment} / {trial.maxEnrollment} Participants</span>
               </div>
               <div className="h-3 bg-muted rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-primary rounded-full transition-all duration-1000 ease-out relative overflow-hidden"
+                  className="h-full bg-primary-color rounded-full transition-all duration-1000 ease-out relative overflow-hidden"
                   style={{ width: `${(trial.enrollment / trial.maxEnrollment) * 100}%` }}
                 >
                   <div className="absolute inset-0 bg-white/20 animate-[shimmer_2s_infinite]"></div>
@@ -273,14 +273,14 @@ export default function TrialDetail() {
           {/* Eligibility Criteria */}
           < Card className="p-6 md:p-8 border-border/60 shadow-sm" >
             <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-              <ShieldCheck size={20} className="text-primary" />
+              <ShieldCheck size={20} className="text-primary-color" />
               Eligibility Criteria
             </h2>
             <div className="space-y-4">
               {trial.eligibility.map((criteria, index) => (
                 <div key={index} className="flex items-center gap-4 p-4 bg-muted/20 rounded-xl border border-muted hover:border-primary/20 transition-colors">
                   <div className="bg-success/10 p-1.5 rounded-full shrink-0">
-                    <CheckCircle2 className="text-success" size={18} />
+                    <CheckCircle2 className="text-success-color" size={18} />
                   </div>
                   <span className="font-medium text-foreground/90">{criteria}</span>
                 </div>
@@ -299,14 +299,14 @@ export default function TrialDetail() {
             {
               !showQuiz && !quizComplete && (
                 <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6 ring-4 ring-primary/5">
-                    <HelpCircle className="text-primary" size={32} />
+                  <div className="w-16 h-16 bg-primary-color/10 rounded-full flex items-center justify-center mx-auto mb-6 ring-4 ring-primary/5">
+                    <HelpCircle className="text-primary-color" size={32} />
                   </div>
                   <h3 className="font-bold text-lg mb-2">Check Your Eligibility</h3>
                   <p className="text-muted-foreground mb-8 max-w-md mx-auto">
                     Take a quick 5-question quiz to see if you might be a good fit for this clinical trial.
                   </p>
-                  <Button onClick={() => setShowQuiz(true)} size="lg" className="shadow-md rounded-xl px-8">Start Eligibility Check</Button>
+                  <Button style={{ backgroundColor: 'hsl(var(--primary))', color: 'white' }} onClick={() => setShowQuiz(true)} size="lg" className="shadow-md rounded-xl px-8">Start Eligibility Check</Button>
                 </div>
               )
             }
@@ -324,7 +324,7 @@ export default function TrialDetail() {
                       {eligibilityQuestions.map((_, idx) => (
                         <div
                           key={idx}
-                          className={`h-2 flex-1 rounded-full transition-colors duration-300 ${idx <= currentQuestion ? 'bg-primary' : 'bg-muted'
+                          className={`h-2 flex-1 rounded-full transition-colors duration-300 ${idx <= currentQuestion ? 'bg-primary-color' : 'bg-muted'
                             }`}
                         />
                       ))}
@@ -333,7 +333,7 @@ export default function TrialDetail() {
 
                   {/* Question */}
                   <div className="py-2">
-                    <div className="text-sm font-bold text-primary mb-2 uppercase tracking-wide">
+                    <div className="text-sm font-bold text-primary-color mb-2 uppercase tracking-wide">
                       Question {currentQuestion + 1}
                     </div>
                     <h3 className="text-2xl font-bold mb-8 leading-tight">
@@ -345,14 +345,14 @@ export default function TrialDetail() {
                         <div className="grid grid-cols-2 gap-4">
                           <Button
                             variant="outline"
-                            className="h-16 text-lg font-medium hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all rounded-xl"
+                            className="h-16 text-lg font-medium hover:bg-primary-color hover:text-primary-foreground hover:border-primary transition-all rounded-xl"
                             onClick={() => handleAnswer('Yes')}
                           >
                             Yes
                           </Button>
                           <Button
                             variant="outline"
-                            className="h-16 text-lg font-medium hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all rounded-xl"
+                            className="h-16 text-lg font-medium hover:bg-primary-color hover:text-primary-foreground hover:border-primary transition-all rounded-xl"
                             onClick={() => handleAnswer('No')}
                           >
                             No
@@ -364,7 +364,7 @@ export default function TrialDetail() {
                             <Button
                               key={option}
                               variant="outline"
-                              className="w-full justify-start h-14 text-base px-6 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all rounded-xl"
+                              className="w-full justify-start h-14 text-base px-6 hover:bg-primary-color hover:text-primary-foreground hover:border-primary transition-all rounded-xl"
                               onClick={() => handleAnswer(option)}
                             >
                               {option}
@@ -422,14 +422,14 @@ export default function TrialDetail() {
           {/* Locations */}
           < Card className="p-6 md:p-8 border-border/60 shadow-sm" >
             <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-              <MapPin size={20} className="text-primary" />
+              <MapPin size={20} className="text-primary-color" />
               Trial Locations
             </h2>
             <div className="space-y-3">
               <div className="flex items-center justify-between p-5 bg-muted/20 rounded-xl border hover:border-primary/30 transition-colors">
                 <div className="flex items-center gap-4">
-                  <div className="bg-primary/10 p-2.5 rounded-full">
-                    <MapPin className="text-primary" size={20} />
+                  <div className="bg-primary-color/10 p-2.5 rounded-full">
+                    <MapPin className="text-primary-color" size={20} />
                   </div>
                   <div>
                     <div className="font-bold text-lg">{trial.location}</div>
@@ -454,7 +454,7 @@ export default function TrialDetail() {
               </div>
               <div className="space-y-1">
                 <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Email</div>
-                <div className="font-medium text-primary break-all hover:underline cursor-pointer">{trial.contact.split(' - ')[1]}</div>
+                <div className="font-medium text-primary-color break-all hover:underline cursor-pointer">{trial.contact.split(' - ')[1]}</div>
               </div>
             </div>
             <Button className="w-full font-bold h-11 rounded-xl shadow-sm" onClick={handleConnect} disabled={isConnected}>
@@ -477,9 +477,9 @@ export default function TrialDetail() {
                   >
                     <div className="flex items-center justify-between mb-2">
                       <Badge variant="outline" className="text-[10px] font-semibold text-muted-foreground bg-muted/50 uppercase tracking-wide">{relatedTrial.phase}</Badge>
-                      <ChevronRight size={16} className="text-muted-foreground group-hover:text-primary transition-colors group-hover:translate-x-1 duration-200" />
+                      <ChevronRight size={16} className="text-muted-foreground group-hover:text-primary-color transition-colors group-hover:translate-x-1 duration-200" />
                     </div>
-                    <div className="font-bold text-sm line-clamp-2 leading-snug group-hover:text-primary transition-colors">{relatedTrial.title}</div>
+                    <div className="font-bold text-sm line-clamp-2 leading-snug group-hover:text-primary-color transition-colors">{relatedTrial.title}</div>
                   </Link>
                 ))}
             </div>

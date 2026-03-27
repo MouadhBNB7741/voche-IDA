@@ -156,7 +156,7 @@ export default function ResourceDetail() {
       <PageHeader
         title={resource.title}
         description={resource.description}
-        variant="orange"
+        variant="green"
         badgeText={`${resource.category} • ${resource.type.charAt(0).toUpperCase() + resource.type.slice(1)}`}
         action={
           <div className="hidden md:flex gap-4 items-center bg-white/10 p-3 rounded-xl backdrop-blur-sm">

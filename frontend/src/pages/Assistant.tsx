@@ -161,10 +161,10 @@ export default function Assistant() {
                     }`}
                 >
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center shadow-sm shrink-0 ${message.sender === 'user'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-secondary text-secondary-foreground'
+                    ? 'bg-primary-color text-primary-foreground'
+                    : 'bg-secondary-color text-secondary-foreground'
                     }`}>
-                    {message.sender === 'user' ? <User size={18} /> : <Bot size={18} />}
+                    {message.sender === 'user' ? <User size={18} /> : <Bot size={18} className="text-white"/>}
                   </div>
                   <div className={`max-w-[85%] ${message.sender === 'user' ? 'text-right' : 'text-left'
                     }`}>
@@ -212,9 +212,9 @@ export default function Assistant() {
                   onClick={() => handleSendMessage()}
                   disabled={!inputMessage.trim() || isTyping}
                   size="icon"
-                  className="h-12 w-12 shadow-md hover:scale-105 transition-transform"
+                  className="h-12 w-12 shadow-md hover:scale-105 transition-transform bg-primary-color"
                 >
-                  <Send size={18} />
+                  <Send size={18} className='text-white' />
                 </Button>
               </div>
             </div>
@@ -232,7 +232,7 @@ export default function Assistant() {
                   onClick={() => handleQuickQuestion(question.query)}
                 >
                   <div className="bg-primary/10 p-2 rounded-lg mr-3">
-                    <Icon size={16} className="text-primary" />
+                    <Icon size={16} className="text-primary-color" />
                   </div>
                   <span className="text-sm font-medium">{question.text}</span>
                 </Button>
@@ -245,25 +245,25 @@ export default function Assistant() {
         <div className="space-y-6">
           {/* Assistant Capabilities */}
           <Card className="p-5 shadow-sm">
-            <h3 className="font-semibold mb-4 flex items-center gap-2 text-primary">
-              <HelpCircle size={18} />
+            <h3 className="font-semibold mb-4 flex items-center gap-2 text-primary-color">
+              <HelpCircle size={18} className="text-primary-color"/>
               I Can Help With
             </h3>
             <ul className="space-y-3 text-sm">
               <li className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted transition-colors">
-                <div className="w-1.5 h-1.5 bg-primary rounded-full mt-2 shrink-0"></div>
+                <div className="w-1.5 h-1.5 bg-primary-color rounded-full mt-2 shrink-0"></div>
                 <span>Finding clinical trials based on your condition and location</span>
               </li>
               <li className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted transition-colors">
-                <div className="w-1.5 h-1.5 bg-secondary rounded-full mt-2 shrink-0"></div>
+                <div className="w-1.5 h-1.5 bg-secondary-color rounded-full mt-2 shrink-0"></div>
                 <span>Explaining informed consent and patient rights</span>
               </li>
               <li className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted transition-colors">
-                <div className="w-1.5 h-1.5 bg-accent rounded-full mt-2 shrink-0"></div>
+                <div className="w-1.5 h-1.5 bg-accent-color rounded-full mt-2 shrink-0"></div>
                 <span>Connecting you with relevant community discussions</span>
               </li>
               <li className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted transition-colors">
-                <div className="w-1.5 h-1.5 bg-info rounded-full mt-2 shrink-0"></div>
+                <div className="w-1.5 h-1.5 bg-blue-color rounded-full mt-2 shrink-0"></div>
                 <span>Recommending educational resources</span>
               </li>
             </ul>
@@ -288,8 +288,8 @@ export default function Assistant() {
           </Card>
 
           {/* Tips */}
-          <div className="p-4 rounded-xl bg-info/10 border border-info/20">
-            <h3 className="font-semibold mb-2 text-info text-sm flex items-center gap-2">
+          <div className="p-4 rounded-xl bg-blue-color/10 border border-info/20">
+            <h3 className="font-semibold mb-2 text-blue-color text-sm flex items-center gap-2">
               <Lightbulb size={14} /> Tips for Better Help
             </h3>
             <ul className="text-xs space-y-1.5 text-muted-foreground/80 font-medium">

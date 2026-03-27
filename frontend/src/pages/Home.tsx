@@ -94,28 +94,22 @@ export default function Dashboard() {
         <PageHeader 
           title="Welcome to VOCE"
           description="Advancing health equity through accessible clinical research for everyone."
-          variant="orange"
-          action={
-            <div className="flex gap-4">
-              <Button onClick={() => navigate('/login')} className="shadow-lg">Login</Button>
-              <Button variant="outline" onClick={() => navigate('/register')} className="bg-white/10 border-white/20 text-foreground hover:bg-white/20">Register</Button>
-            </div>
-          }
+          variant="green"
         />
 
         {/* Quick Actions (Public) */}
         <div className="pt-4">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2"><ShieldCheck size={18} className="text-accent" /> Explore the Platform</h2>
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2"><ShieldCheck size={18} className="text-lime-600" /> Explore the Platform</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {quickActions.map((action, index) => {
               const Icon = action.icon;
               return (
                 <Link key={index} to={action.path}>
-                  <Card className="p-4 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group border-transparent hover:border-border text-center flex flex-col items-center h-full justify-center bg-card">
+                  <Card className="p-4 bg-white/70 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group border-transparent hover:border-border text-center flex flex-col items-center h-full justify-center bg-card">
                     <div className={`w-14 h-14 ${action.color} rounded-2xl flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform`}>
                       <Icon size={28} className="text-white" />
                     </div>
-                    <h3 className="font-bold text-base mb-1 group-hover:text-primary transition-colors">{action.title}</h3>
+                    <h3 className="font-bold text-base mb-1 group-hover:text-primary-color transition-colors">{action.title}</h3>
                     <p className="text-xs text-muted-foreground leading-snug max-w-[120px]">{action.description}</p>
                   </Card>
                 </Link>
@@ -125,35 +119,35 @@ export default function Dashboard() {
         </div>
 
         {/* Upcoming Events (Public) */}
-        <Card className="p-6 md:p-8 overflow-hidden relative bg-card shadow-sm border-none rounded-2xl">
+        <Card className="p-6 rounded-2xl backdrop-blur-md shadow-sm hover:shadow-md transition-all">
           <div className="absolute top-0 right-0 w-64 h-64 bg-accent/5 rounded-full blur-3xl -z-10"></div>
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold flex items-center gap-2">
-              <Calendar size={20} className="text-accent" />
+              <Calendar size={20} className="text-lime-600" />
               Upcoming Events
             </h2>
             <Link to="/events">
-              <Button variant="ghost" size="sm" className="text-accent hover:text-accent-foreground hover:bg-accent/10">
+              <Button variant="ghost" size="sm" className="text-accent-color hover:text-accent-foreground hover:bg-accent/10">
                 View All <ChevronRight size={16} />
               </Button>
             </Link>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {upcomingEvents.map((event) => (
-              <div key={event.id} className="bg-white/70 backdrop-blur-sm rounded-xl p-5 shadow-sm hover:shadow-md transition-all">
-                <Badge variant="outline" className="mb-3 border-accent/30 text-accent font-bold uppercase tracking-wider text-[10px]">
+              <div key={event.id} className="backdrop-blur-sm rounded-xl p-5 shadow-sm hover:shadow-md transition-all">
+                <Badge variant="outline" className="mb-3 border-accent/30 text-lime-600 font-bold uppercase tracking-wider text-[10px]">
                   {event.type}
                 </Badge>
                 <h3 className="font-bold text-sm mb-3 min-h-[40px] line-clamp-2">{event.title}</h3>
                 <div className="text-xs text-muted-foreground mb-4 space-y-1.5">
                   <div className="flex items-center gap-2">
-                    <Clock size={12} className="text-accent" />
-                    <span className="font-medium text-foreground">{new Date(event.date).toLocaleDateString()}</span> at {event.time}
+                    <Clock size={12} className=" text-lime-600" />
+                    <span className="font-medium text-foreground-color">{new Date(event.date).toLocaleDateString()}</span> at {event.time}
                   </div>
                   <div className="pl-5">By <span className="text-foreground">{event.organizer}</span></div>
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="outline" className="w-full" onClick={() => navigate(`/events/${event.id}`)}>
+                  <Button size="sm" variant="default" className="w-full bg-primary text-black font-medium shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all" onClick={() => navigate(`/events/${event.id}`)}>
                     Details
                   </Button>
                   <Button size="sm" variant="ghost" className="px-2" title="Login to register">
@@ -175,7 +169,7 @@ export default function Dashboard() {
         title={`Welcome back, ${user.name}!`}
         description="Stay connected with the global community working towards health equity."
         badgeText="Member Since 2024"
-        variant="orange"
+        variant="green"
         action={
           <div className="hidden md:block">
             <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md shadow-lg">
@@ -202,7 +196,7 @@ export default function Dashboard() {
             <div className="flex-1 text-center sm:text-left space-y-1">
               <div className="flex items-center justify-center sm:justify-start gap-2">
                 <h3 className="text-lg font-bold">{user.name}</h3>
-                <Badge variant="outline" className="px-2 py-0.5 text-xs border-primary/20 bg-primary/5 text-primary">
+                <Badge variant="outline" className="px-2 py-0.5 text-xs border-primary/20 bg-primary/5 text-primary-color">
                   {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
                 </Badge>
               </div>
@@ -248,7 +242,7 @@ export default function Dashboard() {
                   onClick={() => navigate('/notifications')}
                 >
                   <div className="flex justify-between items-start mb-1">
-                    <h4 className={`font-semibold text-sm group-hover:text-primary transition-colors ${!notification.read ? 'text-primary' : 'text-foreground'}`}>
+                    <h4 className={`font-semibold text-sm group-hover:text-primary-color transition-colors ${!notification.read ? 'text-primary-color' : 'text-foreground'}`}>
                       {notification.title}
                     </h4>
                     <span className="text-[10px] uppercase font-bold text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{notification.time}</span>
@@ -264,11 +258,11 @@ export default function Dashboard() {
         <Card className="p-6 border-l-4 border-l-primary shadow-md hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold flex items-center gap-2">
-              <TrendingUp size={20} className="text-primary" />
+              <TrendingUp size={20} className="text-primary-color" />
               Recommended for You
             </h2>
             <Link to="/trials">
-              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
+              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary-color">
                 View All <ChevronRight size={16} />
               </Button>
             </Link>
@@ -277,7 +271,7 @@ export default function Dashboard() {
             {featuredTrials.map((trial) => (
               <div key={trial.id} className="border border-border rounded-xl p-5 hover:border-primary/50 transition-colors bg-card hover:bg-muted/10">
                 <div className="flex justify-between items-start mb-3">
-                  <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
+                  <Badge variant="outline" className="bg-primary/5 text-primary-color border-primary/20">
                     {trial.disease}
                   </Badge>
                   <Badge variant="secondary" className="font-normal text-xs">
@@ -316,7 +310,7 @@ export default function Dashboard() {
                   <div className={`w-14 h-14 ${action.color} rounded-2xl flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform`}>
                     <Icon size={28} className="text-white" />
                   </div>
-                  <h3 className="font-bold text-base mb-1 group-hover:text-primary transition-colors">{action.title}</h3>
+                  <h3 className="font-bold text-base mb-1 group-hover:text-primary-color transition-colors">{action.title}</h3>
                   <p className="text-xs text-muted-foreground leading-snug max-w-[120px]">{action.description}</p>
                 </Card>
               </Link>

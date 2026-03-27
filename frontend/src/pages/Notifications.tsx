@@ -64,11 +64,11 @@ export default function Notifications() {
 
     const getColor = (type: string) => {
         switch (type) {
-            case 'trial': return 'bg-primary/10 text-primary';
-            case 'community': return 'bg-secondary/10 text-secondary';
-            case 'event': return 'bg-accent/10 text-accent';
-            case 'system': return 'bg-muted text-muted-foreground';
-            default: return 'bg-muted text-muted-foreground';
+            case 'trial': return 'bg-primary-color/10 text-primary-color';
+            case 'community': return 'bg-secondary-color/10 text-secondary-color';
+            case 'event': return 'bg-accent-color/10 text-accent-color';
+            case 'system': return 'bg-muted-color text-muted-foreground';
+            default: return 'bg-muted-color text-muted-foreground';
         }
     };
 
@@ -106,19 +106,19 @@ export default function Notifications() {
                     >
                         Unread
                         {unreadCount > 0 && (
-                            <Badge className="ml-2 bg-white text-primary hover:bg-white">{unreadCount}</Badge>
+                            <Badge className="ml-2 bg-white text-primary-color hover:bg-white">{unreadCount}</Badge>
                         )}
                     </Button>
                 </div>
 
                 <div className="flex gap-2">
                     {notifications.some(n => !n.read) && (
-                        <Button variant="ghost" size="sm" onClick={handleMarkAllRead} className="text-primary hover:bg-primary/5 hover:text-primary">
+                        <Button variant="ghost" size="sm" onClick={handleMarkAllRead} className="text-primary-color hover:bg-primary-color/5 hover:text-primary-color">
                             <Check size={16} className="mr-2" /> Mark all read
                         </Button>
                     )}
                     {notifications.length > 0 && (
-                        <Button variant="ghost" size="sm" onClick={handleClearAll} className="text-destructive hover:bg-destructive/5 hover:text-destructive">
+                        <Button variant="ghost" size="sm" onClick={handleClearAll} className="text-destructive-color hover:bg-destructive/5 hover:text-destructive-color">
                             <Trash2 size={16} className="mr-2" /> Clear all
                         </Button>
                     )}
@@ -148,7 +148,7 @@ export default function Notifications() {
                             <Card
                                 key={notification.id}
                                 className={`p-4 transition-all duration-200 cursor-pointer border hover:border-primary/40 hover:shadow-md group relative overflow-hidden ${!notification.read
-                                    ? 'bg-primary/5 border-primary/20 dark:bg-primary/10'
+                                    ? 'bg-primary-color/5 border-primary-color/20 dark:bg-primary-color/10'
                                     : 'bg-card border-border/60 hover:bg-muted/30'
                                     }`}
                                 onClick={() => {
@@ -178,7 +178,7 @@ export default function Notifications() {
                                                     <Button
                                                         size="icon"
                                                         variant="ghost"
-                                                        className="h-6 w-6 rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary"
+                                                        className="h-6 w-6 rounded-full text-muted-foreground hover:bg-primary-color/10 hover:text-primary-color"
                                                         title="Mark as read"
                                                         onClick={(e) => handleMarkAsRead(notification.id, e)}
                                                     >

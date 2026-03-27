@@ -8,16 +8,17 @@ import './App.css'
 import Layout from "./components/Layout";
 import AuthLayout from "./components/AuthLayout";
 import Home from './pages/Home';
-import TrialSearch from './pages/Trials/Trials';
+import Trials from './pages/Trials/Trials';
 import TrialDetail from "./pages/Trials/TrialDetail";
 import Community from './pages/Community/Community';
 import PostDetails from './pages/Community/PostDetails';
-import ResourceLibrary from './pages/Resources/ResourceLibrary';
+import Resources from './pages/Resources/Resources';
 import ResourceDetails from './pages/Resources/ResourceDetails';
-import EventsHub from './pages/Events/EventsHub';
+import Events from './pages/Events/Events';
 import EventDetails from './pages/Events/EventDetails';
 import Assistant from './pages/Assistant';
 import Profile from './pages/Profile';
+import Notifications from './pages/Notifications';
 import Login from './pages/Auth/Login';
 import Signup from './pages/Auth/Signup';
 
@@ -38,16 +39,19 @@ export default function App() {
 
                 <Route element={<Layout />}>
                   <Route path="/" element={<Home />} />
-                  <Route path="/trials" element={<TrialSearch />} />
+                  <Route path="/trials" element={<Trials />} />
                   <Route path="/trials/:id" element={<TrialDetail />} />
                   <Route path="/community" element={<Community />} />
                   <Route path="/community/posts/:id" element={<PostDetails />} />
-                  <Route path="/resourcelibrary" element={<ResourceLibrary />} />
+                  <Route path="/resources" element={<Resources />} />
                   <Route path="/resources/:id" element={<ResourceDetails />} />
-                  <Route path="/eventshub" element={<EventsHub />} />
+                  <Route path="/events" element={<Events />} />
                   <Route path="/events/:id" element={<EventDetails />} />
                   <Route path="/assistant" element={<Assistant />} />
                   <Route path="/profile" element={<Profile />} />
+                  <Route path="/notifications" element={<Notifications />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/signup" element={<Signup />} />
                 </Route>
 
               </Routes>
