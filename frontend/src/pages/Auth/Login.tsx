@@ -58,7 +58,7 @@ export default function Login() {
 
         <div className="z-10 relative max-w-lg mb-20 space-y-6">
           <h1 className="text-5xl font-bold leading-tight tracking-tight">
-            Advancing Health <span className="gradient-text">Equity</span> Together
+            Advancing Health <span className="gradient-text-login">Equity</span> Together
           </h1>
           <p className="text-lg text-slate-300 leading-relaxed">
             Join a global community dedicated to making clinical trials and health resources accessible to everyone, everywhere.
@@ -208,7 +208,7 @@ export default function Login() {
 
           <div className="text-center text-sm">
             <span className="text-muted-foreground">Don't have an account? </span>
-            <Link to="/register" className="font-semibold text-primary-color hover:text-primary-color/80 transition-colors">
+            <Link to="/signup" className="font-semibold text-primary-color hover:text-primary-color/80 transition-colors">
               Sign up for free
             </Link>
           </div>

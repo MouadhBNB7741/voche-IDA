@@ -60,8 +60,16 @@
   .category-active-red     { background-color: #ef4444; color: white; }
   .category-active-blue-bg     { background-color: #236f93; color: white; }
 
-  .gradient-text {
+  .gradient-text-login {
     background-image: linear-gradient(to right, hsl(var(--primary)), hsl(var(--lime)));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  
+  .gradient-text-signup {
+    background-image: linear-gradient(to right, hsl(var(--teal)), hsl(var(--blue)));
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;

@@ -71,7 +71,7 @@ export default function Register() {
 
         <div className="z-10 relative max-w-lg mb-20 space-y-6">
           <h1 className="text-5xl font-bold leading-tight tracking-tight">
-            Empowering <span className="text-transparent bg-clip-text bg-gradient-to-r from-secondary to-info">Patients</span> & Researchers
+            Empowering <span className="gradient-text-signup">Patients</span> & Researchers
           </h1>
           <p className="text-lg text-slate-300 leading-relaxed">
             Create an account to access personalized clinical trials, connect with a supportive community, and contribute to medical advancement.
@@ -198,11 +198,11 @@ export default function Register() {
               <input
                 type="checkbox"
                 id="consent"
-                className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                className="mt-1 h-4 w-4 rounded border-gray-300 text-primary-color focus:ring-primary"
                 required
               />
               <Label htmlFor="consent" className="text-sm font-normal text-muted-foreground leading-snug">
-                I agree to the <Link to="#" className="text-primary hover:underline">Terms of Service</Link> and <Link to="#" className="text-primary hover:underline">Privacy Policy</Link>, and consent to data processing.
+                I agree to the <Link to="#" className="text-primary-color hover:underline">Terms of Service</Link> and <Link to="#" className="text-primary-color hover:underline">Privacy Policy</Link>, and consent to data processing.
               </Label>
             </div>
 
@@ -222,7 +222,7 @@ export default function Register() {
 
           <div className="text-center text-sm pt-4">
             <span className="text-muted-foreground">Already have an account? </span>
-            <Link to="/login" className="font-semibold text-primary hover:text-primary/80 transition-colors">
+            <Link to="/login" className="font-semibold text-primary-color hover:text-primary-color/80 transition-colors">
               Log in
             </Link>
           </div>
