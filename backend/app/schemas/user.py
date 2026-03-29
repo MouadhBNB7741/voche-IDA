@@ -2,17 +2,7 @@ from datetime import datetime
 from typing import Optional, List, Dict, Union, Any, Literal
 from pydantic import BaseModel, EmailStr, ConfigDict
 
-class NotificationTypes(BaseModel):
-    trialMatches: bool = True
-    communityReplies: bool = True
-    events: bool = True
-    system: bool = True
-
-class NotificationPreferences(BaseModel):
-    emailAlerts: bool = True
-    pushNotifications: bool = True
-    notificationTypes: NotificationTypes = NotificationTypes()
-    frequency: Literal["instant", "daily_digest", "weekly"] = "instant"
+# Notification preferences are now centralized in app/schemas/notification.py
 
 class VerificationPayload(BaseModel):
     licenseNumber: str

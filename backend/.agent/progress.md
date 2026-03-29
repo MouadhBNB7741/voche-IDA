@@ -127,6 +127,11 @@
     *   GIN index on `notification_preferences`.
     *   GIN index on `verification`.
     *   B-tree functional index on `verification->>'status'` for fast filtering.
+*   ✅ **Notification System Hardening**:
+    *   Implemented strict `NotificationType` Enum mapping.
+    *   Added centralized event-to-message mapping in `NotificationService`.
+    *   Enforced preference-based guard layer (`_should_notify`) for all alerts.
+    *   Synchronized `schema.sql`, `UserModel`, and `seed.py` with 10 production-ready notification types.
 
 
 ---
@@ -366,6 +371,106 @@ Status: ✅ Implemented & Audited
 * ✅ Completion Details (security checks, responses retrieval)
 
 ---
+
+## Notifications Module
+Status: ✅ Implemented
+
+### ✅ Hardened Endpoints (under `/api/v1/notifications`)
+| Method | URL | Auth | Description |
+|--------|-----|------|-------------|
+| **GET** | `/` | Required | List notifications (paginated, filterable by read/type/date) |
+| **PATCH** | `/mark-all-read` | Required | Mark all unread as read |
+| **PATCH** | `/{id}/read` | Required | Mark single notification as read (IDOR enforced) |
+| **DELETE** | `/{id}` | Required | Delete notification (IDOR enforced) |
+
+### 🛠 Prefs & Alignment (under `/api/v1/users`)
+| Method | URL | Auth | Description |
+|--------|-----|------|-------------|
+| **GET** | `/me/preferences/notifications` | Required | **Aligned Path**: Get notification settings |
+| **PATCH** | `/me/preferences/notifications` | Required | **Aligned Path**: Update settings (Deep merge) |
+
+### Cross-Cutting Services
+- **`NotificationService`** — Central dispatch for all platform notifications. Used by HCP verification, moderation, org membership, trial alerts, and event reminders.
+- **`AuditService`** — Immutable audit logging for admin/security actions with convenience methods.
+
+### Design Decisions
+- **IDOR Prevention**: All read/delete operations include `user_id` in WHERE clause
+- **Event-Driven Mapping**: `_map_event_to_notification()` centralizes all notification copy
+- **Bulk Insert**: `notify_admins()` uses bulk insert for efficiency
+- **Route Ordering**: `mark-all-read` defined before `/{id}/read` to prevent FastAPI path conflicts
+
+### Files
+- Model: `app/models/notification_model.py`
+- Schema: `app/schemas/notification.py`
+- Service: `app/services/notification_service.py`
+- Route: `app/api/v1/notifications.py`
+- Tests: `app/tests/test_notifications.py`
+
+### 🧪 Testing
+- Created `app/tests/test_notifications.py`
+- **Coverage**:
+  - ✅ Auth protection on all 5 endpoints
+  - ✅ Empty inbox handling
+  - ✅ List with pagination, type filter, read/unread filter
+  - ✅ Mark single notification read (success, not found, IDOR)
+  - ✅ Mark all read (success, empty)
+  - ✅ Delete notification (success, not found, IDOR)
+  - ✅ Notification preferences retrieval
+
+---
+
+## System Module
+Status: ✅ Implemented
+
+### Endpoints
+| Method | URL | Auth | Description |
+|--------|-----|------|-------------|
+| **GET** | `/api/v1/health` | Public | Health check (DB connectivity, version) |
+| **GET** | `/api/v1/system/status` | Public | System monitoring (uptime, DB stats, features) |
+| **GET** | `/api/v1/system/metadata` | Public | Platform enums/metadata for frontend (cached) |
+| **POST** | `/api/v1/system/feedback` | Optional | **Updated**: Supports anonymous/public submissions |
+| **POST** | `/api/v1/system/announce` | Required | Multi-scoped platform broadcasts (Global/Org/Group) |
+
+### Admin Middleware
+- **`admin_required`** — New middleware in `app/api/middleware/admin_middleware.py` for Phase 2 admin endpoints.
+- **`org_admin_middleware`** — Scoped authorization for organization and working group leads.
+
+### 📢 Scoped Announcement Engine
+- **Endpoint**: `POST /api/v1/system/announce`
+- **Scopes**: 
+  - `Global`: All users (Platform Admin)
+  - `Organization`: Members of an Org (Org Admin)
+  - `Working Group`: Members of a Group (Org/Group Admin)
+- **Features**: Custom titles, messages, and deep links per broadcast.
+
+### 🛡️ Hardening & Audit Results
+- **Specification Alignment**: 100% matched to `docs/conception/endPoint.md`.
+- **Feedback v2**: Switched from activity log to dedicated `platform_feedback` table.
+- **Rating System**: Enforced star rating (1-5) via Pydantic `Field` and SQL `CHECK` constraints.
+- **Audit Resilience**: `AuditLogModel` hardened with table existence checks and fallback streams.
+- **Seeding**: Restored comprehensive multi-role feedback seeding in `seed.py`.
+- **Validation**: Generated master Postman collection for system-wide production testing.
+
+### Database Extensions
+- ✅ Added `platform_feedback` table for structured user sentiment.
+- ✅ Added `audit_logs` table to `schema.sql`.
+- ✅ Added performance indexes for feedback and audit logs.
+
+### Files
+- Model: `app/models/system_model.py`
+- Schema: `app/schemas/system.py`
+- Service: `app/services/system_service.py`, `app/services/audit_service.py`
+- Middleware: `app/api/middleware/admin_middleware.py`
+- Route: `app/api/v1/system.py`
+- Tests: `app/tests/test_system.py`
+
+### 🧪 Testing
+- Created `app/tests/test_system.py`
+- **Coverage**:
+  - ✅ Health check (public access, DB connected)
+  - ✅ System status (uptime, features, DB stats)
+  - ✅ Metadata (all enum categories, countries, languages structure, caching)
+  - ✅ Feedback (auth required, success, invalid category, too short, missing fields, all valid categories)
 
 ## Guidance for Azzedine
 

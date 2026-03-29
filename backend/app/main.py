@@ -21,6 +21,8 @@ from app.api.v1.organizations import router as organizations_router
 from app.api.v1.events import router as events_router
 from app.api.v1.events import user_events_router
 from app.api.v1.surveys import router as surveys_router
+from app.api.v1.notifications import router as notifications_router
+from app.api.v1.system import router as system_router, health_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -78,6 +80,9 @@ app.include_router(organizations_router, prefix="/api/v1")
 app.include_router(events_router, prefix="/api/v1")
 app.include_router(user_events_router, prefix="/api/v1")
 app.include_router(surveys_router, prefix="/api/v1")
+app.include_router(notifications_router, prefix="/api/v1")
+app.include_router(system_router, prefix="/api/v1")
+app.include_router(health_router, prefix="/api/v1")
 
 
 @app.get("/api/v1/", tags=["Status"])
@@ -86,13 +91,4 @@ async def root():
         "message": "VOCE Backend API is running",
         "docs_url": "/api/v1/docs", 
         "redoc_url": "/redoc"
-    }
-
-@app.get("/api/v1/health", tags=["Status"])
-async def health_check():
-    return {
-        "status": "online",
-        "database": "connected",
-        "redis": "connected",
-        "version": "0.1.0"
     }

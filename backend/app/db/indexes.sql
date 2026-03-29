@@ -372,6 +372,28 @@ COMMENT ON INDEX idx_user_activity_log_metadata IS 'Analytics on flexible metada
 
 
 
+
+-- audit_logs table
+-- Purpose: Query audit trail by actor, action, target, and time
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_target ON audit_logs(target_type, target_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);
+
+COMMENT ON INDEX idx_audit_logs_action IS 'Filter audit logs by action type (e.g., hcp_verified, user_suspended)';
+COMMENT ON INDEX idx_audit_logs_created_at IS 'Time-series queries on audit trail';
+
+
+-- platform_feedback table
+-- Purpose: Query feedback by user, category, rating, and time
+CREATE INDEX IF NOT EXISTS idx_platform_feedback_user_id ON platform_feedback(user_id);
+CREATE INDEX IF NOT EXISTS idx_platform_feedback_category ON platform_feedback(category);
+CREATE INDEX IF NOT EXISTS idx_platform_feedback_rating ON platform_feedback(rating);
+CREATE INDEX IF NOT EXISTS idx_platform_feedback_created_at ON platform_feedback(created_at DESC);
+
+COMMENT ON INDEX idx_platform_feedback_category IS 'Filter feedback by category (platform, bug, feature, etc.)';
+
+
 -- ============================================================================
 -- INDEXES CREATION COMPLETE
 -- ============================================================================

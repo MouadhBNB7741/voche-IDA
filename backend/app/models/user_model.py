@@ -57,7 +57,7 @@ class UserModel(DBModel):
                 status, is_active, is_verified, profile_completed,
                 notification_preferences, verification
             )
-            VALUES ($1, $2, $3, $4, $5, $6, 'active', TRUE, FALSE, FALSE, '{"emailAlerts": true, "pushNotifications": true, "frequency": "instant"}'::jsonb, '{"status": "not_submitted"}'::jsonb)
+            VALUES ($1, $2, $3, $4, $5, $6, 'active', TRUE, FALSE, FALSE, '{"emailAlerts": true, "pushNotifications": true, "frequency": "instant", "notificationTypes": {"trial_match": true, "trial_alert": true, "community_reply": true, "community_like": true, "event_reminder": true, "event_update": true, "org_request_update": true, "resource_update": true, "survey_available": true, "system_announcement": true}}'::jsonb, '{"status": "not_submitted"}'::jsonb)
             RETURNING id, user_type
         """
         
@@ -131,7 +131,10 @@ class UserModel(DBModel):
         return {"notification_preferences": new_prefs} if new_prefs else {}
 
     async def submit_verification(self, user_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
-        """Submit verification documents."""
+        """
+        Submit verification documents.
+        Notifications are handled by the service layer.
+        """
         import json
         
         # Check current status
@@ -151,21 +154,6 @@ class UserModel(DBModel):
         if new_ver_raw and isinstance(new_ver_raw, str):
             new_ver_raw = json.loads(new_ver_raw)
         
-        # Identify Admins and Notify
-        try:
-             admin_query = "SELECT id FROM users WHERE user_type = 'admin'"
-             admins = await self.conn.fetch(admin_query)
-             
-             notif_query = """
-                 INSERT INTO notifications (user_id, type, title, message, created_at)
-                 VALUES ($1, 'system', 'Verification Request', 'A new verification request has been submitted.', NOW())
-             """
-             for admin in admins:
-                  await self.conn.execute(notif_query, admin['id'])
-        except Exception as e:
-             print(f"Failed to notify admins: {e}")
-             pass
-
         return {"verification": new_ver_raw} if new_ver_raw else {}
 
     async def delete_verification(self, user_id: str) -> Optional[Dict[str, Any]]:

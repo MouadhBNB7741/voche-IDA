@@ -111,8 +111,29 @@ async def decide_org_join(
     """Accept or Refuse organization membership request"""
     model = OrganizationModel(conn)
     
+    model = OrganizationModel(conn)
+    from app.services.notification_service import NotificationService
+    from app.schemas.notification import NotificationType
+    
     try:
         result = await model.decide_organization_join(str(org_id), str(user_id), request.action)
+        
+        # TRIGGER NOTIFICATION: ORG_REQUEST_UPDATE
+        try:
+            org = await model.get_organization_details(str(org_id))
+            notif_service = NotificationService(conn)
+            await notif_service.notify_user(
+                user_id=str(user_id),
+                notif_type=NotificationType.ORG_REQUEST_UPDATE,
+                data={
+                    "org_name": org["name"] if org else "the organization",
+                    "org_id": str(org_id),
+                    "status": "approved" if request.action == "accept" else "refused"
+                }
+            )
+        except:
+            pass
+            
         return result
     except ValueError as e:
          raise HTTPException(
@@ -185,9 +206,28 @@ async def decide_group_join(
 ):
     """Accept or Refuse working group membership request"""
     model = OrganizationModel(conn)
+    from app.services.notification_service import NotificationService
+    from app.schemas.notification import NotificationType
     
     try:
         result = await model.decide_working_group_join(str(group_id), str(user_id), request.action)
+        
+        # TRIGGER NOTIFICATION: ORG_REQUEST_UPDATE (reusing type for groups)
+        try:
+             group = await model.get_working_group_details(str(group_id))
+             notif_service = NotificationService(conn)
+             await notif_service.notify_user(
+                 user_id=str(user_id),
+                 notif_type=NotificationType.ORG_REQUEST_UPDATE,
+                 data={
+                     "org_name": group["name"] if group else "the working group",
+                     "org_id": str(group_id),
+                     "status": "approved" if request.action == "accept" else "refused"
+                 }
+             )
+        except:
+             pass
+             
         return result
     except ValueError as e:
          raise HTTPException(

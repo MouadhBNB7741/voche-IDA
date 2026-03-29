@@ -3,6 +3,8 @@ import json
 from datetime import datetime, date
 from app.core.security import hash_password
 from app.db.postgres import PostgresDB
+from app.services.notification_service import NotificationService
+from app.schemas.notification import NotificationType
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +93,7 @@ async def seed_db(conn):
             VALUES (
                 $1, $2, $3, $4, $5, $6,
                 'active', TRUE, $7, TRUE, 
-                '{"emailAlerts": true, "pushNotifications": true, "frequency": "instant"}'::jsonb,
+                '{"emailAlerts": true, "pushNotifications": true, "frequency": "instant", "notificationTypes": {"trial_match": true, "trial_alert": true, "community_reply": true, "community_like": true, "event_reminder": true, "event_update": true, "org_request_update": true, "resource_update": true, "survey_available": true, "system_announcement": true}}'::jsonb,
                 $8, $9
             )
             ON CONFLICT (email) DO UPDATE SET 
@@ -709,5 +711,93 @@ async def seed_db(conn):
         """, survey_id, q_text, q_type, pos, req, opts)
 
     logger.info("✅ Surveys seeded.")
+
+    # ------------------------------------------------------------------
+    # 9. SEED PLATFORM FEEDBACK
+    # ------------------------------------------------------------------
+    logger.info("🌱 Seeding Platform Feedback...")
+
+    feedback_data = [
+        {
+            "user_role": "patient",
+            "category": "platform",
+            "message": "The platform is extremely intuitive! I love how easy it is to find clinical trials in my city.",
+            "rating": 5,
+        },
+        {
+            "user_role": "hcp",
+            "category": "feature",
+            "message": "It would be great to have a PDF export for clinical observations. It helps with patient records.",
+            "rating": 4,
+        },
+        {
+            "user_role": "patient",
+            "category": "bug",
+            "message": "The notification bell sometimes lags and doesn't update the count until I refresh.",
+            "rating": 2,
+        },
+        {
+            "user_role": "org_member",
+            "category": "trial",
+            "message": "The search filters for trials are great, but could use a date-range filter for estimated completion.",
+            "rating": 4,
+        },
+        {
+            "user_role": "patient",
+            "category": "other",
+            "message": "I really appreciate the multilingual support. Adding more African local languages would be amazing!",
+            "rating": 5,
+        },
+        {
+            "user_role": "admin",
+            "category": "feature",
+            "message": "The moderation queue needs bulk actions for handled flagged posts more efficiently.",
+            "rating": 3,
+        },
+    ]
+
+    for fb in feedback_data:
+        uid = user_ids.get(fb["user_role"])
+        if uid:
+            await conn.execute("""
+                INSERT INTO platform_feedback (user_id, category, message, rating)
+                VALUES ($1, $2, $3, $4)
+            """, uid, fb["category"], fb["message"], fb["rating"])
+
+    logger.info("✅ Platform Feedback seeded.")
+
+    # ------------------------------------------------------------------
+    # 10. SEED ADMIN NOTIFICATIONS
+    # ------------------------------------------------------------------
+    if user_ids.get("admin"):
+        admin_id = user_ids["admin"]
+        notif_service = NotificationService(conn)
+        
+        logger.info("🌱 Seeding Admin Notifications (Preference Guarded)...")
+        
+        admin_notifs = [
+            {
+                "type": NotificationType.SYSTEM_ANNOUNCEMENT,
+                "data": {"title": "Welcome Admin!", "message": "Your administrative dashboard is fully active.", "link": "/admin/dashboard"}
+            },
+            {
+                "type": NotificationType.ORG_REQUEST_UPDATE,
+                "data": {"org_name": "VOCE Research Institute", "status": "approved", "org_id": "8ca0327f-598d-4e94-9128-403487000f57"}
+            },
+            {
+                "type": NotificationType.SYSTEM_ANNOUNCEMENT,
+                "data": {"title": "Infrastructure Optimized", "message": "Database indexes and schema hardening completed successfully.", "link": "/docs/technical"}
+            }
+        ]
+        
+        for n in admin_notifs:
+            # notify_user performs the mandatory preference check
+            await notif_service.notify_user(
+                user_id=str(admin_id),
+                notif_type=n["type"],
+                data=n["data"]
+            )
+            
+        logger.info("✅ Admin Notifications seeded.")
 
     logger.info("🌱 Database seeding complete.")

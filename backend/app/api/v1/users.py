@@ -9,7 +9,8 @@ from app.api.middleware.auth_middleware import auth_middleware
 from app.api.dependencies.connections import get_connection
 from app.models.profile_model import ProfileModel
 from app.models.user_model import UserModel
-from app.schemas.user import UserDetailsResponse, UserProfileUpdate, NotificationPreferences
+from app.schemas.user import UserDetailsResponse, UserProfileUpdate
+from app.schemas.notification import NotificationPreferences
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -77,7 +78,23 @@ async def update_my_profile(
     
     return response_data
 
-@router.patch("/me/notifications")
+@router.get("/me/preferences/notifications")
+async def get_notification_preferences(
+    current_user: dict = Depends(auth_middleware),
+    conn=Depends(get_connection)
+):
+    """
+    Get current user's notification preferences.
+    """
+    user_model = UserModel(conn)
+    user = await user_model.get_by_id(current_user["id"])
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    return user.get("notification_preferences") or {}
+
+
+@router.patch("/me/preferences/notifications")
 async def update_notifications(
     preferences: NotificationPreferences,
     current_user: dict = Depends(auth_middleware),

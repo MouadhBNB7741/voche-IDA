@@ -401,6 +401,9 @@ async def reply_to_post(
 ):
     """Reply to a post. Auth required."""
     model = CommunityModel(conn)
+    from app.services.notification_service import NotificationService
+    from app.schemas.notification import NotificationType
+
     try:
         comment = await model.create_comment(
             post_id=str(post_id),
@@ -410,6 +413,25 @@ async def reply_to_post(
             if request.parent_comment_id
             else None,
         )
+
+        # TRIGGER NOTIFICATION: COMMUNITY_REPLY
+        try:
+            post = await model.get_post_details(str(post_id))
+            if post and post["user_id"] != current_user["id"]:
+                notif_service = NotificationService(conn)
+                await notif_service.notify_user(
+                    user_id=post["user_id"],
+                    notif_type=NotificationType.COMMUNITY_REPLY,
+                    data={
+                        "replier_name": current_user.get("display_name", "Someone"),
+                        "post_title": post["title"],
+                        "link": f"/community/{community_id}/posts/{post_id}"
+                    }
+                )
+        except Exception as e:
+            # Notifications shouldn't break the original action
+            pass
+
         return comment
     except ValueError as e:
         raise HTTPException(
@@ -509,8 +531,28 @@ async def like_post(
 ):
     """Like a post. Auth required."""
     model = CommunityModel(conn)
+    from app.services.notification_service import NotificationService
+    from app.schemas.notification import NotificationType
+
     try:
         result = await model.like_post(str(post_id), current_user["id"])
+
+        # TRIGGER NOTIFICATION: COMMUNITY_LIKE
+        try:
+            post = await model.get_post_details(str(post_id))
+            if post and post["user_id"] != current_user["id"]:
+                 notif_service = NotificationService(conn)
+                 await notif_service.notify_user(
+                     user_id=post["user_id"],
+                     notif_type=NotificationType.COMMUNITY_LIKE,
+                     data={
+                         "user_name": current_user.get("display_name", "Someone"),
+                         "link": f"/community/{community_id}/posts/{post_id}"
+                     }
+                 )
+        except:
+            pass
+
         return {"success": True, "data": result}
     except ValueError as e:
         raise HTTPException(
@@ -534,8 +576,30 @@ async def like_reply(
 ):
     """Like a reply/comment. Auth required."""
     model = CommunityModel(conn)
+    from app.services.notification_service import NotificationService
+    from app.schemas.notification import NotificationType
+
     try:
         result = await model.like_comment(str(comment_id), current_user["id"])
+
+        # TRIGGER NOTIFICATION: COMMUNITY_LIKE for reply
+        try:
+             # Need author of comment
+             comment_sql = "SELECT user_id, post_id FROM comments WHERE comment_id = $1"
+             row = await conn.fetchrow(comment_sql, str(comment_id))
+             if row and row["user_id"] != current_user["id"]:
+                  notif_service = NotificationService(conn)
+                  await notif_service.notify_user(
+                      user_id=row["user_id"],
+                      notif_type=NotificationType.COMMUNITY_LIKE,
+                      data={
+                          "user_name": current_user.get("display_name", "Someone"),
+                          "link": f"/community/{community_id}/posts/{row['post_id']}"
+                      }
+                  )
+        except:
+             pass
+
         return {"success": True, "data": result}
     except ValueError as e:
         raise HTTPException(

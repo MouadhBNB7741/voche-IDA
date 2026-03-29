@@ -67,7 +67,7 @@ CREATE TABLE users (
     avatar TEXT,
     
     -- Preferences and verification
-    notification_preferences JSONB DEFAULT '{"emailAlerts": true, "pushNotifications": true, "frequency": "instant"}'::jsonb,
+    notification_preferences JSONB DEFAULT '{"emailAlerts": true, "pushNotifications": true, "frequency": "instant", "notificationTypes": {"trial_match": true, "trial_alert": true, "community_reply": true, "community_like": true, "event_reminder": true, "event_update": true, "org_request_update": true, "resource_update": true, "survey_available": true, "system_announcement": true}}'::jsonb,
     verification JSONB DEFAULT '{"status": "not_submitted"}'::jsonb,
     
     -- Timestamps
@@ -1097,7 +1097,12 @@ CREATE TABLE notifications (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     
     -- Constraints
-    CONSTRAINT check_notification_type CHECK (type IN ('trial', 'community', 'event', 'system'))
+    CONSTRAINT check_notification_type CHECK (type IN (
+        'trial_match', 'trial_alert', 
+        'community_reply', 'community_like', 
+        'event_reminder', 'event_update', 'org_request_update', 
+        'resource_update', 'survey_available', 'system_announcement'
+    ))
 );
 
 COMMENT ON TABLE notifications IS 'User notification inbox with read status tracking';
@@ -1136,6 +1141,82 @@ CREATE TABLE user_activity_log (
 COMMENT ON TABLE user_activity_log IS 'Audit trail and analytics for user actions on the platform';
 COMMENT ON COLUMN user_activity_log.metadata IS 'JSONB for flexible contextual data (e.g., search terms, filters)';
 COMMENT ON COLUMN user_activity_log.ip_address IS 'Store with GDPR considerations and retention policy';
+
+
+-- ============================================================================
+-- 9. AUDIT LOGS (Phase 2)
+-- ============================================================================
+
+-- -----------------------------------------------------------------------------
+-- audit_logs: Immutable record of all security-sensitive actions
+-- -----------------------------------------------------------------------------
+-- Purpose: Track admin actions, moderation decisions, verification reviews
+-- Security: Append-only — no UPDATE or DELETE permitted
+-- Usage: HCP verification, user suspension, content moderation, trial management
+-- -----------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS audit_logs (
+    -- Primary Key
+    log_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+
+    -- Actor
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,  -- NULL for system actions
+
+    -- Action Details
+    action VARCHAR(100) NOT NULL,                          -- e.g., user_suspended, hcp_verified
+    target_type VARCHAR(50),                               -- user, trial, report, resource
+    target_id UUID,                                        -- ID of entity acted upon
+
+    -- Context
+    metadata JSONB DEFAULT '{}',                           -- Additional context (old/new values, reason)
+    ip_address VARCHAR(50),                                -- Actor's IP
+
+    -- Timestamps
+    created_at TIMESTAMPTZ DEFAULT NOW()                   -- Immutable timestamp
+);
+
+COMMENT ON TABLE audit_logs IS 'Immutable audit trail for security-sensitive admin and system actions';
+COMMENT ON COLUMN audit_logs.metadata IS 'JSONB for contextual data: old values, new values, decision reason';
+
+
+-- ============================================================================
+-- 10. PLATFORM FEEDBACK 
+-- ============================================================================
+
+-- -----------------------------------------------------------------------------
+-- platform_feedback: User feedback with star ratings
+-- -----------------------------------------------------------------------------
+-- Purpose: Collect user feedback with category, message, and star rating
+-- Ratings: 1-5 stars (required)
+-- Categories: platform, trial, patient, feature, bug, other
+-- -----------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS platform_feedback (
+    -- Primary Key
+    feedback_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+
+    -- User Reference
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE, -- Optional for anonymous feedback
+
+    -- Feedback Content
+    category VARCHAR(50) NOT NULL,                          -- platform, trial, patient, feature, bug, other
+    message TEXT NOT NULL,
+    rating INTEGER NOT NULL,                                -- 1-5 stars
+
+    -- Technical Details
+    ip_address VARCHAR(50),
+    user_agent TEXT,
+
+    -- Timestamps
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+
+    -- Constraints
+    CONSTRAINT check_feedback_category CHECK (category IN ('platform', 'trial', 'patient', 'feature', 'bug', 'other')),
+    CONSTRAINT check_feedback_rating CHECK (rating >= 1 AND rating <= 5)
+);
+
+COMMENT ON TABLE platform_feedback IS 'User feedback with star ratings and categorization';
+COMMENT ON COLUMN platform_feedback.rating IS 'Star rating from 1 (poor) to 5 (excellent)';
 
 
 -- ============================================================================
