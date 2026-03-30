@@ -66,3 +66,13 @@ export const authService = {
     return !!this.getCurrentUser();
   },
 };
+
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  role: 'patient' | 'hcp';
+  token?: string; // ← add this
+  avatar?: string;
+  location?: string;
+}
