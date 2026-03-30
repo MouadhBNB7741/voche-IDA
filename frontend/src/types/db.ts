@@ -1,4 +1,4 @@
-export type Role = 'patient' | 'hcp' | 'caregiver' | 'cso' | 'coalition' | 'admin';
+export type Role = 'patient' | 'hcp';
 
 export interface User {
     id: string;
@@ -29,7 +29,6 @@ export interface Trial {
     estimatedCompletion: string;
     eligibility: string[];
     contact: string;
-    // Senior Dev: Added proper relational fields if needed later, kept flat for MVP
 }
 
 export interface Event {
