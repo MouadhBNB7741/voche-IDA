@@ -91,7 +91,7 @@ export default function Dashboard() {
     // Guest View
     return (
       <div className="container mx-auto p-4 md:p-8 space-y-8 animate-in fade-in duration-500">
-        <PageHeader 
+        <PageHeader
           title="Welcome to VOCE"
           description="Advancing health equity through accessible clinical research for everyone."
           variant="green"
@@ -212,7 +212,12 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <Button variant="outline" size="sm" className="gap-2 shadow-sm" onClick={() => navigate('/profile')}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 shadow-sm"
+              onClick={() => navigate(user?.role === 'hcp' ? '/hcpdashboard' : '/patientdashboard')}
+            >
               <Edit size={14} />
               Edit Profile
             </Button>
@@ -274,7 +279,7 @@ export default function Dashboard() {
                   <Badge variant="outline" className="bg-primary/5 text-primary-color border-primary/20">
                     {trial.disease}
                   </Badge>
-                  <Badge variant="secondary" className="font-normal text-xs">
+                  <Badge variant="secondary" className="text-white font-normal text-xs">
                     {trial.phase}
                   </Badge>
                 </div>

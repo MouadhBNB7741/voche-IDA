@@ -4,7 +4,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { useAuth } from '../../contexts/AuthContext';
-import type { AuthUser } from '../../services/authService';
+import { authService, type AuthUser } from '../../services/authService';
 import { Eye, EyeOff, Loader2, Mail, Lock, User, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -27,30 +27,25 @@ export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
 
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password !== confirmPassword) {
-      toast.error('Passwords do not match');
-      return;
-    }
 
-    setLoading(true);
-
-    try {
-      await register(email, password, name, role);
-      await new Promise(resolve => setTimeout(resolve, 800));
-      toast.success('Registration successful!', {
-        description: 'Please check your email to verify your account.',
-      });
-      navigate('/');
-    } catch (error) {
-      toast.error('Registration failed', {
-        description: 'Please try again later.',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+const handleRegister = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (password !== confirmPassword) {
+    toast.error('Passwords do not match');
+    return;
+  }
+  setLoading(true);
+  try {
+    await register(email, password, name, role); // sets user in context
+    await new Promise(resolve => setTimeout(resolve, 800));
+    toast.success('Registration successful!');
+    navigate(role === 'hcp' ? '/hcpdashboard' : '/patientdashboard'); // role from form state
+  } catch (error) {
+    toast.error('Registration failed');
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen flex animate-in fade-in duration-500">
@@ -144,9 +139,6 @@ export default function Register() {
                   <SelectContent>
                     <SelectItem value="patient">Patient / Participant</SelectItem>
                     <SelectItem value="hcp">Healthcare Professional</SelectItem>
-                    <SelectItem value="caregiver">Caregiver</SelectItem>
-                    <SelectItem value="researcher">Researcher</SelectItem>
-                    <SelectItem value="admin">Administrator</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

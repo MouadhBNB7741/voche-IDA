@@ -4,6 +4,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { useAuth } from '../../contexts/AuthContext';
+import { authService } from '../../services/authService';
 import { Checkbox } from '../../components/ui/checkbox';
 import { Eye, EyeOff, Loader2, KeyRound, Mail, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
@@ -14,30 +15,25 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  const { login } = useAuth();
 
-    try {
-      await login(email, password);
-      // Simulate network delay for effect
-      await new Promise(resolve => setTimeout(resolve, 800));
-
-      toast.success('Welcome back!', {
-        description: 'You have successfully logged in.',
-      });
-      navigate('/');
-    } catch (error) {
-      toast.error('Login failed', {
-        description: 'Please check your credentials and try again.',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
+  try {
+    await login(email, password); 
+    const loggedInUser = authService.getCurrentUser(); 
+    await new Promise(resolve => setTimeout(resolve, 800));
+    toast.success('Welcome back!');
+    navigate(loggedInUser?.role === 'hcp' ? '/hcpdashboard' : '/patientdashboard');
+  } catch (error) {
+    toast.error('Login failed');
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen flex animate-in fade-in duration-500">

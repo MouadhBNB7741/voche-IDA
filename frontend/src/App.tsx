@@ -17,7 +17,8 @@ import ResourceDetails from './pages/Resources/ResourceDetails';
 import Events from './pages/Events/Events';
 import EventDetails from './pages/Events/EventDetails';
 import Assistant from './pages/Assistant';
-import Profile from './pages/Profile';
+import PatientDashboard from './pages/PatientDashboard/PatientDashboard';
+import HCPDashboard from './pages/HCPDashboard/HCPDashboard';
 import Notifications from './pages/Notifications';
 import Login from './pages/Auth/Login';
 import Signup from './pages/Auth/Signup';
@@ -48,7 +49,8 @@ export default function App() {
                   <Route path="/events" element={<Events />} />
                   <Route path="/events/:id" element={<EventDetails />} />
                   <Route path="/assistant" element={<Assistant />} />
-                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/patientdashboard" element={<PatientDashboard />} />
+                  <Route path="/hcpdashboard" element={<HCPDashboard />} />
                   <Route path="/notifications" element={<Notifications />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/signup" element={<Signup />} />

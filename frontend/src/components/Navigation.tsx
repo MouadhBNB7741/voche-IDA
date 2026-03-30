@@ -184,13 +184,27 @@ export default function Navigation() {
 
               <DropdownMenuSeparator />
 
-              <DropdownMenuItem onClick={() => navigate("/profile")}>
-                <User className="mr-2 h-4 w-4" />
-                <span>Profile</span>
-              </DropdownMenuItem>
+              {user.role === 'hcp' ? (
+                <DropdownMenuItem
+                  onClick={() => navigate("/hcpdashboard")}
+                  className="focus:bg-primary-color/10 focus:text-primary-color hover:bg-primary-color/10 hover:text-primary-color cursor-pointer"
+                >
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Doctor Details</span>
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem
+                  onClick={() => navigate("/patientdashboard")}
+                  className="focus:bg-primary-color/10 focus:text-primary-color hover:bg-primary-color/10 hover:text-primary-color cursor-pointer"
+                >
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Patient Details</span>
+                </DropdownMenuItem>
+              )}
 
               {/* Note: /notifications route should be added to App.tsx */}
-              <DropdownMenuItem onClick={() => navigate("/notifications")}>
+              <DropdownMenuItem onClick={() => navigate("/notifications")}
+                className="focus:bg-primary-color/10 focus:text-primary-color hover:bg-primary-color/10 hover:text-primary-color cursor-pointer">
                 <Bell className="mr-2 h-4 w-4" />
                 <span>Notifications</span>
 
