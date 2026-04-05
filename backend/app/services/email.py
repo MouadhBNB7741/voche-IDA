@@ -38,7 +38,7 @@ class EmailService:
                 </div>
                 <div class="content">
                     <p>Hello,</p>
-                    <p>We received a request to reset your password for your VOCE account.</p>
+                    <p>We received a request to reset your password for your Vocheaccount.</p>
                     <p>Click the button below to reset your password:</p>
                     <p style="text-align: center;">
                         <a href="{reset_url}" class="button">Reset Password</a>
@@ -51,7 +51,7 @@ class EmailService:
                     <p>If you didn't request this password reset, please ignore this email. Your password will remain unchanged.</p>
                 </div>
                 <div class="footer">
-                    <p>VOCE System | Automated Email - Do Not Reply</p>
+                    <p>VocheSystem | Automated Email - Do Not Reply</p>
                 </div>
             </div>
         </body>
@@ -75,7 +75,7 @@ class EmailService:
         try:
             # Create message
             message = MIMEMultipart("alternative")
-            message["Subject"] = "Reset Your Password - VOCE"
+            message["Subject"] = "Reset Your Password - voche"
             message["From"] = settings.email_from
             message["To"] = email
             

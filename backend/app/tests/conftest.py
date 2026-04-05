@@ -24,7 +24,7 @@ def anyio_backend():
 @pytest.fixture(scope="function")
 async def setup_test_db():
     # Verify we are indeed on the test database
-    if "voce_test" not in settings.database_url:
+    if "voche_test" not in settings.database_url:
         raise RuntimeError(f"⚠️ SAFETY TRIGGER: settings.database_url is pointing to: {settings.database_url}")
 
     # Reset Singleton

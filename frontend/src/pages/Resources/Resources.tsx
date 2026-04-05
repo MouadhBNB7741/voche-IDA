@@ -20,7 +20,7 @@ import {
   Award,
   TrendingUp
 } from 'lucide-react';
-import { mockResources } from '../../data/mockData';
+// Mock data removed
 import { Input } from '../../components/ui/input';
 import {
   Select,
@@ -31,7 +31,7 @@ import {
 } from '../../components/ui/select';
 
 const resourceTypes = [
-  { id: 'all', name: 'All Resources', icon: BookOpen, color: 'bg-primary' },
+  { id: 'all', name: 'All Resources', icon: BookOpen, color: 'bg-primary-color' },
   { id: 'video', name: 'Videos', icon: Video, color: 'bg-red-500' },
   { id: 'document', name: 'Documents', icon: FileText, color: 'bg-blue-500' },
   { id: 'toolkit', name: 'Toolkits', icon: Download, color: 'bg-green-500' },
@@ -114,7 +114,7 @@ export default function ResourceLibrary() {
             <Card
               key={type.id}
               className={`p-4 cursor-pointer transition-all duration-200 ${selectedType === type.id
-                ? 'bg-accent text-accent-foreground border-accent shadow-md scale-105 ring-2 ring-accent ring-offset-2 ring-offset-background'
+                ? 'bg-accent-color text-accent-foreground border-accent shadow-md scale-105 ring-2 ring-accent ring-offset-2 ring-offset-background'
                 : 'hover:shadow-md hover:bg-muted/50'
                 }`}
               onClick={() => setSelectedType(type.id)}
@@ -196,7 +196,7 @@ export default function ResourceLibrary() {
               <Card key={resource.id} className="p-6 bg-gradient-to-br from-card to-accent/5 border-accent/20 hover:shadow-lg transition-all hover:border-accent/40 group">
                 <div className="flex items-start justify-between mb-4">
                   <div className="bg-white dark:bg-accent/20 text-accent p-2.5 rounded-xl shadow-sm">
-                    <TypeIcon size={24} />
+                    <TypeIcon size={24} className="text-primary-color"/>
                   </div>
                   <Badge variant="secondary" className="bg-accent text-accent-foreground hover:bg-accent/90">
                     Featured
@@ -213,7 +213,9 @@ export default function ResourceLibrary() {
                   </div>
                 </div>
 
-                <Button size="sm" className="w-full bg-accent hover:bg-accent/90 text-white shadow-md group-hover:scale-[1.02] transition-transform" onClick={() => navigate(`/resources/${resource.id}`)}>
+                <Button size="sm" className="w-full bg-accent hover:bg-accent/90 text-white shadow-md group-hover:scale-[1.02] transition-transform" 
+                style={{ backgroundColor: 'hsl(var(--lime))', color: 'white' }}
+                onClick={() => navigate(`/resources/${resource.id}`)}>
                   Access Resource
                 </Button>
               </Card>
@@ -235,15 +237,15 @@ export default function ResourceLibrary() {
                 onClick={() => navigate(`/resources/${resource.id}`)}
               >
                 <div className="flex items-start justify-between mb-4">
-                  <div className="bg-muted p-2.5 rounded-xl group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                    <TypeIcon size={20} className="text-muted-foreground group-hover:text-primary" />
+                  <div className="bg-muted p-2.5 rounded-xl group-hover:bg-primary/10 group-hover:text-primary-color transition-colors">
+                    <TypeIcon size={20} className="text-muted-foreground group-hover:text-primary-color" />
                   </div>
                   <Badge variant="outline" className="text-xs bg-muted/30">
                     {resource.category}
                   </Badge>
                 </div>
 
-                <h3 className="font-bold mb-2 line-clamp-2 group-hover:text-primary transition-colors">{resource.title}</h3>
+                <h3 className="font-bold mb-2 line-clamp-2 group-hover:text-primary-color transition-colors">{resource.title}</h3>
                 <p className="text-sm text-muted-foreground mb-4 line-clamp-3 flex-grow">
                   {resource.description}
                 </p>
@@ -280,7 +282,9 @@ export default function ResourceLibrary() {
 
                 <div className="flex gap-2.5 mt-auto">
                   {resource.type === 'video' ? (
-                    <Button size="sm" className="flex-1 gap-2 shadow-sm" onClick={(e) => {
+                    <Button size="sm" className="flex-1 gap-2 shadow-sm" 
+                    style={{ backgroundColor: 'hsl(var(--primary))', color: 'white' }}
+                    onClick={(e) => {
                       e.stopPropagation();
                       navigate(`/resources/${resource.id}`);
                     }}>
@@ -288,7 +292,9 @@ export default function ResourceLibrary() {
                       Watch
                     </Button>
                   ) : resource.type === 'course' ? (
-                    <Button size="sm" className="flex-1 gap-2 shadow-sm" onClick={(e) => {
+                    <Button size="sm" className="flex-1 gap-2 shadow-sm" 
+                    style={{ backgroundColor: 'hsl(var(--primary))', color: 'white' }} 
+                    onClick={(e) => {
                       e.stopPropagation();
                       navigate(`/resources/${resource.id}`);
                     }}>
@@ -296,7 +302,9 @@ export default function ResourceLibrary() {
                       Start
                     </Button>
                   ) : (
-                    <Button size="sm" className="flex-1 gap-2 shadow-sm" onClick={(e) => {
+                    <Button size="sm" className="flex-1 gap-2 shadow-sm" 
+                    style={{ backgroundColor: 'hsl(var(--primary))', color: 'white' }}
+                    onClick={(e) => {
                       e.stopPropagation();
                       navigate(`/resources/${resource.id}`);
                     }}>
@@ -304,7 +312,9 @@ export default function ResourceLibrary() {
                       Get
                     </Button>
                   )}
-                  <Button size="sm" variant="secondary" className="px-3" onClick={(e) => {
+                  <Button size="sm" variant="secondary" className="px-3" 
+                  style={{ backgroundColor: 'hsl(var(--teal))', color: 'white' }}
+                  onClick={(e) => {
                     e.stopPropagation();
                     navigate(`/resources/${resource.id}`);
                   }}>
@@ -331,7 +341,7 @@ export default function ResourceLibrary() {
       <Card className="p-8 bg-card border border-border/60 shadow-sm">
         <div className="flex items-center gap-4 mb-6">
           <div className="bg-secondary/10 text-secondary p-3 rounded-xl shadow-sm">
-            <Award size={24} />
+            <Award size={24} className="text-teal-color"/>
           </div>
           <div>
             <h3 className="font-bold text-lg text-foreground">Structured Learning Paths</h3>
@@ -350,7 +360,7 @@ export default function ResourceLibrary() {
               <div>
                 <div className="font-bold mb-1 group-hover:text-secondary transition-colors text-foreground">{path.title}</div>
                 <div className="text-xs text-muted-foreground font-medium flex items-center gap-2">
-                  <span className="bg-secondary/10 text-secondary px-2 py-0.5 rounded text-[10px] uppercase tracking-wide">Path</span>
+                  <span className="bg-secondary/10 text-teal-color px-2 py-0.5 rounded text-[10px] uppercase tracking-wide">Path</span>
                   {path.modules} modules • {path.duration}
                 </div>
               </div>

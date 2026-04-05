@@ -3,7 +3,7 @@
 ---
 
 ## 1. Executive Summary of Technology
-> **Mission:** To support VOCE’s dual mission of **engagement** (community building) and **evidence generation** (data science).
+> **Mission:** To support voche’s dual mission of **engagement** (community building) and **evidence generation** (data science).
 
 The technical architecture utilizes a **Data-First Stack (React + Python + SQL)**. This shift ensures the platform is AI-ready and capable of complex relational data management from Day 1. It explicitly separates *Clinical Observations* (HCPs) from *Content Moderation*, ensuring scientific integrity and clear data pipelines.
 
@@ -11,7 +11,7 @@ The technical architecture utilizes a **Data-First Stack (React + Python + SQL)*
 
 ## 2. The Tech Stack (PERN - Python Edition)
 
-| Component    | Technology         | Rationale for VOCE                                                           |
+| Component    | Technology         | Rationale for Voche                                                          |
 | :----------- | :----------------- | :--------------------------------------------------------------------------- |
 | **Frontend** | `React.js (Vite)`  | Responsive, mobile-first interface optimized for low-bandwidth (LMICs).      |
 | **Backend**  | `Python (FastAPI)` | High-performance API. Native support for AI/Data Science (Pandas, NumPy).    |
@@ -55,7 +55,7 @@ The technical architecture utilizes a **Data-First Stack (React + Python + SQL)*
 * **Partnership Gateway:** `POST /contact` for coalition API requests.
 
 ### 🤖 PHASE 5: AI Assistant & Intelligence
-* **VOCE Assistant:** Rule-based Python logic (Decision Tree) for navigation.
+* **VocheAssistant:** Rule-based Python logic (Decision Tree) for navigation.
 * **Analytics:** Backend logs for "Most Searched Diseases" to inform IDA policy.
 
 ### 🚀 PHASE 6: Pilot & Launch Readiness

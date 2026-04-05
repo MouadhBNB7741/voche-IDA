@@ -309,7 +309,7 @@ async def seed_db(conn):
             "url": "https://example.com/video1.mp4",
             "language": "en",
             "duration": "12:30",
-            "author": "VOCE Medical Team",
+            "author": "VocheMedical Team",
             "tags": ["clinical", "trials", "beginner"],
             "published_date": "2024-01-01",
             "downloads": 12,
@@ -457,7 +457,7 @@ async def seed_db(conn):
     await conn.execute("DELETE FROM organizations")
 
     orgs_data = [
-        {"name": "VOCE Research Institute", "type": "research_institution", "country": "USA", "description": "Leading research center for oncology.", "website": "https://voce-research.org", "email": "contact@voce-research.org", "membership_status": "verified"},
+        {"name": "VocheResearch Institute", "type": "research_institution", "country": "USA", "description": "Leading research center for oncology.", "website": "https://voche-research.org", "email": "contact@voche-research.org", "membership_status": "verified"},
         {"name": "Global Health Pharma", "type": "pharma", "country": "UK", "description": "Global pharmaceutical company.", "website": "https://globalhealth.com", "email": "info@globalhealth.com", "membership_status": "partner"},
         {"name": "National Cancer Foundation", "type": "advocacy_group", "country": "Canada", "description": "Advocating for patient rights.", "website": "https://ncf.ca", "email": "advocacy@ncf.ca", "membership_status": "affiliated"},
         {"name": "Advanced Oncology Clinics", "type": "hospital", "country": "Germany", "description": "Top tier oncology hospital.", "website": "https://advancedoncology.de", "email": "contact@advancedoncology.de", "membership_status": "verified"},
@@ -598,7 +598,7 @@ async def seed_db(conn):
             "title": "Clinical Policy Roundtable",
             "description": "Invite-only discussion on new clinical trial regulations.",
             "type": "roundtable",
-            "organizer": "VOCE",
+            "organizer": "voche",
             "date": next_month,
             "time": time(16, 0),
             "timezone": "UTC",
@@ -782,7 +782,7 @@ async def seed_db(conn):
             },
             {
                 "type": NotificationType.ORG_REQUEST_UPDATE,
-                "data": {"org_name": "VOCE Research Institute", "status": "approved", "org_id": "8ca0327f-598d-4e94-9128-403487000f57"}
+                "data": {"org_name": "VocheResearch Institute", "status": "approved", "org_id": "8ca0327f-598d-4e94-9128-403487000f57"}
             },
             {
                 "type": NotificationType.SYSTEM_ANNOUNCEMENT,

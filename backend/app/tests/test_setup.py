@@ -20,12 +20,12 @@ async def test_health_check(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_database_isolation(setup_test_db):  # <--- ADDED FIXTURE HERE
     """
-    CRITICAL: Verify we are connected to the 'voce_test' database.
+    CRITICAL: Verify we are connected to the 'voche_test' database.
     """
     pool = PostgresDB.get_pool()
     async with pool.acquire() as conn:
         db_name = await conn.fetchval("SELECT current_database();")
-        assert db_name == "voce_test"
+        assert db_name == "voche_test"
 
 @pytest.mark.asyncio
 async def test_redis_operations(setup_test_db):    # <--- GOOD PRACTICE TO ADD HERE TOO

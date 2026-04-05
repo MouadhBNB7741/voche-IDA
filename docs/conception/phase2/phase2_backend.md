@@ -1,4 +1,4 @@
-# 🏗️ VOCE Platform | Phase 2 Backend Conception — RBAC & Advanced Systems
+# 🏗️ VochePlatform | Phase 2 Backend Conception — RBAC & Advanced Systems
 
 > **Document Purpose:** Defines the backend architecture for Phase 2: router structure, middleware stack, service layer, dependency injection, and background jobs. Engineers should implement directly from this document.
 >

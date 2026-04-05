@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # --- Startup ---
-    logger.info("🚀 VOCE Backend Starting up...")
+    logger.info("🚀 Voche Backend Starting up...")
     try:
         await PostgresDB.connect()
         logger.info("Database connected.")
@@ -44,13 +44,13 @@ async def lifespan(app: FastAPI):
         
     yield
     # --- Shutdown ---
-    logger.info("🛑 VOCE Backend Shutting down...")
+    logger.info("🛑 Voche Backend Shutting down...")
     await PostgresDB.disconnect()
     await disconnect_redis()
 
 app = FastAPI(
     title=settings.project_name,
-    description="VOCE Platform API for Clinical Trials & Community",
+    description="Voche Platform API for Clinical Trials & Community",
     version="0.1.0",
     lifespan=lifespan,
     docs_url="/api/v1/docs",
@@ -63,7 +63,7 @@ app.mount("/static", StaticFiles(directory="uploads"), name="static")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -88,7 +88,7 @@ app.include_router(health_router, prefix="/api/v1")
 @app.get("/api/v1/", tags=["Status"])
 async def root():
     return {
-        "message": "VOCE Backend API is running",
+        "message": "Voche Backend API is running",
         "docs_url": "/api/v1/docs", 
         "redoc_url": "/redoc"
     }

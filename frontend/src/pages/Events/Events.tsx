@@ -79,7 +79,7 @@ export default function Events() {
         variant="green"
         action={
           <SuggestEventModal>
-            <Button className="bg-white text-accent hover:bg-white/90 border-0 shadow-lg font-bold gap-2 whitespace-nowrap px-6 h-12 rounded-xl transition-transform hover:scale-105">
+            <Button variant="hero" className="gap-2 font-semibold transition-transform hover:scale-105">
               <Plus size={20} className="stroke-[3px]" />
               Suggest Event
             </Button>
@@ -196,10 +196,10 @@ export default function Events() {
             return (
               <div
                 key={event.id}
-                className="flex flex-col md:flex-row gap-4 p-4 rounded-xl border border-border/60 bg-card hover:shadow-md hover:border-primary/20 transition-all cursor-pointer group"
+                className="flex flex-col md:flex-row gap-4 p-4 rounded-xl bg-card shadow-md hover:border-primary/20 transition-all cursor-pointer group"
                 onClick={() => navigate(`/events/${event.id}`)}
               >
-                <div className="flex-shrink-0 w-full md:w-48 bg-muted/30 rounded-lg flex flex-col items-center justify-center p-4 border border-border/50">
+                <div className="flex-shrink-0 w-full md:w-48 bg-muted/30 rounded-lg flex flex-col items-center justify-center p-4">
                   <span className="text-2xl font-bold text-foreground">{new Date(event.date).getDate()}</span>
                   <span className="text-sm font-semibold text-muted-foreground uppercase">{new Date(event.date).toLocaleDateString('en-US', { month: 'short' })}</span>
                   <span className="text-xs text-muted-foreground mt-1">{new Date(event.date).getFullYear()}</span>

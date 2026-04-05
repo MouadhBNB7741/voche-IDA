@@ -1,8 +1,8 @@
 -- ============================================================================
--- VOCE Platform - Database Indexes
+-- Voche Platform - Database Indexes
 -- ============================================================================
 --
--- Purpose: Create performance indexes for the VOCE platform
+-- Purpose: Create performance indexes for the Voche platform
 -- Strategy: MVP-level indexing - not over-optimized
 -- Focus: Foreign keys, search fields, high-frequency lookups
 --
@@ -402,4 +402,4 @@ COMMENT ON INDEX idx_platform_feedback_category IS 'Filter feedback by category 
 -- Run ANALYZE after index creation to update query planner statistics
 ANALYZE;
 
-COMMENT ON SCHEMA public IS 'VOCE Platform - All performance indexes created for MVP';
+COMMENT ON SCHEMA public IS 'Voche Platform - All performance indexes created for MVP';

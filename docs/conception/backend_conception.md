@@ -1,12 +1,12 @@
-# 🏗️ VOCE Platform | Backend System Conception
+# 🏗️ VochePlatform | Backend System Conception
 
-> **Document Purpose:** This document serves as the comprehensive backend blueprint for the VOCE Platform MVP. It defines the system's structure, communication contracts, and data organization in clear, non-technical language to align Product, Frontend, and Backend teams.
+> **Document Purpose:** This document serves as the comprehensive backend blueprint for the VochePlatform MVP. It defines the system's structure, communication contracts, and data organization in clear, non-technical language to align Product, Frontend, and Backend teams.
 
 ---
 
 ## Executive Summary
 
-The VOCE backend serves as the **secure, scalable foundation** that powers the platform's three core missions:
+The Vochebackend serves as the **secure, scalable foundation** that powers the platform's three core missions:
 
 1. **Discovery** - Connecting users with relevant clinical trials
 2. **Education** - Providing verified health resources and information
@@ -795,7 +795,7 @@ This section is organized by feature domain, following RESTful conventions.
 
 #### **Join Organization** (for verified HCPs/members)
 
-- **What it does:** Requests membership in organization's VOCE group
+- **What it does:** Requests membership in organization's Vochegroup
 - **Method:** `POST /organizations/{org_id}/join`
 - **What happens:**
   1. Membership request created
@@ -906,7 +906,7 @@ The database is the **system's memory**—it stores all persistent information i
 
 ### Design Principles
 
-**Relational Structure:** We use PostgreSQL, a relational database, because VOCE's data has clear relationships:
+**Relational Structure:** We use PostgreSQL, a relational database, because voche's data has clear relationships:
 
 - Users participate in trials
 - Users create forum posts
@@ -1573,7 +1573,7 @@ This backend design directly supports all current frontend pages:
 
 ## 9. Conclusion & Next Steps
 
-This backend conception provides the foundation for VOCE's technical implementation. It balances:
+This backend conception provides the foundation for voche's technical implementation. It balances:
 
 - **Simplicity** (MVP-focused, avoiding over-engineering)
 - **Security** (HIPAA/GDPR-compliant from day one)

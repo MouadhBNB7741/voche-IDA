@@ -1,4 +1,4 @@
-# 📡 VOCE Platform | Phase 2 API Endpoints — RBAC & Advanced Systems
+# 📡 VochePlatform | Phase 2 API Endpoints — RBAC & Advanced Systems
 
 > **Base URL:** `/api/v1`
 > **Auth:** JWT Bearer token in `Authorization` header

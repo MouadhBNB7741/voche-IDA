@@ -1,4 +1,4 @@
-# 📋 VOCE Platform – Complete MVP Action Matrix
+# 📋 VochePlatform – Complete MVP Action Matrix
 
 **Scope:** MVP (Minimum Viable Product)  
 **Golden Rule:** *Every action must either connect a user to a trial, educate them on advocacy, or build community engagement.*

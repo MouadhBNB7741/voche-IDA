@@ -1,8 +1,8 @@
 -- ============================================================================
--- VOCE Platform - Database Schema (MVP)
+-- Voche Platform - Database Schema (MVP)
 -- ============================================================================
 --
--- Purpose: Create all database tables for the VOCE clinical trials platform
+-- Purpose: Create all database tables for the Voche clinical trials platform
 -- Architecture: PostgreSQL 16+ with native async SQL (no ORM)
 -- Standards: UUID primary keys, TIMESTAMP WITH TIME ZONE, JSONB for flexibility
 --
@@ -1223,4 +1223,4 @@ COMMENT ON COLUMN platform_feedback.rating IS 'Star rating from 1 (poor) to 5 (e
 -- SCHEMA CREATION COMPLETE
 -- ============================================================================
 
-COMMENT ON SCHEMA public IS 'VOCE Platform MVP Schema - See docs/conception/dbStrucutre.md for full specification';
+COMMENT ON SCHEMA public IS 'Voche Platform MVP Schema - See docs/conception/dbStrucutre.md for full specification';

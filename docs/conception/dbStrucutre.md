@@ -1,4 +1,4 @@
-# 🏛 VOCE Platform | Database Schema (MVP)
+# 🏛 VochePlatform | Database Schema (MVP)
 
 > **Architecture:** PERN Stack (PostgreSQL, Express/FastAPI, React, Node/Python)  
 > **Standards:** Relational Integrity + AI-Ready JSONB + UUID Primary Keys

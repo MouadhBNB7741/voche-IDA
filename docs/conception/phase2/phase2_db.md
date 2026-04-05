@@ -1,4 +1,4 @@
-# 🏛 VOCE Platform | Phase 2 Database Schema — RBAC & Advanced Systems
+# 🏛 VochePlatform | Phase 2 Database Schema — RBAC & Advanced Systems
 
 > **Architecture:** PERN Stack (PostgreSQL, FastAPI, React, Python)
 > **Standards:** Relational Integrity + AI-Ready JSONB + UUID Primary Keys

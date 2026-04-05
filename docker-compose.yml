@@ -1,55 +1,67 @@
 services:
-  # 1. The Database
+  # VOCE PostgreSQL Database
   db:
-    image: postgres:alpine
-    container_name: veco-postgres
+    image: postgres:16-alpine
+    container_name: voce-db
     ports:
-      - "5433:5432"
+      - "5432:5432"
     environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
+      POSTGRES_USER: voce_user
+      POSTGRES_PASSWORD: voce_password
+      POSTGRES_DB: voce_db
     volumes:
-      - postgres_data:/var/lib/postgresql
+      - voce_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
-      interval: 5s
+      test: ["CMD-SHELL", "pg_isready -U voce_user -d voce_db"]
+      interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - voce-network
 
-  # 2. The Cache
+  # VOCE Redis Cache
   redis:
-    image: redis:latest
-    container_name: veco-redis
+    image: redis:7-alpine
+    container_name: voce-redis
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "6379:6379"
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
-      interval: 5s
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - voce-network
 
-  # 3. The Backend App
+  # VOCE Backend API
   backend:
-    build: ./backend
-    container_name: veco-backend
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: voce-backend
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
-      - ./backend:/app
+      - ./backend/app:/app/app
+      - ./backend/uploads:/app/uploads
     ports:
       - "8000:8000"
+    env_file:
+      - ./backend/.env
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT:-5432}/${POSTGRES_DB}
-      - REDIS_URL=redis://redis:${REDIS_PORT:-6379}
-      - SECRET_KEY=${SECRET_KEY}
-      - SMTP_USER=${SMTP_USER}
-      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - DATABASE_URL=postgres://voce_user:voce_password@db:5432/voce_db
+      - REDIS_URL=redis://redis:6379
       - PYTHONPATH=/app
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - voce-network
+
+networks:
+  voce-network:
+    driver: bridge
 
 volumes:
-  postgres_data:
+  voce_postgres_data:

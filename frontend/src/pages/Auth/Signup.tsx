@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { useAuth } from '../../contexts/AuthContext';
-import type { AuthUser } from '../../services/authService';
 import { Eye, EyeOff, Loader2, Mail, Lock, User, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -14,41 +13,45 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui/select';
+import type { UserType } from '../../types/db';
 import idaLogo from '../../assets/ida.webp';
 
 export default function Register() {
-  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState<AuthUser['role']>('patient');
+  const [userType, setUserType] = useState<UserType>('patient');
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const { register } = useAuth();
-  const navigate = useNavigate();
+  const { register, isLoading } = useAuth();
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (password.length < 8) {
+      toast.error('Password must be at least 8 characters long');
+      return;
+    }
+
     if (password !== confirmPassword) {
       toast.error('Passwords do not match');
       return;
     }
 
-    setLoading(true);
-
     try {
-      await register(email, password, name, role);
-      await new Promise(resolve => setTimeout(resolve, 800));
-      toast.success('Registration successful!', {
-        description: 'Please check your email to verify your account.',
+      await register({
+        email,
+        password,
+        first_name: firstName,
+        last_name: lastName,
+        user_type: userType
       });
-      navigate('/');
-    } catch (error) {
-      toast.error('Registration failed', {
-        description: 'Please try again later.',
-      });
-    } finally {
-      setLoading(false);
+      
+      toast.success('Registration successful!');
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      toast.error(error.message || 'Registration failed. Please try again.');
     }
   };
 
@@ -64,14 +67,14 @@ export default function Register() {
 
         <div className="z-10 relative">
           <div className="flex items-center gap-3 mb-6">
-            <img src={idaLogo} alt="VOCE Logo" className="w-10 h-10 object-contain rounded-xl shadow-lg shadow-primary/20" />
-            <span className="font-bold text-2xl tracking-tight">VOCE Platform</span>
+            <img src={idaLogo} alt="Voche Logo" className="w-10 h-10 object-contain rounded-xl shadow-lg shadow-primary/20" />
+            <span className="font-bold text-2xl tracking-tight">Voche Platform</span>
           </div>
         </div>
 
         <div className="z-10 relative max-w-lg mb-20 space-y-6">
           <h1 className="text-5xl font-bold leading-tight tracking-tight">
-            Empowering <span className="text-transparent bg-clip-text bg-gradient-to-r from-secondary to-info">Patients</span> & Researchers
+            Empowering <span className="gradient-text-signup">Patients</span> & Researchers
           </h1>
           <p className="text-lg text-slate-300 leading-relaxed">
             Create an account to access personalized clinical trials, connect with a supportive community, and contribute to medical advancement.
@@ -79,7 +82,7 @@ export default function Register() {
         </div>
 
         <div className="z-10 relative flex justify-between items-center text-sm text-slate-400">
-          <p>©{new Date().getFullYear()} VOCE Platform. All rights reserved.</p>
+          <p>©{new Date().getFullYear()} Voche Platform. All rights reserved.</p>
           <div className="flex gap-4">
             <Link to="#" className="hover:text-white transition-colors">Privacy</Link>
             <Link to="#" className="hover:text-white transition-colors">Terms</Link>
@@ -91,31 +94,47 @@ export default function Register() {
       <div className="flex-1 flex items-center justify-center p-8 bg-background relative overflow-y-auto">
         <div className="w-full max-w-md space-y-8 my-auto">
           <div className="lg:hidden absolute top-8 left-8 flex items-center gap-2">
-            <img src={idaLogo} alt="VOCE Logo" className="w-8 h-8 object-contain rounded-lg" />
-            <span className="font-bold text-xl">VOCE</span>
+            <img src={idaLogo} alt="Voche Logo" className="w-8 h-8 object-contain rounded-lg" />
+            <span className="font-bold text-xl">voche</span>
           </div>
 
           <div className="space-y-2 text-center lg:text-left mt-8 lg:mt-0">
             <h2 className="text-3xl font-bold tracking-tight">Create an account</h2>
             <p className="text-muted-foreground">
-              Join the VOCE community today
+              Join the Voche community today
             </p>
           </div>
 
           <form onSubmit={handleRegister} className="space-y-5">
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="name"
-                    placeholder="John Doe"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="pl-9 h-11 bg-muted/30 border-input/60 focus:bg-background transition-all"
-                    required
-                  />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First Name</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="firstName"
+                      placeholder="John"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      className="pl-9 h-11 bg-muted/30 border-input/60 focus:bg-background transition-all"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="lastName"
+                      placeholder="Doe"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      className="pl-9 h-11 bg-muted/30 border-input/60 focus:bg-background transition-all"
+                      required
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -137,16 +156,14 @@ export default function Register() {
 
               <div className="space-y-2">
                 <Label htmlFor="role">I am a...</Label>
-                <Select onValueChange={(val) => setRole(val as AuthUser['role'])} defaultValue={role}>
+                <Select onValueChange={(val) => setUserType(val as UserType)} defaultValue={userType}>
                   <SelectTrigger className="h-11 bg-muted/30 border-input/60 focus:bg-background transition-all">
                     <SelectValue placeholder="Select your role" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="patient">Patient / Participant</SelectItem>
                     <SelectItem value="hcp">Healthcare Professional</SelectItem>
-                    <SelectItem value="caregiver">Caregiver</SelectItem>
-                    <SelectItem value="researcher">Researcher</SelectItem>
-                    <SelectItem value="admin">Administrator</SelectItem>
+                    <SelectItem value="org_member">Organization Member</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -198,16 +215,16 @@ export default function Register() {
               <input
                 type="checkbox"
                 id="consent"
-                className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                className="mt-1 h-4 w-4 rounded border-gray-300 text-primary-color focus:ring-primary"
                 required
               />
               <Label htmlFor="consent" className="text-sm font-normal text-muted-foreground leading-snug">
-                I agree to the <Link to="#" className="text-primary hover:underline">Terms of Service</Link> and <Link to="#" className="text-primary hover:underline">Privacy Policy</Link>, and consent to data processing.
+                I agree to the <Link to="#" className="text-primary-color hover:underline">Terms of Service</Link> and <Link to="#" className="text-primary-color hover:underline">Privacy Policy</Link>, and consent to data processing.
               </Label>
             </div>
 
-            <Button type="submit" className="w-full h-11 shadow-lg shadow-primary/20 text-base font-semibold" disabled={loading}>
-              {loading ? (
+            <Button type="submit" className="w-full h-11 shadow-lg shadow-primary/20 text-base font-semibold" disabled={isLoading}>
+              {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Creating account...
@@ -222,7 +239,7 @@ export default function Register() {
 
           <div className="text-center text-sm pt-4">
             <span className="text-muted-foreground">Already have an account? </span>
-            <Link to="/login" className="font-semibold text-primary hover:text-primary/80 transition-colors">
+            <Link to="/login" className="font-semibold text-primary-color hover:text-primary-color/80 transition-colors">
               Log in
             </Link>
           </div>

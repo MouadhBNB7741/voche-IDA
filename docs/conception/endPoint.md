@@ -1,4 +1,4 @@
-# VOCE Platform - Comprehensive API Endpoint Specification
+# VochePlatform - Comprehensive API Endpoint Specification
 
 This document details the **Contract** between the Frontend (React application) and the Backend.
 All endpoints listed here must be implemented to support the full functionality of the current MVP.
@@ -139,7 +139,7 @@ All endpoints listed here must be implemented to support the full functionality 
       "name": "Jane Doe",
       "email": "jane@example.com",
       "role": "patient",
-      "avatar": "https://cdn.voce.app/avatars/user123.jpg", // Optimized URL
+      "avatar": "https://cdn.voche.app/avatars/user123.jpg", // Optimized URL
       "location": "Nairobi, Kenya",
       "bio": "Patient advocate...",
       "interests": ["HIV", "Malaria"],

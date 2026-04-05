@@ -1,8 +1,7 @@
-import { NavLink, Link, useLocation, useNavigate } from "react-router-dom";
-
+import { NavLink, Link, useNavigate } from "react-router-dom";
 import idaLogo from "../assets/ida.webp";
-
 import { Button } from "./ui/button";
+import { Badge } from "./ui/badge";
 import {
   Home,
   FlaskConical,
@@ -13,13 +12,16 @@ import {
   Sun,
   Moon,
   LogOut,
-  User,
-  Bell
+  User as UserIcon,
+  BellRing,
+  ChevronDown,
+  ShieldCheck,
+  BellDot
 } from "lucide-react";
 
 import { useTheme } from "../contexts/ThemeContext";
 import { useAuth } from "../contexts/AuthContext";
-import { useToast } from "../hooks/use-toast";
+import { toast } from "sonner";
 import { useData } from "../contexts/DataContext";
 
 import {
@@ -37,29 +39,20 @@ const navItems = [
   { path: "/", label: "Home", icon: Home },
   { path: "/trials", label: "Trials", icon: FlaskConical },
   { path: "/community", label: "Community", icon: Users },
-  { path: "/resourcelibrary", label: "Resources", icon: BookOpen },
-  { path: "/eventshub", label: "Events", icon: Calendar },
-  { path: "/assistant", label: "Assistant", icon: MessageCircle }
+  { path: "/resources", label: "Resources", icon: BookOpen },
+  { path: "/events", label: "Events", icon: Calendar },
+  { path: "/assistant", label: "Ida", icon: MessageCircle }
 ];
 
 export default function Navigation() {
-
-  const location = useLocation();
   const navigate = useNavigate();
-
   const { isAuthenticated, user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const { toast } = useToast();
   const { state } = useData();
 
   const handleLogout = () => {
     logout();
-
-    toast({
-      title: "Logged out",
-      description: "You have been successfully logged out."
-    });
-
+    toast.success("Logged out successfully");
     navigate("/");
   };
 
@@ -77,154 +70,179 @@ export default function Navigation() {
   const unreadCount = state.notifications.filter((n) => !n.read).length;
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-    `flex items-center gap-2 px-3 py-2 rounded-full text-sm
-     transition-all duration-200
-     ${isActive
-      ? "bg-primary text-primary-foreground shadow-sm"
-      : "text-muted-foreground hover:text-primary hover:bg-primary/10"
+    `flex items-center gap-2.5 px-6 py-2.5 rounded-full text-[11px] font-black uppercase tracking-[0.1em] transition-all duration-500 cursor-pointer
+   ${isActive
+      ? "bg-primary-color text-primary-foreground shadow-2xl shadow-primary-color/30 scale-105"
+      : "text-foreground/70 hover:text-primary-color hover:bg-primary-color/10 hover:scale-105 active:scale-95"
     }`;
 
   return (
-    <header className="flex-shrink-0 flex items-center justify-between px-6 py-3 bg-background/80 backdrop-blur-md sticky top-0 z-50 shadow-sm">
+    <header className="flex-shrink-0 flex items-center justify-between px-10 py-3 bg-background/80 backdrop-blur-3xl sticky top-0 z-50 transition-all duration-500 border-0">
 
       {/* Logo */}
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-3">
-
-          <div className="w-9 h-9 flex items-center justify-center">
-            <img
-              src={idaLogo}
-              alt="VOCE Logo"
-              className="w-9 h-9 object-contain rounded-xl shadow-sm"
-            />
-          </div>
-
-          <div>
-            <h1 className="font-bold text-xl text-foreground tracking-tight">
-              VOCE
-            </h1>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-              Platform
-            </p>
-          </div>
-
+      <Link to="/" className="flex items-center gap-4 active:scale-95 transition-transform group cursor-pointer">
+        <div className="relative">
+          <div className="absolute inset-0 bg-primary-color/30 rounded-2xl blur-xl group-hover:blur-3xl transition-all opacity-0 group-hover:opacity-100"></div>
+          <img
+            src={idaLogo}
+            alt="Voche Logo"
+            className="w-12 h-12 relative z-10 object-contain rounded-2xl shadow-2xl transition-all duration-500 border-0 group-hover:rotate-12"
+          />
         </div>
-      </div>
+
+        <div className="hidden lg:block relative">
+          <div className="flex items-center gap-2">
+            <h1 className="font-black text-xl text-foreground tracking-tighter uppercase italic leading-none">
+              voche
+            </h1>
+            <ShieldCheck size={14} className="text-primary-color opacity-30 group-hover:opacity-100 transition-opacity" />
+          </div>
+        </div>
+      </Link>
 
       {/* Navigation Links */}
-      <nav className="flex items-center gap-1 justify-center">
+      <nav className="hidden lg:flex items-center gap-2 bg-muted/20 p-1.5 rounded-full border-0 shadow-inner">
         {navItems.map(({ path, label, icon: Icon }) => (
           <NavLink
-            key={path}
+            key={`top-nav-v3-${path}`}
             to={path}
             end={path === "/"}
             className={navLinkClass}
           >
-            <Icon className="w-4 h-4" />
+            <Icon className="w-4 h-4 opacity-80" />
             {label}
           </NavLink>
         ))}
       </nav>
 
       {/* Right Side Actions */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-4">
 
-        {/* Theme Toggle */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleTheme}
-          className="rounded-full hover:bg-primary/10 hover:text-primary transition-all duration-300"
-        >
-          {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
-        </Button>
+        <div className="hidden md:flex items-center bg-muted/20 p-2 rounded-full border-0 gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleTheme}
+            className="rounded-full w-11 h-11 transition-all duration-700 hover:bg-background shadow-none border-0 cursor-pointer group/theme"
+          >
+            {theme === "dark" 
+              ? <Sun size={20} className="text-yellow-400 group-hover:rotate-180 transition-transform duration-700" /> 
+              : <Moon size={20} className="text-primary-color group-hover:-rotate-12 transition-transform duration-700" />
+            }
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className={`relative rounded-full w-12 h-12 transition-all duration-700 border-0 cursor-pointer active:scale-90
+              ${unreadCount > 0 ? "bg-primary-color text-white shadow-primary-color/40 hover:bg-primary-color/90 shadow-2xl" : "bg-background/40 hover:bg-background shadow-sm"}`}
+            onClick={() => navigate('/notifications')}
+          >
+            {unreadCount > 0 
+              ? <BellDot size={22} className="animate-[swing_0.8s_ease-out_infinite]" /> 
+              : <BellDot size={20} className="text-foreground/70" />
+            }
+            {unreadCount > 1 && (
+              <span className="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center">
+                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-color opacity-75"></span>
+                 <div className="relative inline-flex rounded-full h-4 w-4 bg-white text-primary-color text-[9px] font-black items-center justify-center shadow-lg">
+                    {unreadCount}
+                 </div>
+              </span>
+            )}
+          </Button>
+        </div>
 
         {/* User Profile / Login */}
         {isAuthenticated && user ? (
           <DropdownMenu>
-
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
-                className="relative h-10 w-10 rounded-full ring-2 ring-transparent hover:ring-primary/20 transition-all p-0"
+                className="flex items-center gap-4 h-12 pl-1 pr-5 rounded-full bg-muted/20 border-0 hover:bg-primary-color/10 transition-all shadow-md group cursor-pointer"
               >
-                <Avatar className="h-9 w-9 border border-border">
-                  <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground font-bold">
-                    {getInitials(user.name)}
+                <Avatar className="h-10 w-10 border-2 border-primary-color/20 shadow-2xl group-hover:scale-105 transition-transform">
+                  <AvatarImage src={user.avatar} />
+                  <AvatarFallback className="bg-primary text-primary-foreground font-black text-[12px]">
+                    {getInitials(user.display_name)}
                   </AvatarFallback>
                 </Avatar>
+                <div className="hidden xl:block text-left">
+                  <p className="text-[11px] font-black truncate max-w-[120px] leading-none opacity-80">{user.display_name?.split(' ')[0]}</p>
+                </div>
+                <ChevronDown size={14} className="opacity-40 group-hover:opacity-100 group-hover:translate-y-0.5 transition-all" />
               </Button>
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent className="w-56" align="end" forceMount>
-
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">
-                    {user.name}
-                  </p>
-                  <p className="text-xs leading-none text-muted-foreground">
-                    {user.email}
-                  </p>
+            <DropdownMenuContent className="w-64 rounded-3xl mt-4 shadow-2xl border border-border/10 p-2 bg-background/95 backdrop-blur-3xl animate-in zoom-in-95 duration-200" align="end">
+              <DropdownMenuLabel className="p-4 bg-muted/20 rounded-2xl mx-1 mb-2">
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-12 w-12 border border-primary-color/20">
+                     <AvatarImage src={user.avatar} />
+                     <AvatarFallback className="bg-primary text-primary-foreground font-black text-xs">
+                        {getInitials(user.display_name)}
+                     </AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col space-y-0.5">
+                    <p className="font-bold text-sm tracking-tight">{user.display_name}</p>
+                    <Badge variant="secondary" className="w-fit px-2 py-0 h-4 text-[8px] font-black uppercase tracking-wider bg-secondary-color/10 text-secondary-color border-0">
+                       {user.user_type}
+                    </Badge>
+                  </div>
                 </div>
               </DropdownMenuLabel>
 
-              <DropdownMenuSeparator />
+              <DropdownMenuSeparator className="opacity-10 h-1" />
 
-              <DropdownMenuItem onClick={() => navigate("/profile")}>
-                <User className="mr-2 h-4 w-4" />
-                <span>Profile</span>
-              </DropdownMenuItem>
+              <div className="space-y-0.5">
+                <DropdownMenuItem
+                  onClick={() => navigate(user.user_type === 'hcp' ? "/hcpdashboard" : "/patientdashboard")}
+                  className="px-4 py-2.5 rounded-xl focus:bg-primary-color/10 focus:text-primary-color cursor-pointer transition-colors gap-3"
+                >
+                  <UserIcon className="h-4 w-4 opacity-70" />
+                  <span className="font-bold text-xs">Profile</span>
+                </DropdownMenuItem>
 
-              <DropdownMenuItem onClick={() => navigate("/notifications")}>
-                <Bell className="mr-2 h-4 w-4" />
-                <span>Notifications</span>
+                <DropdownMenuItem onClick={() => navigate("/notifications")}
+                  className="px-4 py-2.5 rounded-xl focus:bg-primary-color/10 focus:text-primary-color cursor-pointer transition-colors gap-3">
+                  <div className="relative">
+                     <BellRing className="h-4 w-4 opacity-70" />
+                  </div>
+                  <span className="font-bold text-xs">Notifications</span>
+                  {unreadCount > 0 && <Badge variant="destructive" className="ml-auto h-5 px-1.5 min-w-[20px] justify-center text-[10px]">{unreadCount}</Badge>}
+                </DropdownMenuItem>
+              </div>
 
-                {unreadCount > 0 && (
-                  <span className="ml-auto bg-destructive text-destructive-foreground text-[10px] px-1.5 py-0.5 rounded-full">
-                    {unreadCount}
-                  </span>
-                )}
-              </DropdownMenuItem>
+                <DropdownMenuSeparator className="opacity-10 h-3" />
 
-              <DropdownMenuSeparator />
-
-              <DropdownMenuItem
-                onClick={handleLogout}
-                className="text-red-500 focus:text-red-500 focus:bg-red-50 dark:focus:bg-red-950/20"
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Log out</span>
-              </DropdownMenuItem>
-
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="px-4 py-2.5 rounded-xl text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer transition-colors gap-3 mt-1"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span className="font-bold text-xs">Logout</span>
+                </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <>
+          <div className="flex items-center gap-4">
             <Button
               variant="ghost"
-              size="sm"
               asChild
-              className="hidden lg:flex hover:bg-primary/10 hover:text-primary transition-all cursor-pointer"
+              className="font-black text-[11px] uppercase tracking-[0.2em] rounded-full h-11 px-8 hover:bg-muted/40 transition-all border-0 shadow-none cursor-pointer"
             >
-              <Link to="/login">
-                Log in
-              </Link>
+              <Link to="/login">Sign In</Link>
             </Button>
 
             <Button
+              variant="default"
               asChild
-              size="sm"
-              className="gap-2 rounded-full px-5 font-semibold bg-[#08a103] text-white shadow-md hover:bg-[#079702] hover:shadow-lg transition-all duration-200 cursor-pointer"
+              className="bg-primary-color text-primary-foreground font-black text-[11px] uppercase tracking-[0.2em] rounded-full h-11 px-10 shadow-2xl shadow-primary-color/20 hover:shadow-primary-color/50 hover:-translate-y-1 transition-all border-0 cursor-pointer active:scale-95"
             >
-              <Link to="/signup">
-                Sign up
-              </Link>
+              <Link to="/signup">Join voche</Link>
             </Button>
-          </>
+          </div>
         )}
-
       </div>
     </header>
   );

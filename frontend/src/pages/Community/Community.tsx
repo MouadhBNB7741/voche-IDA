@@ -39,13 +39,13 @@ import { PageHeader } from '../../components/ui/PageHeader';
 import { useData } from '../../contexts/DataContext';
 
 const categories = [
-  { id: 'all', name: 'All Discussions', count: 156, color: 'bg-primary' },
-  { id: 'hiv', name: 'HIV/AIDS', count: 45, color: 'bg-destructive' },
-  { id: 'tb', name: 'Tuberculosis', count: 23, color: 'bg-blue-500' },
-  { id: 'malaria', name: 'Malaria', count: 18, color: 'bg-green-500' },
-  { id: 'amr', name: 'Antimicrobial Resistance', count: 12, color: 'bg-yellow-500' },
-  { id: 'vaccines', name: 'Vaccines', count: 34, color: 'bg-purple-500' },
-  { id: 'general', name: 'General Health', count: 24, color: 'bg-secondary' }
+  { id: 'all',      name: 'All Discussions',          count: 156, dot: 'bg-primary-color',   activeClass: 'category-active-blue-bg' },
+  { id: 'hiv',      name: 'HIV/AIDS',                 count: 45,  dot: 'bg-red-500',          activeClass: 'category-active-blue-bg'     },
+  { id: 'tb',       name: 'Tuberculosis',             count: 23,  dot: 'bg-blue-500',         activeClass: 'category-active-blue-bg'    },
+  { id: 'malaria',  name: 'Malaria',                  count: 18,  dot: 'bg-green-500',        activeClass: 'category-active-blue-bg'   },
+  { id: 'amr',      name: 'Antimicrobial Resistance', count: 12,  dot: 'bg-yellow-500',       activeClass: 'category-active-blue-bg'  },
+  { id: 'vaccines', name: 'Vaccines',                 count: 34,  dot: 'bg-purple-500',       activeClass: 'category-active-blue-bg'  },
+  { id: 'general',  name: 'General Health',           count: 24,  dot: 'bg-teal-color',       activeClass: 'category-active-blue-bg'    },
 ];
 
 export default function Community() {
@@ -128,7 +128,7 @@ export default function Community() {
     setNewPostTitle('');
     setNewPostContent('');
     setNewPostCategory('');
-    setCurrentPage(1); // Reset to first page to see new post
+    setCurrentPage(1);
   };
 
   return (
@@ -141,7 +141,7 @@ export default function Community() {
         action={
           <Dialog open={isNewPostOpen} onOpenChange={setIsNewPostOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-white text-primary hover:bg-white/90 border-0 shadow-lg font-semibold gap-2 transition-transform hover:scale-105">
+              <Button variant="hero" className="gap-2 font-semibold transition-transform hover:scale-105">
                 <Plus size={20} />
                 Start Discussion
               </Button>
@@ -193,21 +193,24 @@ export default function Community() {
         }
       />
 
-      {/* Categories */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
         {categories.map((category) => (
           <div
             key={category.id}
-            className={`p-4 rounded-xl cursor-pointer transition-all duration-200 border flex flex-col items-center text-center gap-2
+            className={`p-4 rounded-xl cursor-pointer transition-all duration-200 flex flex-col items-center text-center gap-2
               ${selectedCategory === category.id
-                ? 'bg-secondary text-secondary-foreground border-secondary shadow-md scale-105'
-                : 'bg-card hover:bg-muted/50 border-border hover:shadow-sm'
+                ? `${category.activeClass} shadow-md scale-105`
+                : 'bg-card hover:bg-muted/50 hover:shadow-sm'
               }`}
             onClick={() => { setSelectedCategory(category.id); setCurrentPage(1); }}
           >
-            <div className={`w-3 h-3 rounded-full ${category.color} ring-2 ring-white/20`} />
+            <div className={`w-3 h-3 rounded-full ${category.dot}`} />
             <h3 className="font-semibold text-xs md:text-sm">{category.name}</h3>
-            <span className="text-[10px] text-muted-foreground bg-muted-foreground/10 px-2 py-0.5 rounded-full">
+            <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+              selectedCategory === category.id
+                ? 'bg-white/20 text-white'
+                : 'text-muted-foreground bg-muted-foreground/10'
+            }`}>
               {category.count}
             </span>
           </div>
@@ -245,10 +248,10 @@ export default function Community() {
       {/* Forum Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { icon: Users, label: 'Active Members', value: '2,847', color: 'text-primary' },
-          { icon: MessageSquare, label: 'Discussions', value: '156', color: 'text-secondary' },
-          { icon: Reply, label: 'Total Replies', value: '834', color: 'text-accent' },
-          { icon: TrendingUp, label: 'This Week', value: '+67', color: 'text-success' },
+          { icon: Users, label: 'Active Members', value: '2,847', color: 'text-primary-color' },
+          { icon: MessageSquare, label: 'Discussions', value: '156', color: 'text-blue-500' },
+          { icon: Reply, label: 'Total Replies', value: '834', color: 'text-accent-color' },
+          { icon: TrendingUp, label: 'This Week', value: '+67', color: 'text-success-color' },
         ].map((stat, i) => (
           <Card key={i} className="p-4 flex items-center justify-between hover:shadow-md transition-shadow">
             <div>
@@ -286,9 +289,9 @@ export default function Community() {
               )}
 
               <div className="flex gap-4">
-                <Avatar className="w-12 h-12 border-2 border-background shadow-sm group-hover:scale-105 transition-transform">
+                <Avatar className="w-12 h-12 shadow-sm bg-primary-color group-hover:scale-105 transition-transform">
                   <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-primary-foreground font-bold">
-                    {post.author.split(' ').map(n => n[0]).join('')}
+                    {post.author.split(' ').map((n: string) => n[0]).join('')}
                   </AvatarFallback>
                 </Avatar>
 
@@ -313,7 +316,7 @@ export default function Community() {
                   </p>
 
                   <div className="flex flex-wrap gap-2">
-                    {post.tags.map((tag) => (
+                    {post.tags.map((tag: string) => (
                       <Badge key={tag} variant="outline" className="text-xs bg-muted/20 border-muted">
                         #{tag}
                       </Badge>
@@ -339,7 +342,7 @@ export default function Community() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button size="sm" variant="ghost" className="text-primary hover:text-primary hover:bg-primary/5">
+                      <Button size="sm" variant="ghost" className="text-primary-color hover:text-primary hover:bg-primary/5">
                         View Discussion
                       </Button>
                     </div>
@@ -347,7 +350,7 @@ export default function Community() {
                 </div>
               </div>
             </Card>
-          )
+          );
         })}
       </div>
 

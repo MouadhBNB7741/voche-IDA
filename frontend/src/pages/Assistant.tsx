@@ -13,7 +13,6 @@ import {
   BookOpen,
   Calendar
 } from 'lucide-react';
-import { mockChatResponses } from '../data/mockData';
 import { PageHeader } from '../components/ui/PageHeader';
 
 interface Message {
@@ -23,6 +22,16 @@ interface Message {
   timestamp: Date;
   type?: 'suggestion' | 'normal';
 }
+
+const mockChatResponses: Record<string, string> = {
+  "kenya": "Currently, we are tracking 12 active clinical trials in Kenya, primarily focused on public health and maternal care. Would you like me to show you the list?",
+  "trials": "I can help you search our database of over 1,500 clinical trials. You can filter by condition (e.g., HIV, Malaria), location, or phase. What are you looking for specifically?",
+  "forum": "To join a community discussion, navigate to the 'Community' tab and browse the available disease areas. You can register as a member to start posting and replying.",
+  "informed consent": "Informed consent is the process where you receive all key facts about a trial before deciding whether to join. It's your right to ask questions and withdraw at any time.",
+  "webinars": "Our next webinar, 'Inclusive Research Ethics', is scheduled for next Tuesday at 2:00 PM GMT. You can register in the 'Events' section.",
+  "rights": "As a participant, you have the right to privacy, full disclosure of risks, and the ability to withdraw from a trial at any point without penalty. Your safety is the top priority.",
+  "default": "I'm not quite sure about that specific request. Could you try rephrasing? I can help with finding trials, explaining your rights, or finding resources."
+};
 
 const quickQuestions = [
   {
@@ -60,7 +69,7 @@ export default function Assistant() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      content: "Hello! I'm your VOCE Platform assistant. I'm here to help you navigate clinical trials, community resources, and answer questions about participating in health research. How can I help you today?",
+      content: "Hello! I'm your Voche Platform assistant. I'm here to help you navigate clinical trials, community resources, and answer questions about participating in health research. How can I help you today?",
       sender: 'assistant',
       timestamp: new Date(),
     }
@@ -136,7 +145,7 @@ export default function Assistant() {
   return (
     <div className="container mx-auto p-4 md:p-8 max-w-5xl animate-in fade-in duration-500">
       <PageHeader
-        title="VOCE AI Assistant"
+        title="Voche AI Assistant"
         description="Your intelligent companion for navigating health research and clinical trials."
         variant="green"
         action={
@@ -161,10 +170,10 @@ export default function Assistant() {
                     }`}
                 >
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center shadow-sm shrink-0 ${message.sender === 'user'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-secondary text-secondary-foreground'
+                    ? 'bg-primary-color text-primary-foreground'
+                    : 'bg-secondary-color text-secondary-foreground'
                     }`}>
-                    {message.sender === 'user' ? <User size={18} /> : <Bot size={18} />}
+                    {message.sender === 'user' ? <User size={18} /> : <Bot size={18} className="text-white"/>}
                   </div>
                   <div className={`max-w-[85%] ${message.sender === 'user' ? 'text-right' : 'text-left'
                     }`}>
@@ -212,9 +221,9 @@ export default function Assistant() {
                   onClick={() => handleSendMessage()}
                   disabled={!inputMessage.trim() || isTyping}
                   size="icon"
-                  className="h-12 w-12 shadow-md hover:scale-105 transition-transform"
+                  className="h-12 w-12 shadow-md hover:scale-105 transition-transform bg-primary-color"
                 >
-                  <Send size={18} />
+                  <Send size={18} className='text-white' />
                 </Button>
               </div>
             </div>
@@ -232,7 +241,7 @@ export default function Assistant() {
                   onClick={() => handleQuickQuestion(question.query)}
                 >
                   <div className="bg-primary/10 p-2 rounded-lg mr-3">
-                    <Icon size={16} className="text-primary" />
+                    <Icon size={16} className="text-primary-color" />
                   </div>
                   <span className="text-sm font-medium">{question.text}</span>
                 </Button>
@@ -245,25 +254,25 @@ export default function Assistant() {
         <div className="space-y-6">
           {/* Assistant Capabilities */}
           <Card className="p-5 shadow-sm">
-            <h3 className="font-semibold mb-4 flex items-center gap-2 text-primary">
-              <HelpCircle size={18} />
+            <h3 className="font-semibold mb-4 flex items-center gap-2 text-primary-color">
+              <HelpCircle size={18} className="text-primary-color"/>
               I Can Help With
             </h3>
             <ul className="space-y-3 text-sm">
               <li className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted transition-colors">
-                <div className="w-1.5 h-1.5 bg-primary rounded-full mt-2 shrink-0"></div>
+                <div className="w-1.5 h-1.5 bg-primary-color rounded-full mt-2 shrink-0"></div>
                 <span>Finding clinical trials based on your condition and location</span>
               </li>
               <li className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted transition-colors">
-                <div className="w-1.5 h-1.5 bg-secondary rounded-full mt-2 shrink-0"></div>
+                <div className="w-1.5 h-1.5 bg-secondary-color rounded-full mt-2 shrink-0"></div>
                 <span>Explaining informed consent and patient rights</span>
               </li>
               <li className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted transition-colors">
-                <div className="w-1.5 h-1.5 bg-accent rounded-full mt-2 shrink-0"></div>
+                <div className="w-1.5 h-1.5 bg-accent-color rounded-full mt-2 shrink-0"></div>
                 <span>Connecting you with relevant community discussions</span>
               </li>
               <li className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted transition-colors">
-                <div className="w-1.5 h-1.5 bg-info rounded-full mt-2 shrink-0"></div>
+                <div className="w-1.5 h-1.5 bg-blue-color rounded-full mt-2 shrink-0"></div>
                 <span>Recommending educational resources</span>
               </li>
             </ul>
@@ -288,8 +297,8 @@ export default function Assistant() {
           </Card>
 
           {/* Tips */}
-          <div className="p-4 rounded-xl bg-info/10 border border-info/20">
-            <h3 className="font-semibold mb-2 text-info text-sm flex items-center gap-2">
+          <div className="p-4 rounded-xl bg-blue-color/10 border border-info/20">
+            <h3 className="font-semibold mb-2 text-blue-color text-sm flex items-center gap-2">
               <Lightbulb size={14} /> Tips for Better Help
             </h3>
             <ul className="text-xs space-y-1.5 text-muted-foreground/80 font-medium">

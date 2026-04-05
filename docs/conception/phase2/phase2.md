@@ -1,6 +1,6 @@
-# 🏗️ VOCE Backend — Phase 2: RBAC & Advanced Systems
+# 🏗️ VocheBackend — Phase 2: RBAC & Advanced Systems
 
-> **Document Purpose:** This is the production-readiness specification for the VOCE backend. Phase 2 transforms the working MVP into a fully governed, role-enforced, enterprise-grade platform ready for real-world deployment.
+> **Document Purpose:** This is the production-readiness specification for the Vochebackend. Phase 2 transforms the working MVP into a fully governed, role-enforced, enterprise-grade platform ready for real-world deployment.
 >
 > **Prerequisite:** All MVP modules are implemented and tested (see `progress.md`).
 >

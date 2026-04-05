@@ -1,6 +1,6 @@
 # Concept Note
 
-## VOCHE Platform: Voices of Community for Health Equity 
+## VochePlatform: Voices of Community for Health Equity 
 **A Unified Digital Community for Engagement, Education, and Action**
 **A Global Digital Ecosystem for Inclusive Engagement in Infectious Diseases**
 
@@ -11,13 +11,13 @@ The Infectious Disease Alliance (IDA) convenes civil society, public health inst
 
 Despite scientific progress, the development and uptake of infectious disease solutions, whether diagnostics, vaccines, or therapeutics, remain hindered by a persistent gap: the lack of structured, inclusive patient and frontline feedback across the product lifecycle. This gap is especially pronounced in low- and middle-income countries (LMICs), where patient representation in clinical trials and public health policy remains limited.
 
-The Infectious Disease Alliance (IDA) proposes the Voche (Voices of Communities for Equity) Platform, a secure, user-driven, and ethically governed platform designed to elevate the voices of patients, caregivers, healthcare professionals (HCPs), and civil society organizations (CSOs) in shaping research, clinical trials, access strategies, and health policy.
+The Infectious Disease Alliance (IDA) proposes the Voche(Voices of Communities for Equity) Platform, a secure, user-driven, and ethically governed platform designed to elevate the voices of patients, caregivers, healthcare professionals (HCPs), and civil society organizations (CSOs) in shaping research, clinical trials, access strategies, and health policy.
 
-While similar platforms such as PFMD, Synapse, Inspire, and Esperity offer components of engagement or education, Voche aims to integrate these functions into a unified, multilingual, modular infrastructure specifically focused on infectious diseases and underserved populations.
+While similar platforms such as PFMD, Synapse, Inspire, and Esperity offer components of engagement or education, Vocheaims to integrate these functions into a unified, multilingual, modular infrastructure specifically focused on infectious diseases and underserved populations.
 
-Voche is more than a digital interface. It is a global infrastructure for equitable engagement. By enabling direct patient contributions, data-driven advocacy, and responsible partnerships, Voche will help close the participation gap and drive sustainable impact in infectious diseases. While global platforms for patient engagement or research tracking exist, few are tailored to the specific needs of infectious disease communities, especially in LMICs. Product launches in this space, be it novel therapeutics, diagnostics, or vaccines, require more than scientific validation. True public health impact depends on integrating lived patient experiences and frontline HCPs' insights into development, deployment, and access strategies.
+Vocheis more than a digital interface. It is a global infrastructure for equitable engagement. By enabling direct patient contributions, data-driven advocacy, and responsible partnerships, Vochewill help close the participation gap and drive sustainable impact in infectious diseases. While global platforms for patient engagement or research tracking exist, few are tailored to the specific needs of infectious disease communities, especially in LMICs. Product launches in this space, be it novel therapeutics, diagnostics, or vaccines, require more than scientific validation. True public health impact depends on integrating lived patient experiences and frontline HCPs' insights into development, deployment, and access strategies.
 
-The Voche platform is being developed as a Minimal Viable Product (MVP), with an initial focus on patients, HCPs, and CSOs, particularly in the context of infectious diseases. Designed for simplicity and scalability, Voche will deliver stakeholder value early through data-informed features that support clinical trial participation, education, and evidence-based advocacy.
+The Vocheplatform is being developed as a Minimal Viable Product (MVP), with an initial focus on patients, HCPs, and CSOs, particularly in the context of infectious diseases. Designed for simplicity and scalability, Vochewill deliver stakeholder value early through data-informed features that support clinical trial participation, education, and evidence-based advocacy.
 
 ---
 
@@ -67,13 +67,13 @@ The Voche platform is being developed as a Minimal Viable Product (MVP), with an
 * **Resource & Training Hub:** Offers policy briefs, advocacy toolkits, trial literacy modules, and ethical training on consent and data use.
 * **Initiative Library & Mapping Tool:** Browse active projects and organizations by disease area or geography.
 * **Services to Users:** The patient portal will draw inspiration from platforms such as Esperity, enabling users to complete surveys, track health indicators, and access personalized educational content. Features will be modular, multilingual, and adaptable for white-label deployment with partner organizations.
-* **AI-Powered Voche Assistant (Chatbot Integration):** To complement the platform’s core services, Voche will integrate a multilingual AI-powered assistant designed to provide real-time support to users. The Voche Assistant will:
+* **AI-Powered VocheAssistant (Chatbot Integration):** To complement the platform’s core services, Vochewill integrate a multilingual AI-powered assistant designed to provide real-time support to users. The VocheAssistant will:
   * Deliver validated, non-clinical information in accessible language
   * Be tailored for different audiences (patients, HCPs, CSOs) with curated knowledge bases
   * Apply strict safeguards to avoid dissemination of medical advice or unverified claims
   * Automate connections with surveys, notifications, and event updates through secure integrations
 
-By lowering barriers to information and offering on-demand guidance, the Voche Assistant will strengthen participation, improve trial literacy, and enhance user trust.
+By lowering barriers to information and offering on-demand guidance, the VocheAssistant will strengthen participation, improve trial literacy, and enhance user trust.
 
 ### C. Thematic Committee and Coalitions Channels
 Channels will focus on priority infectious disease topics, including all 12 thematic Specialized and Cross-Cutting IDA committees, and both coalitions' focus areas. Each includes:
@@ -91,7 +91,7 @@ Channels will focus on priority infectious disease topics, including all 12 them
 ---
 
 ## IV. Data Strategy, Governance, Standardization, Ethics
-A core pillar of the Voche platform is a data strategy that balances stakeholder value, ethical insight generation, and data governance. The platform will:
+A core pillar of the Vocheplatform is a data strategy that balances stakeholder value, ethical insight generation, and data governance. The platform will:
 * Prioritize data minimization and privacy-first design
 * Enable anonymized feedback and trend reports for sponsors
 * Apply data standardization frameworks (e.g., CDISC, FAIR) to ensure insights are scalable and interoperable
@@ -103,15 +103,15 @@ The platform will follow a privacy-first, ethics-by-design approach, with:
 * Clear separation between platform access, data use, and sponsorships
 * Advisory board oversight to ensure neutrality and transparency
 
-In line with its ethics-by-design commitment, Voche will deploy moderated AI-driven tools such as the Voche Assistant. These tools will operate under strict governance boundaries to ensure neutrality, accuracy, and compliance with ethical standards. Advisory Board members will periodically review chatbot content libraries, restrictions, and user interactions to prevent the dissemination of unverified medical guidance. This governance model ensures that the use of AI augments, rather than replaces, human oversight in patient and HCP engagement.
+In line with its ethics-by-design commitment, Vochewill deploy moderated AI-driven tools such as the VocheAssistant. These tools will operate under strict governance boundaries to ensure neutrality, accuracy, and compliance with ethical standards. Advisory Board members will periodically review chatbot content libraries, restrictions, and user interactions to prevent the dissemination of unverified medical guidance. This governance model ensures that the use of AI augments, rather than replaces, human oversight in patient and HCP engagement.
 
 ### IDA Data Hub and Interoperability Standards
-To support ethical data sharing, the Voche platform will include a dedicated IDA Data Hub. This infrastructure will aggregate and anonymize patient insights, enable structured exchanges with research sponsors and regulators, and protect against unauthorized commercialization.
+To support ethical data sharing, the Vocheplatform will include a dedicated IDA Data Hub. This infrastructure will aggregate and anonymize patient insights, enable structured exchanges with research sponsors and regulators, and protect against unauthorized commercialization.
 
-To ensure scalability and system compatibility, the Voche platform will adopt global interoperability standards, including FHIR (Fast Healthcare Interoperability Resources) and FAIR principles. These frameworks will allow seamless integration with third-party platforms and ensure that insights from underrepresented populations can be converted into actionable evidence across global health systems.
+To ensure scalability and system compatibility, the Vocheplatform will adopt global interoperability standards, including FHIR (Fast Healthcare Interoperability Resources) and FAIR principles. These frameworks will allow seamless integration with third-party platforms and ensure that insights from underrepresented populations can be converted into actionable evidence across global health systems.
 
 ### Advisory Board Formation
-To guide the Voche platform’s development, IDA is establishing an international Advisory Board composed of:
+To guide the Vocheplatform’s development, IDA is establishing an international Advisory Board composed of:
 * Medical researchers and clinical trial experts
 * Data scientists and ethics advisors
 * Patient advocates and caregivers
@@ -126,7 +126,7 @@ This board will be responsible for:
 The Advisory Board will be formalized in Q4 2025 and meet quarterly to evaluate platform progress and provide strategic recommendations.
 
 ### Operational Governance and Oversight
-To ensure transparent and accountable operations, Voche will establish an internal Steering Committee comprising representatives from:
+To ensure transparent and accountable operations, Vochewill establish an internal Steering Committee comprising representatives from:
 * The IDA Executive Board
 * Advisory Board members
 * Patient organizations and community representatives
@@ -143,10 +143,10 @@ Additional Working Groups (e.g., on accessibility, language localization, or the
 ---
 
 ## V. Governance, Intellectual Property (IP) Rights, and Sustainability
-The Voche platform will operate under a co-development model with clearly defined intellectual property (IP) boundaries and sustainability mechanisms to ensure long-term integrity, transparency, and stakeholder trust.
+The Vocheplatform will operate under a co-development model with clearly defined intellectual property (IP) boundaries and sustainability mechanisms to ensure long-term integrity, transparency, and stakeholder trust.
 
 ### Platform Ownership and IP Rights
-* The Infectious Disease Alliance (IDA) retains full ownership of the Voche platform’s structure, core features, user interface, and data architecture.
+* The Infectious Disease Alliance (IDA) retains full ownership of the Vocheplatform’s structure, core features, user interface, and data architecture.
 * Co-development partners, such as Esperity, may contribute modular services or technical infrastructure under license or collaboration agreements, without claiming platform ownership.
 * Educational content, training materials, and committee outputs will be open-access under Creative Commons licenses unless otherwise agreed upon.
 
@@ -166,7 +166,7 @@ All commercial engagements will be overseen by the IDA Executive Board and adher
 ---
 
 ## VI. Strategic Partnership with stakeholders
-To enhance reach and technical capabilities, Voche will be co-developed with stakeholders as a strategic partner.
+To enhance reach and technical capabilities, Vochewill be co-developed with stakeholders as a strategic partner.
 
 ### Contributions:
 * Integrate global clinical trial metadata into the Navigator
@@ -176,7 +176,7 @@ To enhance reach and technical capabilities, Voche will be co-developed with sta
 * Enable insight dissemination at WHA, UNGA, WHS, and other global platforms
 
 ### Stakeholder Positioning and Risk Mitigation
-While the Voche platform shares features with other engagement tools such as PFMD/Synapse or Inspire, it is designed as a complementary solution focused on infectious diseases and underserved regions. Voche’s modular structure and governance model emphasize transparency, equitable data use, and patient co-creation.
+While the Vocheplatform shares features with other engagement tools such as PFMD/Synapse or Inspire, it is designed as a complementary solution focused on infectious diseases and underserved regions. Voche’s modular structure and governance model emphasize transparency, equitable data use, and patient co-creation.
 
 To mitigate potential tensions or perceptions of competition:
 * IDA will engage proactively with peer platforms to explore interoperability and shared advocacy opportunities.
@@ -186,7 +186,7 @@ To mitigate potential tensions or perceptions of competition:
 ---
 
 ## VII. Sponsorship Opportunity
-IDA invites early sponsors to co-develop and guide the Voche MVP. Platinum partners will benefit from:
+IDA invites early sponsors to co-develop and guide the VocheMVP. Platinum partners will benefit from:
 * Early access to stakeholder sentiment and trial readiness insights
 * Strategic visibility in priority disease areas
 * Co-leadership in thematic working groups
@@ -218,13 +218,13 @@ IDA invites early sponsors to co-develop and guide the Voche MVP. Platinum partn
 ---
 
 ## IX. Feedback and Co-Design Mechanisms
-Voche will incorporate structured, iterative input from patients and partner organizations via:
+Vochewill incorporate structured, iterative input from patients and partner organizations via:
 * Quarterly co-design sprints with selected user groups and Advisory Board feedback
 * Built-in survey prompts and rating tools embedded in the user interface
 * Periodic focus groups with patient organizations, particularly from LMICs, to test new features before launch
 * A public Feature Suggestion Board, allowing logged-in users to propose and vote on improvements
 
-This participatory model ensures Voche evolves in alignment with its core users’ evolving needs and promotes trust, transparency, and relevance.
+This participatory model ensures Vocheevolves in alignment with its core users’ evolving needs and promotes trust, transparency, and relevance.
 
 ### Contact
 For partnership and co-development inquiries:
@@ -234,13 +234,13 @@ For partnership and co-development inquiries:
 ---
 
 ## Annex I – Illustrative User Journeys and Personas
-To ensure the Voche platform meets diverse needs and generates actionable insights, the following user personas illustrate key journeys:
+To ensure the Vocheplatform meets diverse needs and generates actionable insights, the following user personas illustrate key journeys:
 
 ### 👩 Persona 1: Amina – HIV+ Patient Advocate (Kenya)
-* Registers on the Voche platform through a partner NGO
+* Registers on the Vocheplatform through a partner NGO
 * Joins the “HIV/AIDS & STIs” community
 * Receives training on informed consent and trial design
-* Uses the Voche Assistant chatbot to clarify trial terminology and find relevant resources
+* Uses the VocheAssistant chatbot to clarify trial terminology and find relevant resources
 * Shares her experiences via a moderated forum
 * Participates in a survey informing trial site acceptability
 

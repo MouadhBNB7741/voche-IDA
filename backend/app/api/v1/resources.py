@@ -96,7 +96,7 @@ async def download_resource(
         raise HTTPException(status_code=401, detail="Authentication required to download this resource")
 
     # Mock secure signed URL
-    download_url = f"{resource.get('url', 'https://storage.voce.com')}/secure/{resource_id}?token=mock_signed_token"
+    download_url = f"{resource.get('url', 'https://storage.voche.com')}/secure/{resource_id}?token=mock_signed_token"
     
     return {
         "success": True,
