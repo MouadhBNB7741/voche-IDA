@@ -1,0 +1,34 @@
+graph TD
+    %% Onboarding Section
+    Start([HCP Entrance]) --> UC1[Register with License]
+    UC1 --> UC2[Verify Credentials]
+    UC2 --> UC3[Complete Professional Profile]
+    UC3 --> Dashboard{HCP Dashboard}
+
+    %% Referral Workflow
+    Dashboard --> UC4[Search Relevant Trials]
+    UC4 --> UC5[Review Eligibility Criteria]
+    UC5 --> UC6[Assess Patient Match]
+    UC6 --> Match{Match Found?}
+    Match -- Yes --> UC7[Generate Referral]
+    UC7 --> UC8[Track Referral Status]
+    Match -- No --> UC4
+
+    %% Patient Support (Clinical interaction)
+    UC7 --> UC9[Provide Trial Info]
+    UC9 --> UC10[Answer Questions]
+    UC10 --> UC11[Monitor Progress]
+
+    %% Professional Development (CME)
+    Dashboard --> UC12[Browse CME Courses]
+    UC12 --> UC13[Complete Course]
+    UC13 --> UC14[Earn Digital Badge]
+    UC14 --> UC15[Download Certificate]
+
+    %% Collaboration & Resources
+    Dashboard --> UC16[Access Clinical Guidelines]
+    UC16 --> UC17[Download Protocols]
+    
+    Dashboard --> UC19[Join HCP Forum]
+    UC19 --> UC20[Discuss Cases]
+    UC20 --> UC22[Contribute to Research]

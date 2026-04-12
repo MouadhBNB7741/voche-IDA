@@ -8,9 +8,12 @@ import {
   Download,
   Play,
   Award,
+<<<<<<< HEAD
   Star,
   Clock,
   Globe,
+=======
+>>>>>>> origin/main
   Eye,
   Lock,
   LogIn,
@@ -20,7 +23,11 @@ import {
   Loader2
 } from 'lucide-react';
 import { resourceService } from '../../services/resourceService';
+<<<<<<< HEAD
 import type { ExtendedResource } from '../../services/resourceService';
+=======
+import type { Resource } from '../../types/db';
+>>>>>>> origin/main
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'sonner';
 import {
@@ -35,7 +42,11 @@ export default function ResourceDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+<<<<<<< HEAD
   const [resource, setResource] = useState<ExtendedResource | null>(null);
+=======
+  const [resource, setResource] = useState<Resource | null>(null);
+>>>>>>> origin/main
   const [isVideoOpen, setIsVideoOpen] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [videoLoading, setVideoLoading] = useState(false);
@@ -47,7 +58,11 @@ export default function ResourceDetail() {
     }
   }, [id]);
 
+<<<<<<< HEAD
   const canAccess = resource ? resourceService.canAccess(resource.id, isAuthenticated) : false;
+=======
+  const canAccess = resource ? resourceService.canAccess(resource.resource_id, isAuthenticated) : false;
+>>>>>>> origin/main
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -148,7 +163,11 @@ export default function ResourceDetail() {
   return (
     <div className="container mx-auto p-4 max-w-4xl space-y-6 animate-in fade-in duration-300">
       {/* Back Button */}
+<<<<<<< HEAD
       <Button variant="ghost" onClick={() => navigate('/resources')} className="gap-2 pl-0 hover:bg-transparent hover:text-primary">
+=======
+      <Button variant="ghost" onClick={() => navigate('/resources')} className="gap-2 pl-0 hover:bg-transparent hover:text-primary-color">
+>>>>>>> origin/main
         <ArrowLeft size={16} />
         Back to Resources
       </Button>
@@ -166,7 +185,11 @@ export default function ResourceDetail() {
             </div>
             <div className="w-px bg-white/20 h-8"></div>
             <div className="text-center">
+<<<<<<< HEAD
               <div className="text-xl font-bold text-white">{resource.language.slice(0, 2).toUpperCase()}</div>
+=======
+              <div className="text-xl font-bold text-white">{resource.language?.slice(0, 2).toUpperCase() || 'EN'}</div>
+>>>>>>> origin/main
               <div className="text-[10px] text-white/80 uppercase">Lang</div>
             </div>
           </div>
@@ -177,7 +200,11 @@ export default function ResourceDetail() {
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Locked State */}
+<<<<<<< HEAD
           {resource.requiresAuth && !isAuthenticated && (
+=======
+          {resource.requires_auth && !isAuthenticated && (
+>>>>>>> origin/main
             <Card className="p-6 bg-warning/5 border-warning/20 shadow-sm">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-warning/20 rounded-full flex items-center justify-center shrink-0">
@@ -199,7 +226,11 @@ export default function ResourceDetail() {
           {/* About */}
           <Card className="p-6 border-border/60 shadow-sm">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+<<<<<<< HEAD
               <BookOpen size={20} className="text-primary" />
+=======
+              <BookOpen size={20} className="text-primary-color" />
+>>>>>>> origin/main
               About This Resource
             </h2>
             <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
@@ -262,10 +293,17 @@ export default function ResourceDetail() {
             <div className="space-y-4 text-sm">
               <div className="flex justify-between border-b border-border/50 pb-2"><span className="text-muted-foreground">Type</span><span className="font-medium capitalize">{resource.type}</span></div>
               <div className="flex justify-between border-b border-border/50 pb-2"><span className="text-muted-foreground">Category</span><span className="font-medium">{resource.category}</span></div>
+<<<<<<< HEAD
               <div className="flex justify-between border-b border-border/50 pb-2"><span className="text-muted-foreground">Language</span><span className="font-medium">{resource.language}</span></div>
               {resource.downloads && <div className="flex justify-between border-b border-border/50 pb-2"><span className="text-muted-foreground">Downloads</span><span className="font-medium">{resource.downloads.toLocaleString()}</span></div>}
               {resource.duration && <div className="flex justify-between border-b border-border/50 pb-2"><span className="text-muted-foreground">Duration</span><span className="font-medium">{resource.duration}</span></div>}
               <div className="flex justify-between pt-1"><span className="text-muted-foreground">Author</span><span className="font-medium truncate max-w-[150px]" title={resource.author}>{resource.author}</span></div>
+=======
+              <div className="flex justify-between border-b border-border/50 pb-2"><span className="text-muted-foreground">Language</span><span className="font-medium">{resource.language || 'English'}</span></div>
+              {resource.downloads && <div className="flex justify-between border-b border-border/50 pb-2"><span className="text-muted-foreground">Downloads</span><span className="font-medium">{resource.downloads.toLocaleString()}</span></div>}
+              {resource.duration && <div className="flex justify-between border-b border-border/50 pb-2"><span className="text-muted-foreground">Duration</span><span className="font-medium">{resource.duration}</span></div>}
+              <div className="flex justify-between pt-1"><span className="text-muted-foreground">Author</span><span className="font-medium truncate max-w-[150px]" title={resource.author}>{resource.author || 'Voche Content Team'}</span></div>
+>>>>>>> origin/main
             </div>
           </Card>
         </div>
@@ -298,4 +336,8 @@ export default function ResourceDetail() {
       </Dialog>
     </div>
   );
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> origin/main

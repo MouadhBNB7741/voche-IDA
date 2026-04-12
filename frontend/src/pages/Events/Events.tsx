@@ -255,4 +255,8 @@ export default function Events() {
 
     </div>
   );
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> origin/main

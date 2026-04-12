@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import { useState, useEffect, useRef } from 'react';
+=======
+import { useState, useEffect } from 'react';
+>>>>>>> origin/main
 import { useNavigate } from 'react-router-dom';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -9,7 +13,10 @@ import { Textarea } from '../../components/ui/textarea';
 import {
   User,
   Bell,
+<<<<<<< HEAD
   Globe,
+=======
+>>>>>>> origin/main
   MapPin,
   Edit,
   Save,
@@ -18,10 +25,15 @@ import {
   FileText,
   Lock,
   Shield,
+<<<<<<< HEAD
   Upload,
   ChevronRight,
   Trash2,
   Stethoscope,
+=======
+  ChevronRight,
+  Trash2,
+>>>>>>> origin/main
   Palette
 } from 'lucide-react';
 import { DesignSettings } from '../../components/profile/DesignSettings';
@@ -61,6 +73,7 @@ export default function PatientDashboard() {
   const [profileImage, setProfileImage] = useState<string | null>(null);
 
   // Derived state for saved trials
+<<<<<<< HEAD
   const savedTrials = state.trials.filter(trial => state.savedTrials.includes(trial.id));
 
   // Form states
@@ -68,6 +81,15 @@ export default function PatientDashboard() {
     name: user?.name || 'Guest User',
     email: user?.email || 'guest@example.com',
     role: user?.role || 'patient',
+=======
+  const savedTrials = state.trials.filter(trial => state.savedTrials.includes(trial.trial_id));
+
+  // Form states
+  const [formData, setFormData] = useState({
+    name: user?.display_name || 'Guest User',
+    email: user?.email || 'guest@example.com',
+    role: user?.user_type || 'patient',
+>>>>>>> origin/main
     organization: '',
     location: 'Not specified',
     language: 'English',
@@ -152,7 +174,11 @@ export default function PatientDashboard() {
       <PageHeader
         title={formData.name}
         description={formData.bio}
+<<<<<<< HEAD
         badgeText={user?.role === 'hcp' ? 'Healthcare Professional' : 'Patient Advocate'}
+=======
+        badgeText={user?.user_type === 'hcp' ? 'Healthcare Professional' : 'Patient Advocate'}
+>>>>>>> origin/main
         variant="green"
         className="mb-0"
         action={
@@ -334,6 +360,7 @@ export default function PatientDashboard() {
               ) : (
                 <div className="grid gap-4">
                   {savedTrials.map((trial) => (
+<<<<<<< HEAD
                     <Card key={trial.id} className="p-5 group hover:border-primary-color/50 hover:shadow-md transition-all">
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">
@@ -342,11 +369,25 @@ export default function PatientDashboard() {
                             <Badge variant="secondary" className="font-normal">{trial.phase}</Badge>
                           </div>
                           <h4 className="font-bold text-lg mb-2 group-hover:text-primary-color transition-colors cursor-pointer" onClick={() => navigate(`/trials/${trial.id}`)}>{trial.title}</h4>
+=======
+                    <Card key={trial.trial_id} className="p-5 group hover:border-primary-color/50 hover:shadow-md transition-all">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex gap-2 mb-3">
+                            <Badge variant="outline" className="border-primary-color/20 text-primary-color bg-primary/5">{trial.disease_area}</Badge>
+                            <Badge variant="secondary" className="font-normal">{trial.phase}</Badge>
+                          </div>
+                          <h4 className="font-bold text-lg mb-2 group-hover:text-primary-color transition-colors cursor-pointer" onClick={() => navigate(`/trials/${trial.trial_id}`)}>{trial.title}</h4>
+>>>>>>> origin/main
                           <p className="text-muted-foreground line-clamp-2 mb-4 text-sm">{trial.summary}</p>
                           <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground">
                             <span className="flex items-center gap-1.5">
                               <MapPin size={14} className="text-primary-color" />
+<<<<<<< HEAD
                               {trial.location}
+=======
+                              {trial.countries?.[0] || 'International'}
+>>>>>>> origin/main
                             </span>
                             <span className="flex items-center gap-1.5">
                               <FileText size={14} className="text-primary-color" />
@@ -355,14 +396,22 @@ export default function PatientDashboard() {
                           </div>
                         </div>
                         <div className="flex flex-col gap-2">
+<<<<<<< HEAD
                           <Button size="sm" variant="outline" onClick={() => navigate(`/trials/${trial.id}`)}>
+=======
+                          <Button size="sm" variant="outline" onClick={() => navigate(`/trials/${trial.trial_id}`)}>
+>>>>>>> origin/main
                             View
                           </Button>
                           <Button
                             size="sm"
                             variant="ghost"
                             className="text-destructive hover:bg-destructive/10 hover:text-destructive transition-colors"
+<<<<<<< HEAD
                             onClick={() => handleRemoveTrial(trial.id)}
+=======
+                            onClick={() => handleRemoveTrial(trial.trial_id)}
+>>>>>>> origin/main
                             title="Remove"
                           >
                             <Trash2 size={16} />
@@ -403,4 +452,8 @@ export default function PatientDashboard() {
       </div>
     </div>
   );
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> origin/main

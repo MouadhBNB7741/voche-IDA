@@ -21,4 +21,8 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 )
 Textarea.displayName = "Textarea"
 
+<<<<<<< HEAD
 export { Textarea }
+=======
+export { Textarea }
+>>>>>>> origin/main

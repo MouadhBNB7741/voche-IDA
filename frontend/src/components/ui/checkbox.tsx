@@ -25,4 +25,8 @@ const Checkbox = React.forwardRef<
 ))
 Checkbox.displayName = CheckboxPrimitive.Root.displayName
 
+<<<<<<< HEAD
 export { Checkbox }
+=======
+export { Checkbox }
+>>>>>>> origin/main

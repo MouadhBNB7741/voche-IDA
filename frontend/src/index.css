@@ -90,6 +90,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
+<<<<<<< HEAD
     --border: 220 13% 88%;
     --input: 220 13% 88%;
     --ring: 142 71% 45%;
@@ -101,6 +102,19 @@
     --secondary: 142 35% 94%;
     --secondary-foreground: 142 60% 22%;
     --secondary-muted: 142 25% 90%;
+=======
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 161 94% 45%;
+
+    --primary: 161 94% 30%;
+    --primary-foreground: 0 0% 100%;
+    --primary-muted: 161 40% 92%;
+
+    --secondary: 214 32% 91%;
+    --secondary-foreground: 215 25% 27%;
+    --secondary-muted: 214 25% 94%;
+>>>>>>> origin/main
 
     --teal: 165 60% 35%;
     --teal-foreground: 0 0% 100%;
@@ -158,9 +172,15 @@
     --popover: 222 47% 11%;
     --popover-foreground: 210 40% 96%;
 
+<<<<<<< HEAD
     --border: 217 33% 20%;
     --input: 217 33% 20%;
     --ring: 142 71% 45%;
+=======
+    --border: 217 33% 30%;
+    --input: 217 33% 30%;
+    --ring: 161 94% 55%;
+>>>>>>> origin/main
 
     --primary: 142 70% 45%;
     --primary-foreground: 0 0% 100%;
@@ -201,6 +221,15 @@
     color: hsl(var(--foreground));
     font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
+<<<<<<< HEAD
+=======
+    transition: background-color 500ms cubic-bezier(0.4, 0, 0.2, 1), color 500ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Optimized Zero-Blink Theme Transition */
+  html.dark, html:not(.dark) {
+    transition: background-color 500ms ease-in-out;
+>>>>>>> origin/main
   }
 }
 
@@ -243,4 +272,75 @@
 
 .voce-nav-item svg {
   color: currentColor;
+<<<<<<< HEAD
+=======
+}
+
+/* ── Premium Sonner Toast Progress System ── */
+[data-sonner-toast] {
+  border-radius: 2.5rem !important;
+}
+
+[data-sonner-toast].voche-toast-premium {
+  position: relative !important;
+  overflow: visible !important;
+  border: 4px solid hsl(var(--card) / 0.1) !important;
+  background-color: hsl(var(--card)) !important;
+  color: hsl(var(--foreground)) !important;
+  backdrop-filter: blur(28px) !important;
+  box-shadow: 0 60px 120px -30px rgba(0,0,0,0.6) !important;
+  padding: 1.5rem !important;
+  transition: all 400ms cubic-bezier(0.32, 0.72, 0, 1) !important;
+}
+
+/* Universal Text Contrast */
+[data-sonner-toast].voche-toast-premium [data-title],
+[data-sonner-toast].voche-toast-premium [data-description] {
+  color: hsl(var(--foreground)) !important;
+  opacity: 1 !important;
+  transition: color 300ms, opacity 300ms !important;
+}
+
+/* Premium Semantic Titles IF ACTIVE (peeking ones keep standard color) */
+[data-sonner-toast][data-front="true"][data-rich-colors="true"][data-type="success"].voche-toast-premium [data-title] {
+  color: hsl(var(--success)) !important;
+}
+
+[data-sonner-toast][data-front="true"][data-rich-colors="true"][data-type="error"].voche-toast-premium [data-title] {
+  color: hsl(var(--destructive)) !important;
+}
+
+[data-sonner-toast][data-front="true"][data-rich-colors="true"][data-type="info"].voche-toast-premium [data-title] {
+  color: hsl(var(--info)) !important;
+}
+
+/* Inset Progress Bar */
+[data-sonner-toast].voche-toast-premium::after {
+  content: '' !important;
+  position: absolute !important;
+  bottom: 0px !important;
+  left: 2.5rem !important;
+  right: 2.5rem !important;
+  height: 5px !important;
+  width: calc(100% - 5rem) !important;
+  background-color: currentColor !important;
+  opacity: 0.2 !important;
+  transform-origin: left !important;
+  animation: voche-toast-progress 3000ms linear forwards !important;
+  border-radius: 999px 999px 0 0 !important;
+}
+
+[data-sonner-toast][data-type="success"].voche-toast-premium::after { background-color: hsl(var(--success)) !important; opacity: 1 !important;}
+[data-sonner-toast][data-type="error"].voche-toast-premium::after { background-color: hsl(var(--destructive)) !important; opacity: 1 !important;}
+[data-sonner-toast][data-type="info"].voche-toast-premium::after { background-color: hsl(var(--info)) !important; opacity: 1 !important;}
+
+/* Only show countdown on the primary active toast */
+[data-sonner-toast]:not([data-front="true"]).voche-toast-premium::after {
+  opacity: 0 !important;
+}
+
+@keyframes voche-toast-progress {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+>>>>>>> origin/main
 }

@@ -20,7 +20,11 @@ import {
   FlaskConical
 } from 'lucide-react';
 import { trialService } from '../../services/TrialService';
+<<<<<<< HEAD
 import type { Trial } from '../../data/mockData';
+=======
+import type { ClinicalTrial } from '../../types/db';
+>>>>>>> origin/main
 import { toast } from 'sonner';
 import { PageHeader } from '../../components/ui/PageHeader';
 
@@ -57,7 +61,11 @@ const eligibilityQuestions = [
 export default function TrialDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+<<<<<<< HEAD
   const [trial, setTrial] = useState<Trial | null>(null);
+=======
+  const [trial, setTrial] = useState<ClinicalTrial | null>(null);
+>>>>>>> origin/main
   const { state, actions } = useData();
   const [isSaved, setIsSaved] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
@@ -68,6 +76,7 @@ export default function TrialDetail() {
 
   useEffect(() => {
     if (id) {
+<<<<<<< HEAD
       const foundTrial = trialService.getById(id);
       setTrial(foundTrial || null);
       setIsConnected(trialService.isTrialConnected(id));
@@ -79,6 +88,15 @@ export default function TrialDetail() {
       setIsSaved(state.savedTrials.includes(id));
     }
   }, [id, state.savedTrials]);
+=======
+      // For now, look in the global DataContext first, fallback to service if not found
+      const foundTrial = state.trials.find(t => t.trial_id === id) || trialService.getById(id);
+      setTrial(foundTrial || null);
+      setIsConnected(trialService.isTrialConnected(id));
+      setIsSaved(state.savedTrials.includes(id));
+    }
+  }, [id, state.trials, state.savedTrials]);
+>>>>>>> origin/main
 
   const handleSave = () => {
     if (id) {
@@ -124,7 +142,10 @@ export default function TrialDetail() {
   };
 
   const getEligibilityResult = () => {
+<<<<<<< HEAD
     // Simple mock logic: if user answers mostly positively
+=======
+>>>>>>> origin/main
     const yesCount = Object.values(answers).filter(a => a === 'Yes' || a === 'No medications').length;
     return yesCount >= 3;
   };
@@ -161,9 +182,15 @@ export default function TrialDetail() {
 
       <PageHeader
         title={trial.title}
+<<<<<<< HEAD
         description={trial.description}
         variant="green"
         badgeText={`${trial.disease} • ${trial.phase}`}
+=======
+        description={trial.summary || ''}
+        variant="green"
+        badgeText={`${trial.disease_area} • ${trial.phase}`}
+>>>>>>> origin/main
         className="mb-8"
         action={
           <div className="flex flex-col sm:flex-row gap-3 min-w-[200px] justify-center sm:justify-end">
@@ -186,8 +213,13 @@ export default function TrialDetail() {
             <Button
               variant="outline"
               className={`h-12 px-4 rounded-xl border transition-colors ${isSaved
+<<<<<<< HEAD
                 ? 'bg-white/20 border-white/40 text-white hover:bg-white/30' // Saved state: glass
                 : 'bg-transparent border-white/30 text-white hover:bg-white/10' // Default: outline white
+=======
+                ? 'bg-white/20 border-white/40 text-white hover:bg-white/30'
+                : 'bg-transparent border-white/30 text-white hover:bg-white/10'
+>>>>>>> origin/main
                 }`}
               onClick={handleSave}
             >
@@ -197,6 +229,7 @@ export default function TrialDetail() {
               />
               {isSaved ? 'Saved' : 'Save'}
             </Button>
+<<<<<<< HEAD
             {/* HCP Only: Download Protocol */}
             {/* @ts-ignore - Mocking user role check without context for now */}
             {(localStorage.getItem('voce_user') && JSON.parse(localStorage.getItem('voce_user')!)?.role === 'hcp') && (
@@ -209,15 +242,25 @@ export default function TrialDetail() {
                 Protocol
               </Button>
             )}
+=======
+>>>>>>> origin/main
           </div>
         }
       />
 
+<<<<<<< HEAD
       < div className="grid lg:grid-cols-3 gap-8" >
         {/* Main Content */}
         < div className="lg:col-span-2 space-y-8" >
           {/* Overview */}
           < Card className="p-6 md:p-8 border-border/60 shadow-sm" >
+=======
+      <div className="grid lg:grid-cols-3 gap-8">
+        {/* Main Content */}
+        <div className="lg:col-span-2 space-y-8">
+          {/* Overview */}
+          <Card className="p-6 md:p-8 border-border/60 shadow-sm">
+>>>>>>> origin/main
             <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
               <Activity size={20} className="text-primary-color" />
               Overview
@@ -233,27 +276,41 @@ export default function TrialDetail() {
               <div className="flex items-start gap-4 p-4 bg-muted/30 rounded-xl border border-transparent hover:border-primary/20 transition-colors">
                 <MapPin className="text-primary-color mt-1" size={20} />
                 <div>
+<<<<<<< HEAD
                   <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Location</div>
                   <div className="font-medium">{trial.location}</div>
+=======
+                  <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Primary Country</div>
+                  <div className="font-medium">{trial.countries?.[0] || 'International'}</div>
+>>>>>>> origin/main
                 </div>
               </div>
               <div className="flex items-start gap-4 p-4 bg-muted/30 rounded-xl border border-transparent hover:border-primary/20 transition-colors">
                 <Calendar className="text-primary-color mt-1" size={20} />
                 <div>
                   <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Start Date</div>
+<<<<<<< HEAD
                   <div className="font-medium">{new Date(trial.startDate).toLocaleDateString()}</div>
+=======
+                  <div className="font-medium">{trial.start_date ? new Date(trial.start_date).toLocaleDateString() : 'N/A'}</div>
+>>>>>>> origin/main
                 </div>
               </div>
               <div className="flex items-start gap-4 p-4 bg-muted/30 rounded-xl border border-transparent hover:border-primary/20 transition-colors">
                 <Clock className="text-primary-color mt-1" size={20} />
                 <div>
                   <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Est. Completion</div>
+<<<<<<< HEAD
                   <div className="font-medium">{new Date(trial.estimatedCompletion).toLocaleDateString()}</div>
+=======
+                  <div className="font-medium">{trial.estimated_completion ? new Date(trial.estimated_completion).toLocaleDateString() : 'N/A'}</div>
+>>>>>>> origin/main
                 </div>
               </div>
             </div>
 
             {/* Enrollment Progress */}
+<<<<<<< HEAD
             <div className="mt-8 pt-6 border-t border-dashed">
               <div className="flex justify-between text-sm mb-2 font-medium">
                 <span className="text-muted-foreground">Enrollment Progress</span>
@@ -290,12 +347,48 @@ export default function TrialDetail() {
 
           {/* Eligibility Quiz Section */}
           < Card className="p-6 md:p-8 border-l-4 border-l-primary shadow-lg overflow-hidden relative" >
+=======
+            {trial.max_enrollment && (
+              <div className="mt-8 pt-6 border-t border-dashed">
+                <div className="flex justify-between text-sm mb-2 font-medium">
+                  <span className="text-muted-foreground">Enrollment Progress</span>
+                  <span className="text-primary-color font-bold">{trial.enrollment} / {trial.max_enrollment} Participants</span>
+                </div>
+                <div className="h-3 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary-color rounded-full transition-all duration-1000 ease-out relative overflow-hidden"
+                    style={{ width: `${(trial.enrollment / trial.max_enrollment) * 100}%` }}
+                  >
+                    <div className="absolute inset-0 bg-white/20 animate-[shimmer_2s_infinite]"></div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </Card>
+
+          {/* Eligibility Criteria */}
+          {trial.eligibility_criteria && (
+            <Card className="p-6 md:p-8 border-border/60 shadow-sm">
+              <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+                <ShieldCheck size={20} className="text-primary-color" />
+                Eligibility Summary
+              </h2>
+              <div className="p-4 bg-muted/20 rounded-xl border border-muted hover:border-primary/20 transition-colors">
+                <p className="font-medium text-foreground/90 whitespace-pre-wrap">{trial.eligibility_criteria}</p>
+              </div>
+            </Card>
+          )}
+
+          {/* Eligibility Quiz Section */}
+          <Card className="p-6 md:p-8 border-l-4 border-l-primary shadow-lg overflow-hidden relative">
+>>>>>>> origin/main
             <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
               <FlaskConical size={140} />
             </div>
 
             <h2 className="text-xl font-bold mb-6">Eligibility Quiz</h2>
 
+<<<<<<< HEAD
             {
               !showQuiz && !quizComplete && (
                 <div className="text-center py-8">
@@ -455,11 +548,119 @@ export default function TrialDetail() {
               <div className="space-y-1">
                 <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Email</div>
                 <div className="font-medium text-primary-color break-all hover:underline cursor-pointer">{trial.contact.split(' - ')[1]}</div>
+=======
+            {!showQuiz && !quizComplete && (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-primary-color/10 rounded-full flex items-center justify-center mx-auto mb-6 ring-4 ring-primary/5">
+                  <HelpCircle className="text-primary-color" size={32} />
+                </div>
+                <h3 className="font-bold text-lg mb-2">Check Your Eligibility</h3>
+                <p className="text-muted-foreground mb-8 max-w-md mx-auto">
+                  Take a quick 5-question quiz to see if you might be a good fit for this clinical trial.
+                </p>
+                <Button style={{ backgroundColor: 'hsl(var(--primary))', color: 'white' }} onClick={() => setShowQuiz(true)} size="lg" className="shadow-md rounded-xl px-8">Start Eligibility Check</Button>
+              </div>
+            )}
+
+            {showQuiz && !quizComplete && (
+              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    <span>Quiz Progress</span>
+                    <span>{Math.round(((currentQuestion + 1) / eligibilityQuestions.length) * 100)}%</span>
+                  </div>
+                  <div className="flex gap-1.5">
+                    {eligibilityQuestions.map((_, idx) => (
+                      <div
+                        key={idx}
+                        className={`h-2 flex-1 rounded-full transition-colors duration-300 ${idx <= currentQuestion ? 'bg-primary-color' : 'bg-muted'}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="py-2">
+                  <div className="text-sm font-bold text-primary-color mb-2 uppercase tracking-wide">
+                    Question {currentQuestion + 1}
+                  </div>
+                  <h3 className="text-2xl font-bold mb-8 leading-tight">
+                    {eligibilityQuestions[currentQuestion].question}
+                  </h3>
+
+                  <div className="space-y-3">
+                    {eligibilityQuestions[currentQuestion].type === 'yesno' ? (
+                      <div className="grid grid-cols-2 gap-4">
+                        <Button variant="outline" className="h-16 text-lg font-medium hover:bg-primary-color hover:text-primary-foreground hover:border-primary transition-all rounded-xl" onClick={() => handleAnswer('Yes')}>Yes</Button>
+                        <Button variant="outline" className="h-16 text-lg font-medium hover:bg-primary-color hover:text-primary-foreground hover:border-primary transition-all rounded-xl" onClick={() => handleAnswer('No')}>No</Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {eligibilityQuestions[currentQuestion].options?.map((option) => (
+                          <Button key={option} variant="outline" className="w-full justify-start h-14 text-base px-6 hover:bg-primary-color hover:text-primary-foreground hover:border-primary transition-all rounded-xl" onClick={() => handleAnswer(option)}>{option}</Button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {quizComplete && (
+              <div className="text-center py-8 animate-in zoom-in duration-300">
+                {getEligibilityResult() ? (
+                  <>
+                    <div className="w-20 h-20 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-6 ring-4 ring-success/5">
+                      <CheckCircle2 className="text-success" size={40} />
+                    </div>
+                    <h3 className="text-2xl font-bold text-success mb-3">You May Be Eligible!</h3>
+                    <p className="text-muted-foreground mb-8 max-w-md mx-auto text-lg leading-relaxed">
+                      Based on your answers, you appear to be a good candidate for this trial.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                      <Button onClick={handleConnect} size="lg" className="shadow-lg h-12 px-8 rounded-xl" disabled={isConnected}>
+                        {isConnected ? 'Request Pending' : 'Connect with Trial Now'}
+                      </Button>
+                      <Button variant="outline" onClick={resetQuiz} className="h-12 rounded-xl">Retake Quiz</Button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-20 h-20 bg-warning/10 rounded-full flex items-center justify-center mx-auto mb-6 ring-4 ring-warning/5">
+                      <XCircle className="text-warning" size={40} />
+                    </div>
+                    <h3 className="text-2xl font-bold text-foreground mb-3">Eligibility Uncertain</h3>
+                    <p className="text-muted-foreground mb-8 max-w-md mx-auto leading-relaxed">
+                      Based on your answers, you might not meet all criteria. However, we recommend consulting with a healthcare provider to be sure.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                      <Button variant="outline" onClick={resetQuiz} className="h-12 rounded-xl">Retake Quiz</Button>
+                      <Button variant="default" asChild className="h-12 rounded-xl">
+                        <Link to="/trials">Browse Other Trials</Link>
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </Card>
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-6">
+          {/* Contact Card */}
+          <Card className="p-6 border-border/60 shadow-sm">
+            <h3 className="font-bold mb-4 text-lg">Contact Information</h3>
+            <div className="space-y-4 p-4 bg-muted/30 rounded-xl mb-4 border border-border/50">
+              <div className="space-y-1">
+                <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Direct Contact</div>
+                <div className="font-medium">{trial.contact || 'contact@voche.com'}</div>
+>>>>>>> origin/main
               </div>
             </div>
             <Button className="w-full font-bold h-11 rounded-xl shadow-sm" onClick={handleConnect} disabled={isConnected}>
               {isConnected ? 'Request Sent' : 'Contact Trial Team'}
             </Button>
+<<<<<<< HEAD
           </Card >
 
           {/* Related Trials */}
@@ -473,6 +674,21 @@ export default function TrialDetail() {
                   <Link
                     key={relatedTrial.id}
                     to={`/trials/${relatedTrial.id}`}
+=======
+          </Card>
+
+          {/* Related Trials */}
+          <Card className="p-6 border-border/60 shadow-sm">
+            <h3 className="font-bold mb-4 text-lg">Related Trials</h3>
+            <div className="space-y-3">
+              {state.trials
+                .filter(t => t.trial_id !== trial.trial_id && t.disease_area === trial.disease_area)
+                .slice(0, 2)
+                .map(relatedTrial => (
+                  <Link
+                    key={relatedTrial.trial_id}
+                    to={`/trials/${relatedTrial.trial_id}`}
+>>>>>>> origin/main
                     className="group block p-4 bg-card border rounded-xl hover:shadow-md hover:border-primary/30 transition-all"
                   >
                     <div className="flex items-center justify-between mb-2">
@@ -483,9 +699,18 @@ export default function TrialDetail() {
                   </Link>
                 ))}
             </div>
+<<<<<<< HEAD
           </Card >
         </div >
       </div >
     </div >
   );
 }
+=======
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+>>>>>>> origin/main

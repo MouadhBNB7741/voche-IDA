@@ -1,8 +1,12 @@
+<<<<<<< HEAD
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { DataProvider } from "./contexts/DataContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { SettingsProvider } from "./contexts/SettingsContext";
+=======
+import { Routes, Route, Navigate } from "react-router-dom";
+>>>>>>> origin/main
 import './App.css'
 
 import Layout from "./components/Layout";
@@ -23,6 +27,7 @@ import Notifications from './pages/Notifications';
 import Login from './pages/Auth/Login';
 import Signup from './pages/Auth/Signup';
 
+<<<<<<< HEAD
 
 export default function App() {
   return (
@@ -62,5 +67,36 @@ export default function App() {
         </SettingsProvider>
       </AuthProvider>
     </ThemeProvider>
+=======
+export default function App() {
+  return (
+    <Routes>
+      {/* Auth Routes */}
+      <Route element={<AuthLayout />}>
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+      </Route>
+
+      {/* Protected / App Routes */}
+      <Route element={<Layout />}>
+        <Route path="/" element={<Home />} />
+        <Route path="/trials" element={<Trials />} />
+        <Route path="/trials/:id" element={<TrialDetail />} />
+        <Route path="/community" element={<Community />} />
+        <Route path="/community/posts/:id" element={<PostDetails />} />
+        <Route path="/resources" element={<Resources />} />
+        <Route path="/resources/:id" element={<ResourceDetails />} />
+        <Route path="/events" element={<Events />} />
+        <Route path="/events/:id" element={<EventDetails />} />
+        <Route path="/assistant" element={<Assistant />} />
+        <Route path="/patientdashboard" element={<PatientDashboard />} />
+        <Route path="/hcpdashboard" element={<HCPDashboard />} />
+        <Route path="/notifications" element={<Notifications />} />
+      </Route>
+
+      {/* Redirects */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+>>>>>>> origin/main
   );
 }

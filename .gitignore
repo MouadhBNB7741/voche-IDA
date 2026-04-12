@@ -1,1 +1,6 @@
-docs/conception/endPoint.md
+.venv 
+**/__pycache__/
+.gitignore
+.env
+.env.test
+uploads/

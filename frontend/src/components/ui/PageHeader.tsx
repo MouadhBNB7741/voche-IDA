@@ -42,7 +42,11 @@ export function PageHeader({
             <div className="relative z-10 p-8 md:p-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
                 <div className="space-y-3 max-w-3xl">
                     {badgeText && (
+<<<<<<< HEAD
                         <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider mb-2">
+=======
+                        <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider mb-2 ">
+>>>>>>> origin/main
                             {isGreen ? <ShieldCheck size={14} /> : <Sparkles size={14} />}
                             {badgeText}
                         </div>
@@ -61,4 +65,8 @@ export function PageHeader({
             </div>
         </div>
     );
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> origin/main

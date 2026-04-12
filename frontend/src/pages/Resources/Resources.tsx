@@ -20,7 +20,11 @@ import {
   Award,
   TrendingUp
 } from 'lucide-react';
+<<<<<<< HEAD
 import { mockResources } from '../../data/mockData';
+=======
+// Mock data removed
+>>>>>>> origin/main
 import { Input } from '../../components/ui/input';
 import {
   Select,
@@ -371,4 +375,8 @@ export default function ResourceLibrary() {
 
   </div>
 );
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> origin/main

@@ -20,6 +20,10 @@
     "@radix-ui/react-toast": "^1.2.15",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-query": "^5.0.0",
+<<<<<<< HEAD
+=======
+    "@types/axios": "^0.9.36",
+>>>>>>> origin/main
     "axios": "^1.14.0",
     "class-variance-authority": "^0.7.1",
     "lucide-react": "^0.563.0",
@@ -28,7 +32,12 @@
     "react-router-dom": "^6.30.3",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.1",
+<<<<<<< HEAD
     "tailwindcss-animate": "^1.0.7"
+=======
+    "tailwindcss-animate": "^1.0.7",
+    "universal-cookie": "^8.1.0"
+>>>>>>> origin/main
   },
   "devDependencies": {
     "@types/node": "^25.2.3",

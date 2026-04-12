@@ -16,8 +16,13 @@ import {
   User,
   ShieldAlert
 } from 'lucide-react';
+<<<<<<< HEAD
 import { mockForumPosts } from '../../data/mockData';
 import type { ForumPost } from '../../data/mockData';
+=======
+// Mock data removed
+// Mock data removed
+>>>>>>> origin/main
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -321,7 +326,11 @@ export default function PostDetail() {
         <div>
           <h4 className="font-semibold text-info mb-1 text-sm">Community Guidelines</h4>
           <p className="text-xs text-muted-foreground leading-relaxed">
+<<<<<<< HEAD
             VOCE is a safe space for support and information. Please be respectful and constructive.
+=======
+            Voche is a safe space for support and information. Please be respectful and constructive.
+>>>>>>> origin/main
             Medical advice should only come from qualified professionals. content violating our policies will be removed.
           </p>
         </div>
@@ -371,4 +380,8 @@ export default function PostDetail() {
       </Dialog>
     </div>
   );
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> origin/main

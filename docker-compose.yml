@@ -1,0 +1,67 @@
+services:
+  # VOCE PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    container_name: voce-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: voce_user
+      POSTGRES_PASSWORD: voce_password
+      POSTGRES_DB: voce_db
+    volumes:
+      - voce_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U voce_user -d voce_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - voce-network
+
+  # VOCE Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: voce-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - voce-network
+
+  # VOCE Backend API
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: voce-backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./backend/app:/app/app
+      - ./backend/uploads:/app/uploads
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    environment:
+      - DATABASE_URL=postgres://voce_user:voce_password@db:5432/voce_db
+      - REDIS_URL=redis://redis:6379
+      - PYTHONPATH=/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - voce-network
+
+networks:
+  voce-network:
+    driver: bridge
+
+volumes:
+  voce_postgres_data:

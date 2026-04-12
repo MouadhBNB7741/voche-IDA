@@ -1,10 +1,17 @@
 import { useState } from 'react';
+<<<<<<< HEAD
 import { Link, useNavigate } from 'react-router-dom';
+=======
+import { Link } from 'react-router-dom';
+>>>>>>> origin/main
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { useAuth } from '../../contexts/AuthContext';
+<<<<<<< HEAD
 import { authService, type AuthUser } from '../../services/authService';
+=======
+>>>>>>> origin/main
 import { Eye, EyeOff, Loader2, Mail, Lock, User, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -14,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui/select';
+<<<<<<< HEAD
 import idaLogo from '../../assets/ida.webp';
 
 export default function Register() {
@@ -46,6 +54,49 @@ const handleRegister = async (e: React.FormEvent) => {
     setLoading(false);
   }
 };
+=======
+import type { UserType } from '../../types/db';
+import idaLogo from '../../assets/ida.webp';
+
+export default function Register() {
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [userType, setUserType] = useState<UserType>('patient');
+  const [showPassword, setShowPassword] = useState(false);
+  const { register, isLoading } = useAuth();
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (password.length < 8) {
+      toast.error('Password must be at least 8 characters long');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+
+    try {
+      await register({
+        email,
+        password,
+        first_name: firstName,
+        last_name: lastName,
+        user_type: userType
+      });
+      
+      toast.success('Registration successful!');
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      toast.error(error.message || 'Registration failed. Please try again.');
+    }
+  };
+>>>>>>> origin/main
 
   return (
     <div className="min-h-screen flex animate-in fade-in duration-500">
@@ -59,8 +110,13 @@ const handleRegister = async (e: React.FormEvent) => {
 
         <div className="z-10 relative">
           <div className="flex items-center gap-3 mb-6">
+<<<<<<< HEAD
             <img src={idaLogo} alt="VOCE Logo" className="w-10 h-10 object-contain rounded-xl shadow-lg shadow-primary/20" />
             <span className="font-bold text-2xl tracking-tight">VOCE Platform</span>
+=======
+            <img src={idaLogo} alt="Voche Logo" className="w-10 h-10 object-contain rounded-xl shadow-lg shadow-primary/20" />
+            <span className="font-bold text-2xl tracking-tight">Voche Platform</span>
+>>>>>>> origin/main
           </div>
         </div>
 
@@ -74,7 +130,11 @@ const handleRegister = async (e: React.FormEvent) => {
         </div>
 
         <div className="z-10 relative flex justify-between items-center text-sm text-slate-400">
+<<<<<<< HEAD
           <p>©{new Date().getFullYear()} VOCE Platform. All rights reserved.</p>
+=======
+          <p>©{new Date().getFullYear()} Voche Platform. All rights reserved.</p>
+>>>>>>> origin/main
           <div className="flex gap-4">
             <Link to="#" className="hover:text-white transition-colors">Privacy</Link>
             <Link to="#" className="hover:text-white transition-colors">Terms</Link>
@@ -86,19 +146,29 @@ const handleRegister = async (e: React.FormEvent) => {
       <div className="flex-1 flex items-center justify-center p-8 bg-background relative overflow-y-auto">
         <div className="w-full max-w-md space-y-8 my-auto">
           <div className="lg:hidden absolute top-8 left-8 flex items-center gap-2">
+<<<<<<< HEAD
             <img src={idaLogo} alt="VOCE Logo" className="w-8 h-8 object-contain rounded-lg" />
             <span className="font-bold text-xl">VOCE</span>
+=======
+            <img src={idaLogo} alt="Voche Logo" className="w-8 h-8 object-contain rounded-lg" />
+            <span className="font-bold text-xl">voche</span>
+>>>>>>> origin/main
           </div>
 
           <div className="space-y-2 text-center lg:text-left mt-8 lg:mt-0">
             <h2 className="text-3xl font-bold tracking-tight">Create an account</h2>
             <p className="text-muted-foreground">
+<<<<<<< HEAD
               Join the VOCE community today
+=======
+              Join the Voche community today
+>>>>>>> origin/main
             </p>
           </div>
 
           <form onSubmit={handleRegister} className="space-y-5">
             <div className="space-y-4">
+<<<<<<< HEAD
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name</Label>
                 <div className="relative">
@@ -111,6 +181,36 @@ const handleRegister = async (e: React.FormEvent) => {
                     className="pl-9 h-11 bg-muted/30 border-input/60 focus:bg-background transition-all"
                     required
                   />
+=======
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First Name</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="firstName"
+                      placeholder="John"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      className="pl-9 h-11 bg-muted/30 border-input/60 focus:bg-background transition-all"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="lastName"
+                      placeholder="Doe"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      className="pl-9 h-11 bg-muted/30 border-input/60 focus:bg-background transition-all"
+                      required
+                    />
+                  </div>
+>>>>>>> origin/main
                 </div>
               </div>
 
@@ -132,13 +232,21 @@ const handleRegister = async (e: React.FormEvent) => {
 
               <div className="space-y-2">
                 <Label htmlFor="role">I am a...</Label>
+<<<<<<< HEAD
                 <Select onValueChange={(val) => setRole(val as AuthUser['role'])} defaultValue={role}>
+=======
+                <Select onValueChange={(val) => setUserType(val as UserType)} defaultValue={userType}>
+>>>>>>> origin/main
                   <SelectTrigger className="h-11 bg-muted/30 border-input/60 focus:bg-background transition-all">
                     <SelectValue placeholder="Select your role" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="patient">Patient / Participant</SelectItem>
                     <SelectItem value="hcp">Healthcare Professional</SelectItem>
+<<<<<<< HEAD
+=======
+                    <SelectItem value="org_member">Organization Member</SelectItem>
+>>>>>>> origin/main
                   </SelectContent>
                 </Select>
               </div>
@@ -198,8 +306,13 @@ const handleRegister = async (e: React.FormEvent) => {
               </Label>
             </div>
 
+<<<<<<< HEAD
             <Button type="submit" className="w-full h-11 shadow-lg shadow-primary/20 text-base font-semibold" disabled={loading}>
               {loading ? (
+=======
+            <Button type="submit" className="w-full h-11 shadow-lg shadow-primary/20 text-base font-semibold" disabled={isLoading}>
+              {isLoading ? (
+>>>>>>> origin/main
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Creating account...
@@ -222,4 +335,8 @@ const handleRegister = async (e: React.FormEvent) => {
       </div>
     </div>
   );
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> origin/main

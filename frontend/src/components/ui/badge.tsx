@@ -28,4 +28,8 @@ function Badge({ className, variant, ...props }: BadgeProps) {
   )
 }
 
+<<<<<<< HEAD
 export { Badge, badgeVariants }
+=======
+export { Badge, badgeVariants }
+>>>>>>> origin/main

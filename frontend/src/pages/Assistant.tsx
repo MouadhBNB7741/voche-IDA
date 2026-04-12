@@ -13,7 +13,10 @@ import {
   BookOpen,
   Calendar
 } from 'lucide-react';
+<<<<<<< HEAD
 import { mockChatResponses } from '../data/mockData';
+=======
+>>>>>>> origin/main
 import { PageHeader } from '../components/ui/PageHeader';
 
 interface Message {
@@ -24,6 +27,19 @@ interface Message {
   type?: 'suggestion' | 'normal';
 }
 
+<<<<<<< HEAD
+=======
+const mockChatResponses: Record<string, string> = {
+  "kenya": "Currently, we are tracking 12 active clinical trials in Kenya, primarily focused on public health and maternal care. Would you like me to show you the list?",
+  "trials": "I can help you search our database of over 1,500 clinical trials. You can filter by condition (e.g., HIV, Malaria), location, or phase. What are you looking for specifically?",
+  "forum": "To join a community discussion, navigate to the 'Community' tab and browse the available disease areas. You can register as a member to start posting and replying.",
+  "informed consent": "Informed consent is the process where you receive all key facts about a trial before deciding whether to join. It's your right to ask questions and withdraw at any time.",
+  "webinars": "Our next webinar, 'Inclusive Research Ethics', is scheduled for next Tuesday at 2:00 PM GMT. You can register in the 'Events' section.",
+  "rights": "As a participant, you have the right to privacy, full disclosure of risks, and the ability to withdraw from a trial at any point without penalty. Your safety is the top priority.",
+  "default": "I'm not quite sure about that specific request. Could you try rephrasing? I can help with finding trials, explaining your rights, or finding resources."
+};
+
+>>>>>>> origin/main
 const quickQuestions = [
   {
     icon: Search,
@@ -60,7 +76,11 @@ export default function Assistant() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
+<<<<<<< HEAD
       content: "Hello! I'm your VOCE Platform assistant. I'm here to help you navigate clinical trials, community resources, and answer questions about participating in health research. How can I help you today?",
+=======
+      content: "Hello! I'm your Voche Platform assistant. I'm here to help you navigate clinical trials, community resources, and answer questions about participating in health research. How can I help you today?",
+>>>>>>> origin/main
       sender: 'assistant',
       timestamp: new Date(),
     }
@@ -136,7 +156,11 @@ export default function Assistant() {
   return (
     <div className="container mx-auto p-4 md:p-8 max-w-5xl animate-in fade-in duration-500">
       <PageHeader
+<<<<<<< HEAD
         title="VOCE AI Assistant"
+=======
+        title="Voche AI Assistant"
+>>>>>>> origin/main
         description="Your intelligent companion for navigating health research and clinical trials."
         variant="green"
         action={
@@ -302,4 +326,8 @@ export default function Assistant() {
       </div>
     </div>
   );
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> origin/main

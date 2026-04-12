@@ -128,4 +128,8 @@ export function SuggestEventModal({ children }: { children?: React.ReactNode }) 
             </DialogContent>
         </Dialog>
     );
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> origin/main

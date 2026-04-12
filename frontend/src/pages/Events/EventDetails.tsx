@@ -213,4 +213,8 @@ export default function EventDetail() {
       </div>
     </div>
   );
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> origin/main
