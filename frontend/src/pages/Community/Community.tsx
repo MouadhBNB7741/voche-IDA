@@ -37,15 +37,23 @@ import { Label } from '../../components/ui/label';
 import { toast } from 'sonner';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { useData } from '../../contexts/DataContext';
+import type { PostType } from '../../types/db';
 
 const categories = [
   { id: 'all',      name: 'All Discussions',          count: 156, dot: 'bg-primary-color',   activeClass: 'category-active-blue-bg' },
-  { id: 'hiv',      name: 'HIV/AIDS',                 count: 45,  dot: 'bg-red-500',          activeClass: 'category-active-blue-bg'     },
-  { id: 'tb',       name: 'Tuberculosis',             count: 23,  dot: 'bg-blue-500',         activeClass: 'category-active-blue-bg'    },
-  { id: 'malaria',  name: 'Malaria',                  count: 18,  dot: 'bg-green-500',        activeClass: 'category-active-blue-bg'   },
-  { id: 'amr',      name: 'Antimicrobial Resistance', count: 12,  dot: 'bg-yellow-500',       activeClass: 'category-active-blue-bg'  },
-  { id: 'vaccines', name: 'Vaccines',                 count: 34,  dot: 'bg-purple-500',       activeClass: 'category-active-blue-bg'  },
-  { id: 'general',  name: 'General Health',           count: 24,  dot: 'bg-teal-color',       activeClass: 'category-active-blue-bg'    },
+  { id: 'hiv',      name: 'HIV/AIDS',                 count: 45,  dot: 'bg-red-500',          activeClass: 'category-active-blue-bg' },
+  { id: 'tb',       name: 'Tuberculosis',             count: 23,  dot: 'bg-blue-500',         activeClass: 'category-active-blue-bg' },
+  { id: 'malaria',  name: 'Malaria',                  count: 18,  dot: 'bg-green-500',        activeClass: 'category-active-blue-bg' },
+  { id: 'amr',      name: 'Antimicrobial Resistance', count: 12,  dot: 'bg-yellow-500',       activeClass: 'category-active-blue-bg' },
+  { id: 'vaccines', name: 'Vaccines',                 count: 34,  dot: 'bg-purple-500',       activeClass: 'category-active-blue-bg' },
+  { id: 'general',  name: 'General Health',           count: 24,  dot: 'bg-teal-color',       activeClass: 'category-active-blue-bg' },
+];
+
+const postTypeOptions: { id: PostType; name: string }[] = [
+  { id: 'question',     name: 'Question' },
+  { id: 'story',        name: 'Story' },
+  { id: 'discussion',   name: 'Discussion' },
+  { id: 'announcement', name: 'Announcement' },
 ];
 
 export default function Community() {
@@ -60,7 +68,7 @@ export default function Community() {
   // New Post Form State
   const [newPostTitle, setNewPostTitle] = useState('');
   const [newPostContent, setNewPostContent] = useState('');
-  const [newPostCategory, setNewPostCategory] = useState('');
+  const [newPostType, setNewPostType] = useState<PostType | ''>('');
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -68,16 +76,26 @@ export default function Community() {
 
   // Filter posts based on search and filters
   const filteredPosts = state.forumPosts.filter(post => {
-    const matchesSearch = post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchesSearch =
+      post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       post.content.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' ||
-      post.category.toLowerCase().replace('/', '').includes(selectedCategory);
+    const matchesCategory =
+      selectedCategory === 'all' ||
+      post.community_id.toLowerCase().includes(selectedCategory) ||
+      post.post_type.toLowerCase().includes(selectedCategory);
     return matchesSearch && matchesCategory;
   });
 
+  // Sort posts
+  const sortedPosts = [...filteredPosts].sort((a, b) => {
+    if (sortBy === 'popular') return b.likes_count - a.likes_count;
+    if (sortBy === 'replies') return b.replies_count - a.replies_count;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+
   // Calculate pagination
-  const totalPages = Math.ceil(filteredPosts.length / itemsPerPage);
-  const paginatedPosts = filteredPosts.slice(
+  const totalPages = Math.ceil(sortedPosts.length / itemsPerPage);
+  const paginatedPosts = sortedPosts.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
@@ -110,7 +128,7 @@ export default function Community() {
   };
 
   const handleCreatePost = () => {
-    if (!newPostTitle || !newPostContent || !newPostCategory) {
+    if (!newPostTitle || !newPostContent || !newPostType) {
       toast.error("Please fill in all fields");
       return;
     }
@@ -118,16 +136,20 @@ export default function Community() {
     actions.createPost({
       title: newPostTitle,
       content: newPostContent,
-      category: newPostCategory,
-      author: state.currentUser?.name || 'Anonymous',
-      tags: ['discussion', 'community']
+      post_type: newPostType as PostType,
+      community_id: 'general',
+      user_id: state.currentUser?.id || 'anonymous',
+      author_name: state.currentUser?.display_name || 'Anonymous',
+      tags: ['discussion', 'community'],
     });
 
-    toast.success("Discussion Created", { description: "Your post has been published to the community." });
+    toast.success("Discussion Created", {
+      description: "Your post has been published to the community.",
+    });
     setIsNewPostOpen(false);
     setNewPostTitle('');
     setNewPostContent('');
-    setNewPostCategory('');
+    setNewPostType('');
     setCurrentPage(1);
   };
 
@@ -162,14 +184,14 @@ export default function Community() {
                   />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="category" className="text-right">Category</Label>
-                  <Select onValueChange={setNewPostCategory} value={newPostCategory}>
+                  <Label htmlFor="post-type" className="text-right">Type</Label>
+                  <Select onValueChange={(v) => setNewPostType(v as PostType)} value={newPostType}>
                     <SelectTrigger className="col-span-3">
-                      <SelectValue placeholder="Select a topic" />
+                      <SelectValue placeholder="Select a post type" />
                     </SelectTrigger>
                     <SelectContent>
-                      {categories.filter(c => c.id !== 'all').map(c => (
-                        <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                      {postTypeOptions.map(opt => (
+                        <SelectItem key={opt.id} value={opt.id}>{opt.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -248,10 +270,10 @@ export default function Community() {
       {/* Forum Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { icon: Users, label: 'Active Members', value: '2,847', color: 'text-primary-color' },
-          { icon: MessageSquare, label: 'Discussions', value: '156', color: 'text-blue-500' },
-          { icon: Reply, label: 'Total Replies', value: '834', color: 'text-accent-color' },
-          { icon: TrendingUp, label: 'This Week', value: '+67', color: 'text-success-color' },
+          { icon: Users,        label: 'Active Members', value: '2,847', color: 'text-primary-color' },
+          { icon: MessageSquare, label: 'Discussions',   value: '156',   color: 'text-blue-500' },
+          { icon: Reply,        label: 'Total Replies',  value: '834',   color: 'text-accent-color' },
+          { icon: TrendingUp,   label: 'This Week',      value: '+67',   color: 'text-success-color' },
         ].map((stat, i) => (
           <Card key={i} className="p-4 flex items-center justify-between hover:shadow-md transition-shadow">
             <div>
@@ -268,12 +290,14 @@ export default function Community() {
       {/* Posts List */}
       <div className="space-y-4">
         {paginatedPosts.map((post) => {
-          const isAuthor = post.userId === state.currentUser?.id;
+          const isAuthor = post.user_id === state.currentUser?.id;
+          const isLiked = likedPosts.includes(post.post_id);
+
           return (
             <Card
-              key={post.id}
+              key={post.post_id}
               className="group p-6 hover:shadow-lg transition-all duration-300 cursor-pointer border-transparent hover:border-primary/10 relative"
-              onClick={() => navigate(`/community/posts/${post.id}`)}
+              onClick={() => navigate(`/community/posts/${post.post_id}`)}
             >
               {isAuthor && (
                 <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -281,7 +305,7 @@ export default function Community() {
                     size="icon"
                     variant="ghost"
                     className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    onClick={(e) => handleDeletePost(post.id, e)}
+                    onClick={(e) => handleDeletePost(post.post_id, e)}
                   >
                     <Trash2 size={16} />
                   </Button>
@@ -291,21 +315,25 @@ export default function Community() {
               <div className="flex gap-4">
                 <Avatar className="w-12 h-12 shadow-sm bg-primary-color group-hover:scale-105 transition-transform">
                   <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-primary-foreground font-bold">
-                    {post.author.split(' ').map((n: string) => n[0]).join('')}
+                    {(post.author_name ?? 'AN').split(' ').map((n: string) => n[0]).join('')}
                   </AvatarFallback>
                 </Avatar>
 
                 <div className="flex-1 space-y-3">
                   <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2">
                     <div className="space-y-1">
-                      <h3 className="text-lg font-bold group-hover:text-primary transition-colors">{post.title}</h3>
+                      <h3 className="text-lg font-bold group-hover:text-primary transition-colors">
+                        {post.title}
+                      </h3>
                       <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                        <span className="font-medium text-foreground">{post.author}</span>
+                        <span className="font-medium text-foreground">
+                          {post.author_name ?? 'Anonymous'}
+                        </span>
                         <span>•</span>
                         <Clock size={12} />
-                        <span>{post.timestamp}</span>
+                        <span>{new Date(post.created_at).toLocaleDateString()}</span>
                         <Badge variant="secondary" className="bg-muted text-muted-foreground">
-                          {post.category}
+                          {post.post_type}
                         </Badge>
                       </div>
                     </div>
@@ -327,18 +355,18 @@ export default function Community() {
                     <div className="flex items-center gap-4 text-sm font-medium">
                       <button
                         className={`flex items-center gap-1.5 transition-colors hover:text-red-500
-                        ${likedPosts.includes(post.id) ? 'text-red-500' : 'text-muted-foreground'}`}
+                          ${isLiked ? 'text-red-500' : 'text-muted-foreground'}`}
                         onClick={(e) => {
                           e.stopPropagation();
-                          toggleLike(post.id);
+                          toggleLike(post.post_id);
                         }}
                       >
-                        <Heart size={16} className={likedPosts.includes(post.id) ? 'fill-current' : ''} />
-                        {post.likes + (likedPosts.includes(post.id) ? 1 : 0)}
+                        <Heart size={16} className={isLiked ? 'fill-current' : ''} />
+                        {post.likes_count + (isLiked ? 1 : 0)}
                       </button>
                       <div className="flex items-center gap-1.5 text-muted-foreground">
                         <Reply size={16} />
-                        {post.replies} Replies
+                        {post.replies_count} Replies
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -389,8 +417,4 @@ export default function Community() {
       )}
     </div>
   );
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> origin/main

@@ -16,45 +16,25 @@ import {
   Edit,
   Activity,
   CheckCircle2,
-<<<<<<< HEAD
-  Lock
-=======
   Lock,
   Heart
->>>>>>> origin/main
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PageHeader } from '../components/ui/PageHeader';
 import { toast } from 'sonner';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
-<<<<<<< HEAD
-=======
 import type { Event, Notification, ClinicalTrial } from '../types/db';
->>>>>>> origin/main
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { state, actions } = useData();
-<<<<<<< HEAD
-  const { user } = useAuth(); // Use AuthContext for user state
-
-  // If not logged in, user is null.
-  // const { currentUser } = state; // We typically use AuthContext for the active session, but DataContext holds the full user profile if fetched separately.
-  // For now, let's assume useAuth() returns the primary user object.
-  // DataContext might need to sync with AuthContext or we just use AuthContext here.
-
-  const { trials, events, notifications } = state;
-
-  // Get featured trials and events for dashboard
-=======
   const { user } = useAuth(); 
 
   const trials = state.trials as ClinicalTrial[] || [];
   const events = state.events as Event[] || [];
   const notifications = state.notifications as Notification[] || [];
 
->>>>>>> origin/main
   const featuredTrials = trials.slice(0, 2);
   const upcomingEvents = events.slice(0, 3);
   const recentNotifications = notifications.slice(0, 3);
@@ -73,90 +53,49 @@ export default function Dashboard() {
       });
     }
   };
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/main
   const quickActions = [
     {
       icon: FlaskConical,
       title: 'Find Trials',
       description: 'Search clinical trials in your area',
       path: '/trials',
-<<<<<<< HEAD
-      color: 'bg-[hsl(var(--primary))]'
-=======
       color: 'bg-primary-color'
->>>>>>> origin/main
     },
     {
       icon: Users,
       title: 'Forums',
       description: 'Connect with the community',
       path: '/community',
-<<<<<<< HEAD
-      color: 'bg-[hsl(var(--teal))]'
-=======
       color: 'bg-teal-color'
->>>>>>> origin/main
     },
     {
       icon: BookOpen,
       title: 'Resources',
       description: 'Educational materials & toolkits',
       path: '/resources',
-<<<<<<< HEAD
-      color: 'bg-[hsl(var(--lime))]'
-=======
       color: 'bg-lime-color'
->>>>>>> origin/main
     },
     {
       icon: Calendar,
       title: 'Events',
       description: 'Webinars & conferences',
       path: '/events',
-<<<<<<< HEAD
-      color: 'bg-[hsl(var(--blue))]'
-=======
       color: 'bg-blue-color'
->>>>>>> origin/main
     },
   ];
 
   if (!user) {
     // Guest View
     return (
-<<<<<<< HEAD
-      <div className="container mx-auto p-4 md:p-8 space-y-8 animate-in fade-in duration-500">
-        <PageHeader
-          title="Welcome to VOCE"
-          description="Advancing health equity through accessible clinical research for everyone."
-=======
       <div className="container mx-auto p-4 md:p-8 space-y-12 animate-in fade-in duration-1000">
         <PageHeader
-          title="Welcome to voche"
+          title="Welcome to VOCHE"
           description="Advancing health equity through accessible clinical research for everyone. Join our mission to make healthcare research inclusive."
->>>>>>> origin/main
           variant="green"
         />
 
         {/* Quick Actions (Public) */}
         <div className="pt-4">
-<<<<<<< HEAD
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2"><ShieldCheck size={18} className="text-lime-600" /> Explore the Platform</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {quickActions.map((action, index) => {
-              const Icon = action.icon;
-              return (
-                <Link key={index} to={action.path}>
-                  <Card className="p-4 bg-white/70 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group border-transparent hover:border-border text-center flex flex-col items-center h-full justify-center bg-card">
-                    <div className={`w-14 h-14 ${action.color} rounded-2xl flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform`}>
-                      <Icon size={28} className="text-white" />
-                    </div>
-                    <h3 className="font-bold text-base mb-1 group-hover:text-primary-color transition-colors">{action.title}</h3>
-                    <p className="text-xs text-muted-foreground leading-snug max-w-[120px]">{action.description}</p>
-=======
           <h2 className="text-xl font-bold mb-10 flex items-center gap-3"><ShieldCheck size={28} className="text-primary-color" /> Explore the Platform</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {quickActions.map((action, index) => {
@@ -169,7 +108,6 @@ export default function Dashboard() {
                     </div>
                     <h3 className="font-extrabold text-xl mb-3 group-hover:text-primary-color tracking-tight transition-colors duration-500">{action.title}</h3>
                     <p className="text-sm text-muted-foreground leading-relaxed font-bold opacity-60 transition-colors duration-500">{action.description}</p>
->>>>>>> origin/main
                   </Card>
                 </Link>
               );
@@ -178,44 +116,6 @@ export default function Dashboard() {
         </div>
 
         {/* Upcoming Events (Public) */}
-<<<<<<< HEAD
-        <Card className="p-6 rounded-2xl backdrop-blur-md shadow-sm hover:shadow-md transition-all">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-accent/5 rounded-full blur-3xl -z-10"></div>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold flex items-center gap-2">
-              <Calendar size={20} className="text-lime-600" />
-              Upcoming Events
-            </h2>
-            <Link to="/events">
-              <Button variant="ghost" size="sm" className="text-accent-color hover:text-accent-foreground hover:bg-accent/10">
-                View All <ChevronRight size={16} />
-              </Button>
-            </Link>
-          </div>
-          <div className="grid md:grid-cols-3 gap-6">
-            {upcomingEvents.map((event) => (
-              <div key={event.id} className="backdrop-blur-sm rounded-xl p-5 shadow-sm hover:shadow-md transition-all">
-                <Badge variant="outline" className="mb-3 border-accent/30 text-lime-600 font-bold uppercase tracking-wider text-[10px]">
-                  {event.type}
-                </Badge>
-                <h3 className="font-bold text-sm mb-3 min-h-[40px] line-clamp-2">{event.title}</h3>
-                <div className="text-xs text-muted-foreground mb-4 space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <Clock size={12} className=" text-lime-600" />
-                    <span className="font-medium text-foreground-color">{new Date(event.date).toLocaleDateString()}</span> at {event.time}
-                  </div>
-                  <div className="pl-5">By <span className="text-foreground">{event.organizer}</span></div>
-                </div>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="default" className="w-full bg-primary text-black font-medium shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all" onClick={() => navigate(`/events/${event.id}`)}>
-                    Details
-                  </Button>
-                  <Button size="sm" variant="ghost" className="px-2" title="Login to register">
-                    <Lock size={14} className="text-muted-foreground" />
-                  </Button>
-                </div>
-              </div>
-=======
         <Card className="p-10 md:p-14 rounded-[3.5rem] border-0 bg-card/20 backdrop-blur-2xl shadow-2xl relative overflow-hidden group">
           <div className="absolute -top-32 -right-32 w-96 h-96 bg-primary-color/5 rounded-full blur-[120px] transition-all duration-1000 group-hover:scale-125 -z-10"></div>
           
@@ -264,7 +164,6 @@ export default function Dashboard() {
                   </Button>
                 </div>
               </Card>
->>>>>>> origin/main
             ))}
           </div>
         </Card>
@@ -273,19 +172,6 @@ export default function Dashboard() {
   }
 
   // Authenticated View
-<<<<<<< HEAD
-  return (
-    <div className="container mx-auto p-4 md:p-8 space-y-8 animate-in fade-in duration-500">
-      <PageHeader
-        title={`Welcome back, ${user.name}!`}
-        description="Stay connected with the global community working towards health equity."
-        badgeText="Member Since 2024"
-        variant="green"
-        action={
-          <div className="hidden md:block">
-            <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md shadow-lg">
-              <Users size={32} className="text-white" />
-=======
   const firstName = user.first_name || user.display_name?.split(' ')[0] || 'Member';
   
   return (
@@ -299,43 +185,11 @@ export default function Dashboard() {
           <div className="hidden md:block">
             <div className="w-24 h-24 bg-primary-color/10 rounded-[2rem] flex items-center justify-center backdrop-blur-xl shadow-2xl rotate-6 group hover:rotate-0 transition-transform duration-700">
               <Activity size={40} className=" animate-pulse" />
->>>>>>> origin/main
             </div>
           </div>
         }
       />
 
-<<<<<<< HEAD
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* User Status Card */}
-        <Card className="p-6 md:col-span-2 bg-gradient-to-r from-card to-muted/20 border-border/50 shadow-sm relative overflow-hidden group">
-          <div className="absolute right-0 top-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
-            <Activity size={100} />
-          </div>
-          <div className="flex flex-col sm:flex-row gap-6 items-center relative z-10">
-            <Avatar className="w-16 h-16 border-2 border-primary/20 shadow-md">
-              <AvatarImage src={localStorage.getItem('voce_profile_image') || user.avatar} />
-              <AvatarFallback className="bg-primary text-primary-foreground text-xl font-bold">
-                {user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-
-            <div className="flex-1 text-center sm:text-left space-y-1">
-              <div className="flex items-center justify-center sm:justify-start gap-2">
-                <h3 className="text-lg font-bold">{user.name}</h3>
-                <Badge variant="outline" className="px-2 py-0.5 text-xs border-primary/20 bg-primary/5 text-primary-color">
-                  {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-                </Badge>
-              </div>
-              <div className="flex flex-wrap justify-center sm:justify-start gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <MapPin size={14} />
-                  {user.location || 'Location not set'}
-                </div>
-                <div className="hidden sm:block text-border">•</div>
-                <div className="font-medium text-foreground/80">
-                  {state.savedTrials.length} Saved Trials
-=======
       <div className="grid md:grid-cols-2 gap-10 lg:gap-14">
         {/* User Status Card */}
         <Card className="p-10 md:col-span-2 bg-gradient-to-br from-card/40 to-muted/20 border border-border/5 shadow-[0_45px_100px_-25px_rgba(0,0,0,0.2)] rounded-[3.5rem] relative overflow-hidden group hover:shadow-[0_60px_120px_-30px_rgba(0,0,0,0.4)] transition-all duration-700 cursor-pointer">
@@ -384,54 +238,10 @@ export default function Dashboard() {
                     <Activity size={16} className="text-blue-500 opacity-70" />
                   </div>
                   {user.is_verified ? 'Identity Verified' : 'Standard Access'}
->>>>>>> origin/main
                 </div>
               </div>
             </div>
 
-<<<<<<< HEAD
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2 shadow-sm"
-              onClick={() => navigate(user?.role === 'hcp' ? '/hcpdashboard' : '/patientdashboard')}
-            >
-              <Edit size={14} />
-              Edit Profile
-            </Button>
-          </div>
-        </Card>
-
-        {/* Notifications Panel */}
-        <Card className="p-6 border-l-4 border-l-secondary shadow-md hover:shadow-lg transition-shadow">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold flex items-center gap-2">
-              <Bell size={20} className="text-secondary" />
-              Notifications
-            </h2>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/notifications')} className="text-muted-foreground hover:text-secondary">
-              View All
-            </Button>
-          </div>
-          <div className="space-y-4">
-            {notifications.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">No notifications</p>
-            ) : (
-              recentNotifications.map((notification) => (
-                <div
-                  key={notification.id}
-                  className={`p-4 rounded-xl border transition-all cursor-pointer hover:bg-muted/50 group ${!notification.read ? 'border-primary/30 bg-primary/5' : 'border-dashed'
-                    }`}
-                  onClick={() => navigate('/notifications')}
-                >
-                  <div className="flex justify-between items-start mb-1">
-                    <h4 className={`font-semibold text-sm group-hover:text-primary-color transition-colors ${!notification.read ? 'text-primary-color' : 'text-foreground'}`}>
-                      {notification.title}
-                    </h4>
-                    <span className="text-[10px] uppercase font-bold text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{notification.time}</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground leading-snug line-clamp-2">{notification.message}</p>
-=======
             <div className="flex flex-col gap-3">
                <Button
                 variant="default"
@@ -483,52 +293,12 @@ export default function Dashboard() {
                     </span>
                   </div>
                   <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2 font-medium">{notification.message}</p>
->>>>>>> origin/main
                 </div>
               ))
             )}
           </div>
         </Card>
 
-<<<<<<< HEAD
-        {/* Personalized Trial Alerts */}
-        <Card className="p-6 border-l-4 border-l-primary shadow-md hover:shadow-lg transition-shadow">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold flex items-center gap-2">
-              <TrendingUp size={20} className="text-primary-color" />
-              Recommended for You
-            </h2>
-            <Link to="/trials">
-              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary-color">
-                View All <ChevronRight size={16} />
-              </Button>
-            </Link>
-          </div>
-          <div className="space-y-4">
-            {featuredTrials.map((trial) => (
-              <div key={trial.id} className="border border-border rounded-xl p-5 hover:border-primary/50 transition-colors bg-card hover:bg-muted/10">
-                <div className="flex justify-between items-start mb-3">
-                  <Badge variant="outline" className="bg-primary/5 text-primary-color border-primary/20">
-                    {trial.disease}
-                  </Badge>
-                  <Badge variant="secondary" className="text-white font-normal text-xs">
-                    {trial.phase}
-                  </Badge>
-                </div>
-                <h3 className="font-bold text-base mb-2 line-clamp-1">{trial.title}</h3>
-                <div className="flex items-center text-xs text-muted-foreground mb-4 gap-4">
-                  <span className="flex items-center gap-1">
-                    <MapPin size={12} />
-                    {trial.location}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Users size={12} />
-                    {trial.enrollment} enrolled
-                  </span>
-                </div>
-                <Button size="sm" className="w-full shadow-sm" asChild>
-                  <Link to={`/trials/${trial.id}`}>Learn More</Link>
-=======
         {/* Matches Panel */}
         <Card className="p-10 border-0 bg-card/40 backdrop-blur-2xl shadow-2xl rounded-[3rem] hover:shadow-[0_45px_100px_-25px_rgba(16,185,129,0.3)] transition-all duration-700 cursor-pointer">
           <div className="flex items-center justify-between mb-10">
@@ -566,7 +336,6 @@ export default function Dashboard() {
                 </div>
                 <Button className="w-full shadow-2xl shadow-primary-color/10 rounded-2xl font-black h-14 bg-primary-color text-primary-foreground text-xs uppercase tracking-widest border-0 hover:shadow-primary-color/50 transition-all duration-500 cursor-pointer">
                   Consultation
->>>>>>> origin/main
                 </Button>
               </div>
             ))}
@@ -574,22 +343,6 @@ export default function Dashboard() {
         </Card>
       </div>
 
-<<<<<<< HEAD
-      {/* Quick Actions (Authenticated) */}
-      <div className="pt-4">
-        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2"><ShieldCheck size={18} className="text-accent" /> Quick Actions</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {quickActions.map((action, index) => {
-            const Icon = action.icon;
-            return (
-              <Link key={index} to={action.path}>
-                <Card className="p-4 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group border-transparent hover:border-border text-center flex flex-col items-center h-full justify-center bg-card">
-                  <div className={`w-14 h-14 ${action.color} rounded-2xl flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform`}>
-                    <Icon size={28} className="text-white" />
-                  </div>
-                  <h3 className="font-bold text-base mb-1 group-hover:text-primary-color transition-colors">{action.title}</h3>
-                  <p className="text-xs text-muted-foreground leading-snug max-w-[120px]">{action.description}</p>
-=======
       {/* Instant Access */}
       <div className="pt-10">
         <h2 className="text-2xl font-black mb-12 flex items-center gap-3 underline decoration-primary-color/30 decoration-8 underline-offset-[12px]"><ShieldCheck size={32} className="text-primary-color" /> Priority Access</h2>
@@ -604,7 +357,6 @@ export default function Dashboard() {
                   </div>
                   <h3 className="font-black text-xl mb-3 group-hover:text-primary-color tracking-tighter transition-colors duration-500 leading-none">{action.title}</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed font-bold opacity-60 transition-colors duration-500">{action.description}</p>
->>>>>>> origin/main
                 </Card>
               </Link>
             );
@@ -612,47 +364,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-<<<<<<< HEAD
-      {/* Upcoming Events */}
-      <Card className="p-6 md:p-8 overflow-hidden relative /60">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-accent/5 rounded-full blur-3xl -z-10"></div>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            <Calendar size={20} className="text-accent" />
-            Upcoming Events
-          </h2>
-          <Link to="/events">
-            <Button variant="ghost" size="sm" className="text-accent hover:text-accent-foreground hover:bg-accent/10">
-              View All <ChevronRight size={16} />
-            </Button>
-          </Link>
-        </div>
-        <div className="grid md:grid-cols-3 gap-6">
-          {upcomingEvents.map((event) => {
-            const isRegistered = state.registeredEvents.includes(event.id);
-            return (
-              <div key={event.id} className="border border-border/60 bg-background/50 backdrop-blur-sm rounded-xl p-5 hover:shadow-md transition-all">
-                <Badge variant="outline" className="mb-3 border-accent/30 text-accent font-bold uppercase tracking-wider text-[10px]">
-                  {event.type}
-                </Badge>
-                <h3 className="font-bold text-sm mb-3 min-h-[40px] line-clamp-2">{event.title}</h3>
-                <div className="text-xs text-muted-foreground mb-4 space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <Clock size={12} className="text-accent" />
-                    <span className="font-medium text-foreground">{new Date(event.date).toLocaleDateString()}</span> at {event.time}
-                  </div>
-                  <div className="pl-5">By <span className="text-foreground">{event.organizer}</span></div>
-                </div>
-                <Button
-                  size="sm"
-                  variant={isRegistered ? "default" : "outline"}
-                  className={`w-full border-accent/20 ${isRegistered ? "bg-green-600 hover:bg-green-700 text-white" : "hover:bg-accent hover:text-white"}`}
-                  onClick={(e) => handleRegister(e, event.id, event.title)}
-                >
-                  {isRegistered ? <><CheckCircle2 size={16} className="mr-2" /> Registered</> : "Register Now"}
-                </Button>
-              </div>
-=======
       {/* Community Space */}
       <Card className="p-10 md:p-20 rounded-[4.5rem] border-0 bg-card/30 backdrop-blur-3xl shadow-[0_48px_100px_-24px_rgba(0,0,0,0.15)] relative overflow-hidden group hover:shadow-[0_64px_128px_-32px_rgba(0,0,0,0.25)] transition-all duration-1000 cursor-pointer">
         <div className="absolute -top-40 -right-40 w-[35rem] h-[35rem] bg-primary-color/5 rounded-full blur-[160px] transition-all duration-1000 group-hover:scale-110 -z-10"></div>
@@ -702,15 +413,10 @@ export default function Dashboard() {
                   {isRegistered ? <><CheckCircle2 size={28} className="mr-3" /> Registered</> : "Apply Now"}
                 </Button>
               </Card>
->>>>>>> origin/main
             );
           })}
         </div>
       </Card>
     </div>
   );
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> origin/main

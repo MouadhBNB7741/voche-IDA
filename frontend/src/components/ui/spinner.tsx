@@ -25,8 +25,4 @@ function Spinner({ size = "md", className, ...props }: SpinnerProps) {
   );
 }
 
-<<<<<<< HEAD
 export { Spinner };
-=======
-export { Spinner };
->>>>>>> origin/main

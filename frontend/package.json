@@ -30,7 +30,6 @@
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.1",
     "tailwindcss-animate": "^1.0.7",
-    "tailwindcss-animate": "^1.0.7",
     "universal-cookie": "^8.1.0"
   },
   "devDependencies": {

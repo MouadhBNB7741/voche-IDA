@@ -123,12 +123,12 @@ export default function Events() {
         </h2>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {state.events.slice(0, 3).map(event => {
-            const isRegistered = state.registeredEvents.includes(event.id);
+            const isRegistered = state.registeredEvents.includes(event.event_id);
             return (
               <Card
-                key={event.id}
+                key={event.event_id}
                 className="group overflow-hidden cursor-pointer hover:shadow-xl transition-all duration-300 border-border/60"
-                onClick={() => navigate(`/events/${event.id}`)}
+                onClick={() => navigate(`/events/${event.event_id}`)}
               >
                 <div className="h-32 bg-muted/50 relative overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10"></div>
@@ -147,7 +147,7 @@ export default function Events() {
                   <div className="space-y-2 text-sm text-muted-foreground mb-4">
                     <div className="flex items-center gap-2">
                       <Calendar size={14} className="text-accent" />
-                      {new Date(event.date).toLocaleDateString()} • {event.time}
+                      {new Date(event.event_date).toLocaleDateString()} • {event.event_time}
                     </div>
                     <div className="flex items-center gap-2">
                       <Building size={14} />
@@ -163,7 +163,7 @@ export default function Events() {
                     <Button
                       className={`flex-1 shadow-sm transition-all ${isRegistered ? "bg-green-600 hover:bg-green-700 text-white" : ""}`}
                       variant={isRegistered ? "default" : "default"}
-                      onClick={(e) => handleRegister(e, event.id, event.title)}
+                      onClick={(e) => handleRegister(e, event.event_id, event.title)}
                     >
                       {isRegistered ? (
                         <>
@@ -192,17 +192,17 @@ export default function Events() {
         <h2 className="text-xl font-bold">All Upcoming Events</h2>
         <div className="space-y-4">
           {filteredEvents.map(event => {
-            const isRegistered = state.registeredEvents.includes(event.id);
+            const isRegistered = state.registeredEvents.includes(event.event_id);
             return (
               <div
-                key={event.id}
+                key={event.event_id}
                 className="flex flex-col md:flex-row gap-4 p-4 rounded-xl bg-card shadow-md hover:border-primary/20 transition-all cursor-pointer group"
-                onClick={() => navigate(`/events/${event.id}`)}
+                onClick={() => navigate(`/events/${event.event_id}`)}
               >
                 <div className="flex-shrink-0 w-full md:w-48 bg-muted/30 rounded-lg flex flex-col items-center justify-center p-4">
-                  <span className="text-2xl font-bold text-foreground">{new Date(event.date).getDate()}</span>
-                  <span className="text-sm font-semibold text-muted-foreground uppercase">{new Date(event.date).toLocaleDateString('en-US', { month: 'short' })}</span>
-                  <span className="text-xs text-muted-foreground mt-1">{new Date(event.date).getFullYear()}</span>
+                  <span className="text-2xl font-bold text-foreground">{new Date(event.event_date).getDate()}</span>
+                  <span className="text-sm font-semibold text-muted-foreground uppercase">{new Date(event.event_date).toLocaleDateString('en-US', { month: 'short' })}</span>
+                  <span className="text-xs text-muted-foreground mt-1">{new Date(event.event_date).getFullYear()}</span>
                 </div>
 
                 <div className="flex-1 flex flex-col justify-between">
@@ -212,7 +212,7 @@ export default function Events() {
                         {event.type}
                       </Badge>
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Clock size={12} /> {event.time}
+                        <Clock size={12} /> {event.event_time}
                       </span>
                     </div>
                     <h3 className="font-bold text-lg mb-1 group-hover:text-primary transition-colors">{event.title}</h3>
@@ -234,7 +234,7 @@ export default function Events() {
                     size="sm"
                     className={`w-full shadow-sm ${isRegistered ? "bg-green-600 hover:bg-green-700 text-white" : ""}`}
                     variant={isRegistered ? "default" : "outline"}
-                    onClick={(e) => handleRegister(e, event.id, event.title)}
+                    onClick={(e) => handleRegister(e, event.event_id, event.title)}
                   >
                     {isRegistered ? <><CheckCircle2 size={14} className="mr-2" /> Registered</> : "Register"}
                   </Button>
@@ -242,7 +242,7 @@ export default function Events() {
                     variant="ghost"
                     size="sm"
                     className="w-full text-muted-foreground"
-                    onClick={(e) => { e.stopPropagation(); navigate(`/events/${event.id}`); }}
+                    onClick={(e) => { e.stopPropagation(); navigate(`/events/${event.event_id}`); }}
                   >
                     Details <ArrowRight size={14} className="ml-1" />
                   </Button>
@@ -255,8 +255,4 @@ export default function Events() {
 
     </div>
   );
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> origin/main

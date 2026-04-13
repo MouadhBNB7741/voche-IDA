@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { mockTrials } from '../data/mockData';
 import type { Trial } from '../data/mockData';
 
@@ -52,35 +51,6 @@ export const trialService = {
   },
 
   // Connection Logic
-=======
-import type { ClinicalTrial } from '../types/db';
-
-/**
- * Voche Clinical Trial Service
- * Synchronized with backend schema (trial_id, disease_area, etc.)
- */
-
-const CONNECTED_TRIALS_KEY = 'voce_connected_trials';
-
-export const trialService = {
-  /**
-   * Get all trials (Placeholder for API call)
-   */
-  getAll(): ClinicalTrial[] {
-    return [];
-  },
-
-  /**
-   * Get trial by ID (Placeholder for API call)
-   */
-  getById(_id: string): ClinicalTrial | undefined {
-    return undefined;
-  },
-
-  /**
-   * Local storage fallback for connection status (until API is live)
-   */
->>>>>>> origin/main
   getConnectedTrials(): string[] {
     const stored = localStorage.getItem(CONNECTED_TRIALS_KEY);
     return stored ? JSON.parse(stored) : [];
@@ -98,7 +68,6 @@ export const trialService = {
     return this.getConnectedTrials().includes(trialId);
   },
 
-<<<<<<< HEAD
   search(query: string, filters?: { disease?: string; phase?: string }): Trial[] {
     return mockTrials.filter(trial => {
       const matchesSearch = !query ||
@@ -113,12 +82,3 @@ export const trialService = {
     });
   },
 };
-=======
-  /**
-   * Search utility (Placeholder)
-   */
-  search(_query: string, _filters?: { disease_area?: string; phase?: string }): ClinicalTrial[] {
-    return [];
-  },
-};
->>>>>>> origin/main

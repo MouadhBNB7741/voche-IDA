@@ -39,8 +39,4 @@ export function PrivacySettings() {
             </div>
         </Card>
     );
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> origin/main

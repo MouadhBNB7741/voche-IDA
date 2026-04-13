@@ -171,8 +171,4 @@ export {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuRadioGroup,
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> origin/main

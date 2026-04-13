@@ -94,8 +94,4 @@ export {
   DialogFooter,
   DialogTitle,
   DialogDescription,
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> origin/main

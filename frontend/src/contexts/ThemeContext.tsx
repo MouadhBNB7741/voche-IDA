@@ -26,21 +26,12 @@ const COLORS_STORAGE_KEY = 'voce_theme_colors';
 const FONT_STORAGE_KEY = 'voce_theme_font';
 
 const DEFAULT_COLORS: ThemeColors = {
-<<<<<<< HEAD
-  primary: '142 70% 35%',
-  secondary: '170 50% 30%',
-  accent: '80 60% 45%',
-};
-
-const DEFAULT_FONT = 'poppins';
-=======
   primary: '161 94% 30%', // Professional Emerald
   secondary: '215 25% 27%', // Slate Navy
   accent: '245 58% 51%', // Indigo Accent
 };
 
 const DEFAULT_FONT = 'Inter';
->>>>>>> origin/main
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
@@ -129,8 +120,4 @@ export function useTheme() {
     throw new Error('useTheme must be used within a ThemeProvider');
   }
   return context;
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> origin/main

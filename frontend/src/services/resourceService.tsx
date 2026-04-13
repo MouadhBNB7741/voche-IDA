@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 // Mock Resource Service
 import { mockResources } from '../data/mockData';
 import type { Resource } from '../data/mockData';
@@ -36,38 +35,6 @@ export const resourceService = {
 
   search(query: string, filters?: { type?: string; category?: string }): ExtendedResource[] {
     return extendedResources.filter(resource => {
-=======
-import type { Resource } from '../types/db';
-
-/**
- * Voche Resource Service
- * Standardized for backend API integration.
- * Static mock data removed.
- */
-
-export interface ExtendedResource extends Resource {
-  // Add any frontend-specific fields if needed, 
-  // but db.ts now covers featured, requires_auth, etc.
-}
-
-export const platformResources: ExtendedResource[] = [];
-
-export const resourceService = {
-  getAll(): ExtendedResource[] {
-    return platformResources;
-  },
-
-  getById(id: string): ExtendedResource | undefined {
-    return platformResources.find(resource => resource.resource_id === id);
-  },
-
-  getFeatured(): ExtendedResource[] {
-    return platformResources.filter(resource => resource.featured);
-  },
-
-  search(query: string, filters?: { type?: string; category?: string }): ExtendedResource[] {
-    return platformResources.filter(resource => {
->>>>>>> origin/main
       const matchesSearch = !query ||
         resource.title.toLowerCase().includes(query.toLowerCase()) ||
         resource.description.toLowerCase().includes(query.toLowerCase());
@@ -82,14 +49,7 @@ export const resourceService = {
   canAccess(resourceId: string, isAuthenticated: boolean): boolean {
     const resource = this.getById(resourceId);
     if (!resource) return false;
-<<<<<<< HEAD
     if (!resource.requiresAuth) return true;
     return isAuthenticated;
   },
 };
-=======
-    if (!resource.requires_auth) return true;
-    return isAuthenticated;
-  },
-};
->>>>>>> origin/main

@@ -184,8 +184,4 @@ export function DesignSettings() {
             </div>
         </div>
     );
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> origin/main

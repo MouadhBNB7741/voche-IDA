@@ -29,9 +29,7 @@ function VocheToaster() {
 }
 
 createRoot(document.getElementById('root')!).render(
-<<<<<<< HEAD
-    <App />
-=======
+
   <QueryClientProvider client={queryClient}>
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <ThemeProvider>
@@ -46,5 +44,5 @@ createRoot(document.getElementById('root')!).render(
       </ThemeProvider>
     </BrowserRouter>
   </QueryClientProvider>
->>>>>>> origin/main
+
 )

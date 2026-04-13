@@ -27,8 +27,4 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 )
 Button.displayName = "Button"
 
-<<<<<<< HEAD
 export { Button }
-=======
-export { Button }
->>>>>>> origin/main

@@ -23,7 +23,7 @@ export default function EventDetail() {
   const navigate = useNavigate();
   const { state, actions } = useData();
 
-  const event = state.events.find(e => e.id === id);
+  const event = state.events.find(e => e.event_id === id);
   const isRegistered = id ? state.registeredEvents.includes(id) : false;
 
   if (!event) {
@@ -37,12 +37,12 @@ export default function EventDetail() {
 
   const handleRegister = () => {
     if (isRegistered) {
-      actions.unregisterEvent(event.id);
+      actions.unregisterEvent(event.event_id);
       toast.info("Registration Cancelled", {
         description: `You are no longer registered for ${event.title}.`
       });
     } else {
-      actions.registerEvent(event.id, event.title);
+      actions.registerEvent(event.event_id, event.title);
       toast.success("Registration Successful", {
         description: `You have been registered for ${event.title}. Check your email for details.`
       });
@@ -64,12 +64,12 @@ export default function EventDetail() {
 
   // Mock related events based on type
   const relatedEvents = state.events
-    .filter(e => e.type === event.type && e.id !== event.id)
+    .filter(e => e.type === event.type && e.event_id !== event.event_id)
     .slice(0, 3);
 
   // Helper for safe distance access
   const locationText = event.location || (event.type === 'webinar' ? 'Online' : 'Global');
-  const distanceText = event.distance ?? 'Online';
+  const distanceText = event.timezone ?? 'Online';
 
   return (
     <div className="container mx-auto p-4 md:p-8 space-y-8 animate-in fade-in duration-500">
@@ -124,14 +124,14 @@ export default function EventDetail() {
                   <Calendar className="text-orange-600 mt-1" size={20} />
                   <div>
                     <h4 className="font-semibold text-sm">Date</h4>
-                    <p className="text-muted-foreground">{new Date(event.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                    <p className="text-muted-foreground">{new Date(event.event_date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/10">
                   <Clock className="text-blue-600 mt-1" size={20} />
                   <div>
                     <h4 className="font-semibold text-sm">Time</h4>
-                    <p className="text-muted-foreground">{event.time} (UTC)</p>
+                    <p className="text-muted-foreground">{event.event_time} (UTC)</p>
                   </div>
                 </div>
               </div>
@@ -213,8 +213,4 @@ export default function EventDetail() {
       </div>
     </div>
   );
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> origin/main

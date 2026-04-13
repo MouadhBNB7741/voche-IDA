@@ -62,9 +62,9 @@ export default function HCPDashboard() {
 
   // Form states
     const [formData, setFormData] = useState({
-      name: user?.name || 'Guest User',
+      name: user?.display_name || 'Guest User',
       email: user?.email || 'guest@example.com',
-      role: user?.role || 'patient',
+      role: user?.user_type || 'patient',
       organization: '',
       location: 'Not specified',
       language: 'English',
@@ -105,7 +105,7 @@ export default function HCPDashboard() {
     setFeedbackData({ category: '', message: '' });
   };
 
-  const isDoctor = user?.role === 'hcp';
+  const isDoctor = user?.user_type === 'hcp';
 
   const tabs = [
     { id: 'profile', label: 'Profile Settings', icon: User },
@@ -141,7 +141,7 @@ export default function HCPDashboard() {
       <PageHeader
         title={formData.name}
         description={formData.bio}
-        badgeText={user?.role === 'hcp' ? 'Healthcare Professional' : 'Patient Advocate'}
+        badgeText={user?.user_type === 'hcp' ? 'Healthcare Professional' : 'Patient Advocate'}
         variant="green"
         className="mb-0"
         action={
@@ -391,8 +391,4 @@ export default function HCPDashboard() {
       </div>
     </div>
   );
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> origin/main

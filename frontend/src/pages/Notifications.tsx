@@ -17,6 +17,7 @@ import {
 import { PageHeader } from '../components/ui/PageHeader';
 import { toast } from 'sonner';
 import { useData } from '../contexts/DataContext';
+import type { NotificationType } from '../types/db';
 
 export default function Notifications() {
     const navigate = useNavigate();
@@ -52,23 +53,37 @@ export default function Notifications() {
         toast.success("All notifications cleared");
     };
 
-    const getIcon = (type: string) => {
+    const getIcon = (type: NotificationType) => {
         switch (type) {
-            case 'trial': return FlaskConical;
-            case 'community': return MessageSquare;
-            case 'event': return Calendar;
-            case 'system': return Info;
-            default: return Bell;
+            case 'trial_match':
+            case 'trial_alert':
+                return FlaskConical;
+            case 'community_reply':
+            case 'community_like':
+                return MessageSquare;
+            case 'event_reminder':
+            case 'event_update':
+                return Calendar;
+            case 'system_announcement':
+                return Info;
+            default:
+                return Bell;
         }
     };
 
-    const getColor = (type: string) => {
+    const getColor = (type: NotificationType) => {
         switch (type) {
-            case 'trial': return 'bg-primary-color/10 text-primary-color';
-            case 'community': return 'bg-secondary-color/10 text-secondary-color';
-            case 'event': return 'bg-accent-color/10 text-accent-color';
-            case 'system': return 'bg-muted-color text-muted-foreground';
-            default: return 'bg-muted-color text-muted-foreground';
+            case 'trial_match':
+            case 'trial_alert':
+                return 'bg-primary-color/10 text-primary-color';
+            case 'community_reply':
+            case 'community_like':
+                return 'bg-secondary-color/10 text-secondary-color';
+            case 'event_reminder':
+            case 'event_update':
+                return 'bg-accent-color/10 text-accent-color';
+            default:
+                return 'bg-muted-color text-muted-foreground';
         }
     };
 
@@ -106,19 +121,31 @@ export default function Notifications() {
                     >
                         Unread
                         {unreadCount > 0 && (
-                            <Badge className="ml-2 bg-white text-primary-color hover:bg-white">{unreadCount}</Badge>
+                            <Badge className="ml-2 bg-white text-primary-color hover:bg-white">
+                                {unreadCount}
+                            </Badge>
                         )}
                     </Button>
                 </div>
 
                 <div className="flex gap-2">
                     {notifications.some(n => !n.read) && (
-                        <Button variant="ghost" size="sm" onClick={handleMarkAllRead} className="text-primary-color hover:bg-primary-color/5 hover:text-primary-color">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleMarkAllRead}
+                            className="text-primary-color hover:bg-primary-color/5 hover:text-primary-color"
+                        >
                             <Check size={16} className="mr-2" /> Mark all read
                         </Button>
                     )}
                     {notifications.length > 0 && (
-                        <Button variant="ghost" size="sm" onClick={handleClearAll} className="text-destructive-color hover:bg-destructive/5 hover:text-destructive-color">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleClearAll}
+                            className="text-destructive-color hover:bg-destructive/5 hover:text-destructive-color"
+                        >
                             <Trash2 size={16} className="mr-2" /> Clear all
                         </Button>
                     )}
@@ -146,18 +173,19 @@ export default function Notifications() {
 
                         return (
                             <Card
-                                key={notification.id}
-                                className={`p-4 transition-all duration-200 cursor-pointer border hover:border-primary/40 hover:shadow-md group relative overflow-hidden ${!notification.read
-                                    ? 'bg-primary-color/5 border-primary-color/20 dark:bg-primary-color/10'
-                                    : 'bg-card border-border/60 hover:bg-muted/30'
-                                    }`}
+                                key={notification.notification_id}
+                                className={`p-4 transition-all duration-200 cursor-pointer border hover:border-primary/40 hover:shadow-md group relative overflow-hidden ${
+                                    !notification.read
+                                        ? 'bg-primary-color/5 border-primary-color/20 dark:bg-primary-color/10'
+                                        : 'bg-card border-border/60 hover:bg-muted/30'
+                                }`}
                                 onClick={() => {
-                                    if (!notification.read) actions.markRead(notification.id);
+                                    if (!notification.read) actions.markRead(notification.notification_id);
                                     if (notification.link) navigate(notification.link);
                                 }}
                             >
                                 {!notification.read && (
-                                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
+                                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary" />
                                 )}
 
                                 <div className="flex gap-4 items-start">
@@ -172,7 +200,8 @@ export default function Notifications() {
                                             </h4>
                                             <div className="flex items-center gap-2 shrink-0">
                                                 <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                                    <Clock size={10} /> {notification.time}
+                                                    <Clock size={10} />
+                                                    {new Date(notification.created_at).toLocaleDateString()}
                                                 </span>
                                                 {!notification.read && (
                                                     <Button
@@ -180,9 +209,9 @@ export default function Notifications() {
                                                         variant="ghost"
                                                         className="h-6 w-6 rounded-full text-muted-foreground hover:bg-primary-color/10 hover:text-primary-color"
                                                         title="Mark as read"
-                                                        onClick={(e) => handleMarkAsRead(notification.id, e)}
+                                                        onClick={(e) => handleMarkAsRead(notification.notification_id, e)}
                                                     >
-                                                        <div className="w-2 h-2 bg-primary rounded-full"></div>
+                                                        <div className="w-2 h-2 bg-primary rounded-full" />
                                                     </Button>
                                                 )}
                                             </div>
@@ -197,7 +226,7 @@ export default function Notifications() {
                                             size="icon"
                                             variant="ghost"
                                             className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive rounded-md"
-                                            onClick={(e) => handleDelete(notification.id, e)}
+                                            onClick={(e) => handleDelete(notification.notification_id, e)}
                                             title="Delete"
                                         >
                                             <Trash2 size={16} />
@@ -211,8 +240,4 @@ export default function Notifications() {
             </div>
         </div>
     );
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> origin/main

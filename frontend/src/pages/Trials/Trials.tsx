@@ -16,11 +16,8 @@ import {
   SelectValue,
 } from "../../components/ui/select";
 
-<<<<<<< HEAD
 import { mockTrials } from "../../data/mockData";
 
-=======
->>>>>>> origin/main
 import { toast } from "sonner";
 
 import {
@@ -40,29 +37,18 @@ export default function Trials() {
   const navigate = useNavigate();
   const { state, actions } = useData();
 
-<<<<<<< HEAD
   const savedTrials = state.savedTrials;
-=======
-  const trials = state.trials || [];
-  const savedTrials = state.savedTrials || [];
->>>>>>> origin/main
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDisease, setSelectedDisease] = useState("all");
   const [selectedPhase, setSelectedPhase] = useState("all");
 
-<<<<<<< HEAD
   const diseases = ["all", ...Array.from(new Set(mockTrials.map((t) => t.disease)))];
   const phases = ["all", ...Array.from(new Set(mockTrials.map((t) => t.phase)))];
-=======
-  const diseases = ["all", ...Array.from(new Set(trials.map((t) => t.disease_area).filter(Boolean)))];
-  const phases = ["all", ...Array.from(new Set(trials.map((t) => t.phase).filter(Boolean)))];
->>>>>>> origin/main
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
-<<<<<<< HEAD
   const filteredTrials = mockTrials.filter((trial) => {
     const matchesSearch =
       trial.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -71,16 +57,6 @@ export default function Trials() {
 
     const matchesDisease =
       selectedDisease === "all" || trial.disease === selectedDisease;
-=======
-  const filteredTrials = trials.filter((trial) => {
-    const matchesSearch =
-      trial.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (trial.summary?.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (trial.sponsor.toLowerCase().includes(searchQuery.toLowerCase()));
-
-    const matchesDisease =
-      selectedDisease === "all" || trial.disease_area === selectedDisease;
->>>>>>> origin/main
 
     const matchesPhase =
       selectedPhase === "all" || trial.phase === selectedPhase;
@@ -102,20 +78,12 @@ export default function Trials() {
 
     if (isSaved) {
       actions.unsaveTrial(trialId);
-<<<<<<< HEAD
       toast("Trial Removed", {
-=======
-      toast.success("Trial Removed", {
->>>>>>> origin/main
         description: "Removed from your saved trials list.",
       });
     } else {
       actions.saveTrial(trialId);
-<<<<<<< HEAD
       toast("Trial Saved", {
-=======
-      toast.success("Trial Saved", {
->>>>>>> origin/main
         description: "Added to your saved trials list.",
       });
     }
@@ -153,11 +121,7 @@ export default function Trials() {
           <div className="relative">
             <Search className="absolute left-4 top-3.5 h-4 w-4 text-muted-foreground" />
             <Input
-<<<<<<< HEAD
               placeholder="Search trials by disease, title, or location..."
-=======
-              placeholder="Search trials by disease, title, or sponsor..."
->>>>>>> origin/main
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -181,13 +145,8 @@ export default function Trials() {
               </SelectTrigger>
               <SelectContent>
                 {diseases.map((disease) => (
-<<<<<<< HEAD
                   <SelectItem key={disease} value={disease}>
                     {disease === "all" ? "All Diseases" : disease}
-=======
-                  <SelectItem key={`disease-${disease}`} value={disease as string}>
-                    {disease === "all" ? "All Diseases" : (disease as string)}
->>>>>>> origin/main
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -205,13 +164,8 @@ export default function Trials() {
               </SelectTrigger>
               <SelectContent>
                 {phases.map((phase) => (
-<<<<<<< HEAD
                   <SelectItem key={phase} value={phase}>
                     {phase === "all" ? "All Phases" : phase}
-=======
-                  <SelectItem key={`phase-${phase}`} value={phase as string}>
-                    {phase === "all" ? "All Phases" : (phase as string)}
->>>>>>> origin/main
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -231,15 +185,9 @@ export default function Trials() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 
         {[
-<<<<<<< HEAD
           { label: "Total Trials",  value: mockTrials.length,    color: 'text-[hsl(var(--primary))]' },
           { label: "Disease Areas", value: diseases.length - 1,  color: 'text-[hsl(var(--teal))]'    },
           { label: "Countries",     value: 12,                   color: 'text-[hsl(var(--lime))]'    },
-=======
-          { label: "Total Trials",  value: trials.length,    color: 'text-[hsl(var(--primary))]' },
-          { label: "Disease Areas", value: Math.max(0, diseases.length - 1),  color: 'text-[hsl(var(--teal))]'    },
-          { label: "Countries",     value: 0,                   color: 'text-[hsl(var(--lime))]'    },
->>>>>>> origin/main
           { label: "Saved Trials",  value: savedTrials.length,   color: 'text-[hsl(var(--blue))]'    },
         ].map((stat, i) => (
           <Card key={i} className="p-5 text-center rounded-xl border-0">
@@ -252,7 +200,6 @@ export default function Trials() {
 
       </div>
 
-<<<<<<< HEAD
       {/* Trials */}
       <div className="space-y-4">
         {paginatedTrials.map((trial) => (
@@ -260,49 +207,26 @@ export default function Trials() {
             key={trial.id}
             className="group p-6 hover:shadow-xl transition-all duration-300 cursor-pointer border-transparent hover:border-primary/20"
             onClick={() => navigate(`/trials/${trial.id}`)}
-=======
-      <div className="space-y-4">
-        {paginatedTrials.map((trial, index) => (
-          <Card
-            key={`trial-nav-item-${trial.trial_id || index}`}
-            className="group p-6 hover:shadow-xl transition-all duration-300 cursor-pointer border-transparent hover:border-primary/20"
-            onClick={() => navigate(`/trials/${trial.trial_id}`)}
->>>>>>> origin/main
           >
             <div className="flex flex-col lg:flex-row lg:items-start gap-6">
               <div className="flex-1 space-y-4">
                 <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
                   <div className="flex flex-wrap gap-2">
-<<<<<<< HEAD
                     <Badge variant="default" className="bg-primary/90 hover:bg-primary">{trial.disease}</Badge>
                     <Badge variant="outline" className="border-primary/20 text-primary">{trial.phase}</Badge>
                     <Badge variant="secondary" className="bg-secondary/10 text-secondary hover:bg-secondary/20">
                       Enrolling: {trial.enrollment}/{trial.maxEnrollment}
-=======
-                    <Badge variant="default" className="bg-primary/90 hover:bg-primary">{trial.disease_area}</Badge>
-                    <Badge variant="outline" className="border-primary/20 text-primary">{trial.phase}</Badge>
-                    <Badge variant="secondary" className="bg-secondary/10 text-secondary hover:bg-secondary/20">
-                      Enrolled: {trial.enrollment}/{trial.max_enrollment || 'N/A'}
->>>>>>> origin/main
                     </Badge>
                   </div>
                   <Button
                     variant="ghost"
                     size="icon"
-<<<<<<< HEAD
                     onClick={(e) => toggleSavedTrial(trial.id, e)}
-=======
-                    onClick={(e) => toggleSavedTrial(trial.trial_id, e)}
->>>>>>> origin/main
                     className="rounded-full hover:bg-muted"
                   >
                     <Heart
                       size={20}
-<<<<<<< HEAD
                       className={`transition-colors duration-300 ${savedTrials.includes(trial.id)
-=======
-                      className={`transition-colors duration-300 ${savedTrials.includes(trial.trial_id)
->>>>>>> origin/main
                         ? 'fill-red-500 text-red-500' // Red when saved
                         : 'text-muted-foreground group-hover:text-red-500' // Gray/Contrast when not, hover red
                         }`}
@@ -313,11 +237,7 @@ export default function Trials() {
                 <div>
                   <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">{trial.title}</h3>
                   <p className="text-muted-foreground leading-relaxed">
-<<<<<<< HEAD
                     {trial.description}
-=======
-                    {trial.summary}
->>>>>>> origin/main
                   </p>
                 </div>
 
@@ -333,13 +253,8 @@ export default function Trials() {
                     <div className="flex items-center gap-3 text-sm p-2 rounded-lg bg-muted/30">
                       <MapPin size={16} className="text-primary-color" />
                       <div>
-<<<<<<< HEAD
                         <span className="text-xs font-semibold text-muted-foreground uppercase block">Location</span>
                         <span className="font-medium">{trial.location}</span>
-=======
-                        <span className="text-xs font-semibold text-muted-foreground uppercase block">Primary Site</span>
-                        <span className="font-medium">{trial.countries?.[0] || 'International'}</span>
->>>>>>> origin/main
                       </div>
                     </div>
                   </div>
@@ -348,22 +263,14 @@ export default function Trials() {
                       <Calendar size={16} className="text-primary-color" />
                       <div>
                         <span className="text-xs font-semibold text-muted-foreground uppercase block">Started</span>
-<<<<<<< HEAD
                         <span className="font-medium">{new Date(trial.startDate).toLocaleDateString()}</span>
-=======
-                        <span className="font-medium">{trial.start_date ? new Date(trial.start_date).toLocaleDateString() : 'N/A'}</span>
->>>>>>> origin/main
                       </div>
                     </div>
                     <div className="flex items-center gap-3 text-sm p-2 rounded-lg bg-muted/30">
                       <Clock size={16} className="text-primary-color" />
                       <div>
                         <span className="text-xs font-semibold text-muted-foreground uppercase block">Est. Completion</span>
-<<<<<<< HEAD
                         <span className="font-medium">{new Date(trial.estimatedCompletion).toLocaleDateString()}</span>
-=======
-                        <span className="font-medium">{trial.estimated_completion ? new Date(trial.estimated_completion).toLocaleDateString() : 'N/A'}</span>
->>>>>>> origin/main
                       </div>
                     </div>
                   </div>
@@ -373,7 +280,6 @@ export default function Trials() {
                   <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
                     <FileText size={14} /> Key Eligibility
                   </h4>
-<<<<<<< HEAD
                   <div className="flex flex-wrap gap-2">
                     {trial.eligibility.slice(0, 3).map((criteria, index) => (
                       <Badge key={index} variant="outline" className="text-xs bg-background">
@@ -384,13 +290,6 @@ export default function Trials() {
                       <Badge variant="outline" className="text-xs text-muted-foreground">
                         +{trial.eligibility.length - 3} more
                       </Badge>
-=======
-                  <div className="text-xs text-muted-foreground">
-                    {trial.eligibility_criteria ? (
-                       <p className="line-clamp-2">{trial.eligibility_criteria}</p>
-                    ) : (
-                      "Please contact site for full eligibility details."
->>>>>>> origin/main
                     )}
                   </div>
                 </div>
@@ -401,33 +300,21 @@ export default function Trials() {
                   style={{ backgroundColor: 'hsl(var(--primary))', color: 'white' }}
                   onClick={(e) => {
                   e.stopPropagation();
-<<<<<<< HEAD
                   navigate(`/trials/${trial.id}`);
-=======
-                  navigate(`/trials/${trial.trial_id}`);
->>>>>>> origin/main
                 }}>
                   View Details
                   <ChevronRight size={16} />
                 </Button>
                 <Button variant="outline" className="w-full gap-2 border-primary/20 text-primary hover:bg-primary/60" onClick={(e) => {
                   e.stopPropagation();
-<<<<<<< HEAD
                   navigate(`/trials/${trial.id}`);
-=======
-                  navigate(`/trials/${trial.trial_id}`);
->>>>>>> origin/main
                 }}>
                   <FileText size={16} />
                   Eligibility Quiz
                 </Button>
                 <div className="text-center pt-2">
                   <div className="text-[10px] uppercase font-bold text-muted-foreground">Primary Contact</div>
-<<<<<<< HEAD
                   <div className="text-xs font-medium text-primary mt-1 break-words">{trial.contact.split(' - ')[0]}</div>
-=======
-                  <div className="text-xs font-medium text-primary mt-1 break-words">{trial.contact || 'contact@voche.com'}</div>
->>>>>>> origin/main
                 </div>
               </div>
             </div>
@@ -499,8 +386,4 @@ export default function Trials() {
 
     </div>
   );
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> origin/main
