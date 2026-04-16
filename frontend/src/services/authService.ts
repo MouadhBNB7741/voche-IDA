@@ -1,5 +1,5 @@
 import { apiClient } from '../lib/apiClient';
-import { AUTH } from '../lib/api';
+import { AUTH, USERS } from '../lib/api';
 import Cookies from 'universal-cookie';
 import type { User, LoginRequest, LoginResponse, RegisterRequest } from '../types/db';
 
@@ -73,7 +73,7 @@ export const authService = {
    */
   getMe: async (): Promise<User> => {
     try {
-      const response = await apiClient.get<User>(AUTH.ME);
+      const response = await apiClient.get<User>(USERS.ME);
       return response.data;
     } catch (err) {
       throw err;
