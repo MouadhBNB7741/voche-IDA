@@ -18,6 +18,8 @@ import HCPDashboard from './pages/HCPDashboard/HCPDashboard';
 import Notifications from './pages/Notifications';
 import Login from './pages/Auth/Login';
 import Signup from './pages/Auth/Signup';
+import ForgotPassword from "./pages/Auth/ForgotPassword";
+import ResetPassword from "./pages/Auth/ResetPassword";
 
 export default function App() {
   return (
@@ -26,6 +28,8 @@ export default function App() {
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
       </Route>
 
       {/* Protected / App Routes */}
