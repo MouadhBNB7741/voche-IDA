@@ -1,7 +1,12 @@
-import { apiClient } from '../lib/apiClient';
-import { AUTH, USERS } from '../lib/api';
-import Cookies from 'universal-cookie';
-import type { User, LoginRequest, LoginResponse, RegisterRequest } from '../types/db';
+import { apiClient } from "../lib/apiClient";
+import { AUTH, USERS } from "../lib/api";
+import Cookies from "universal-cookie";
+import type {
+  User,
+  LoginRequest,
+  LoginResponse,
+  RegisterRequest,
+} from "../types/db";
 
 const cookies = new Cookies();
 
@@ -13,23 +18,23 @@ const platformSession = {
   setToken: (token: string) => {
     try {
       // 24 hour secure, strict cookie
-      cookies.set('voche_token', token, {
-        path: '/',
+      cookies.set("voche_token", token, {
+        path: "/",
         maxAge: 86400,
         secure: true,
-        sameSite: 'strict',
+        sameSite: "strict",
       });
     } catch (err) {
-      console.error('[AUTH SESSION ERROR - SET]', err);
+      console.error("[AUTH SESSION ERROR - SET]", err);
     }
   },
   clearToken: () => {
     try {
-      cookies.remove('voche_token', { path: '/' });
+      cookies.remove("voche_token", { path: "/" });
     } catch (err) {
-      console.error('[AUTH SESSION ERROR - REMOVE]', err);
+      console.error("[AUTH SESSION ERROR - REMOVE]", err);
     }
-  }
+  },
 };
 
 /**
@@ -85,7 +90,29 @@ export const authService = {
    */
   logout: async (): Promise<void> => {
     platformSession.clearToken();
-  }
+  },
+
+  /**
+   * Forgot password using email link.
+   */
+  forgotPassword: async (email: string): Promise<void> => {
+    try {
+      await apiClient.post(AUTH.FORGOT_PASSWORD, { email });
+    } catch (err) {
+      throw err;
+    }
+  },
+
+  /**
+   * Reset password using token from email link.
+   */
+  resetPassword: async (token: string, new_password: string): Promise<void> => {
+    try {
+      await apiClient.post(AUTH.RESET_PASSWORD, { token, new_password });
+    } catch (err) {
+      throw err;
+    }
+  },
 };
 
 export default authService;

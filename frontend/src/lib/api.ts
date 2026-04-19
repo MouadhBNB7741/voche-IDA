@@ -9,7 +9,7 @@ export const AUTH = {
   LOGIN: `${API_BASE}/auth/login`,
   REGISTER: `${API_BASE}/auth/register`,
   ME: `${API_BASE}/auth/me`,
-  FORGOT_PASSWORD: `${API_BASE}/auth/forgot-password`,
+  FORGOT_PASSWORD: `${API_BASE}/auth/request-reset`,        
   RESET_PASSWORD: `${API_BASE}/auth/reset-password`,
   VERIFY_EMAIL: `${API_BASE}/auth/verify-email`,
 };
