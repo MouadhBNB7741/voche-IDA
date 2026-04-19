@@ -163,9 +163,13 @@ async def request_password_reset(
     # Generate token
     token = await pwd_model.create_token(str(user['id']))
     
-    # Send email (mock)
-    # await EmailService.send_password_reset(data.email, token)
-    logging.info(f"RESET TOKEN for {data.email}: {token}")
+    # Send password reset email
+    logging.info(f"📤 Preparing to send password reset email to {data.email}")
+    try:
+        await EmailService.send_password_reset(data.email, token)
+        logging.info(f"✅ Reset email sent. TOKEN for {data.email}: {token}")
+    except Exception as e:
+        logging.error(f"❌ Failed to send reset email to {data.email}: {str(e)}")
     
     return generic_msg
 

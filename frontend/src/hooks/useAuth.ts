@@ -32,7 +32,6 @@ export function useAuth() {
   const {
     data: user,
     isLoading: isFetchingUser,
-    isError,
     status: authStatus
   } = useQuery<User>({
     queryKey: ['auth', 'me'],
@@ -48,8 +47,7 @@ export function useAuth() {
   const loginMutation = useMutation({
     mutationFn: (data: LoginRequest) => authService.login(data),
     onSuccess: async () => {
-      // Clear previous cache state to ensure fresh data
-      await queryClient.clear();
+      // Invalidate and refetch immediately
       await queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
       navigate('/patientdashboard');
     },
@@ -58,7 +56,7 @@ export function useAuth() {
   const registerMutation = useMutation({
     mutationFn: (data: RegisterRequest) => authService.register(data),
     onSuccess: async () => {
-      await queryClient.clear();
+      // Invalidate and refetch immediately
       await queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
       navigate('/patientdashboard');
     },
@@ -71,10 +69,13 @@ export function useAuth() {
     navigate('/login');
   };
 
+  const isInitialLoading = isFetchingUser && !user;
+
   return {
     user: user || null,
-    isAuthenticated: !!user && !isError,
-    isLoading: isFetchingUser || loginMutation.isPending || registerMutation.isPending,
+    isAuthenticated: !!user,
+    isLoading: isInitialLoading || loginMutation.isPending || registerMutation.isPending,
+    isFetchingUser,
     login: loginMutation.mutateAsync,
     register: registerMutation.mutateAsync,
     logout,
