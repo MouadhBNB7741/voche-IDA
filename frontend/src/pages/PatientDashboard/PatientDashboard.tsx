@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -9,7 +9,6 @@ import { Textarea } from '../../components/ui/textarea';
 import {
   User,
   Bell,
-  Globe,
   MapPin,
   Edit,
   Save,
@@ -18,11 +17,10 @@ import {
   FileText,
   Lock,
   Shield,
-  Upload,
   ChevronRight,
   Trash2,
-  Stethoscope,
-  Palette
+  Palette,
+  Loader2
 } from 'lucide-react';
 import { DesignSettings } from '../../components/profile/DesignSettings';
 import { useAuth } from '../../contexts/AuthContext';
@@ -53,27 +51,43 @@ const languages = [
 
 export default function PatientDashboard() {
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const { state, actions } = useData();
 
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
   const [profileImage, setProfileImage] = useState<string | null>(null);
 
-  // Derived state for saved trials
-  const savedTrials = state.trials.filter(trial => state.savedTrials.includes(trial.id));
-
   // Form states
   const [formData, setFormData] = useState({
-    name: user?.name || 'Guest User',
+    name: user?.display_name || 'Guest User',
     email: user?.email || 'guest@example.com',
-    role: user?.role || 'patient',
+    role: user?.user_type || 'patient',
     organization: '',
-    location: 'Not specified',
-    language: 'English',
-    bio: 'Passionate about advancing health equity and improving access to clinical trials in underserved communities.',
-    interests: ['HIV Prevention', 'Clinical Trials'] as string[]
+    location: user?.location || 'Not specified',
+    language: user?.language_preference || 'English',
+    bio: user?.bio || 'Passionate about advancing health equity and improving access to clinical trials in underserved communities.',
+    interests: (user?.interests as string[]) || ['HIV Prevention', 'Clinical Trials']
   });
+
+  // Sync form data when user data loads
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        name: user.display_name || '',
+        email: user.email || '',
+        role: user.user_type || 'patient',
+        organization: '',
+        location: user.location || 'Not specified',
+        language: user.language_preference || 'English',
+        bio: user.bio || '',
+        interests: (user.interests as string[]) || []
+      });
+    }
+  }, [user]);
+
+  // Derived state for saved trials
+  const savedTrials = state.trials.filter(trial => state.savedTrials.includes(trial.trial_id));
 
   useEffect(() => {
     // Load mock profile image
@@ -127,6 +141,17 @@ export default function PatientDashboard() {
     { id: 'danger', label: 'Danger Zone', icon: Lock, variant: 'destructive' }
   ];
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-10 w-10 animate-spin text-primary-color" />
+          <p className="text-muted-foreground font-medium animate-pulse">Syncing your profile...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
     return (
       <div className="container mx-auto p-4 max-w-2xl mt-20 animate-in fade-in duration-500">
@@ -140,7 +165,7 @@ export default function PatientDashboard() {
           </p>
           <div className="flex gap-4 justify-center">
             <Button size="lg" onClick={() => navigate('/login')} className="px-8">Login</Button>
-            <Button size="lg" variant="outline" onClick={() => navigate('/register')} className="px-8">Register</Button>
+            <Button size="lg" variant="outline" onClick={() => navigate('/signup')} className="px-8">Register</Button>
           </div>
         </Card>
       </div>
@@ -334,19 +359,19 @@ export default function PatientDashboard() {
               ) : (
                 <div className="grid gap-4">
                   {savedTrials.map((trial) => (
-                    <Card key={trial.id} className="p-5 group hover:border-primary-color/50 hover:shadow-md transition-all">
+                    <Card key={trial.trial_id} className="p-5 group hover:border-primary-color/50 hover:shadow-md transition-all">
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">
                           <div className="flex gap-2 mb-3">
-                            <Badge variant="outline" className="border-primary-color/20 text-primary-color bg-primary/5">{trial.disease}</Badge>
+                            <Badge variant="outline" className="border-primary-color/20 text-primary-color bg-primary/5">{trial.disease_area}</Badge>
                             <Badge variant="secondary" className="font-normal">{trial.phase}</Badge>
                           </div>
-                          <h4 className="font-bold text-lg mb-2 group-hover:text-primary-color transition-colors cursor-pointer" onClick={() => navigate(`/trials/${trial.id}`)}>{trial.title}</h4>
+                          <h4 className="font-bold text-lg mb-2 group-hover:text-primary-color transition-colors cursor-pointer" onClick={() => navigate(`/trials/${trial.trial_id}`)}>{trial.title}</h4>
                           <p className="text-muted-foreground line-clamp-2 mb-4 text-sm">{trial.summary}</p>
                           <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground">
                             <span className="flex items-center gap-1.5">
                               <MapPin size={14} className="text-primary-color" />
-                              {trial.location}
+                              {trial.countries?.[0] || 'Remote'}
                             </span>
                             <span className="flex items-center gap-1.5">
                               <FileText size={14} className="text-primary-color" />
@@ -355,14 +380,14 @@ export default function PatientDashboard() {
                           </div>
                         </div>
                         <div className="flex flex-col gap-2">
-                          <Button size="sm" variant="outline" onClick={() => navigate(`/trials/${trial.id}`)}>
+                          <Button size="sm" variant="outline" onClick={() => navigate(`/trials/${trial.trial_id}`)}>
                             View
                           </Button>
                           <Button
                             size="sm"
                             variant="ghost"
                             className="text-destructive hover:bg-destructive/10 hover:text-destructive transition-colors"
-                            onClick={() => handleRemoveTrial(trial.id)}
+                            onClick={() => handleRemoveTrial(trial.trial_id)}
                             title="Remove"
                           >
                             <Trash2 size={16} />
