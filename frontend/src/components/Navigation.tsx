@@ -41,7 +41,7 @@ const navItems = [
   { path: "/community", label: "Community", icon: Users },
   { path: "/resources", label: "Resources", icon: BookOpen },
   { path: "/events", label: "Events", icon: Calendar },
-  { path: "/assistant", label: "Ida", icon: MessageCircle }
+  { path: "/assistant", label: "Voche", icon: MessageCircle }
 ];
 
 export default function Navigation() {
