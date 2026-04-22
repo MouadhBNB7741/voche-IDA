@@ -41,6 +41,10 @@ import { DangerZone } from '../../components/profile/DangerZone';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { compressImage } from '../../utils/imageUtils';
 
+import authService from '../../services/authService';
+import { useQueryClient } from '@tanstack/react-query';
+
+
 const languages = [
   { code: 'en', name: 'English' },
   { code: 'pt', name: 'Português' },
@@ -49,10 +53,13 @@ const languages = [
   { code: 'ar', name: 'العربية' },
 ];
 
+
 export default function PatientDashboard() {
   const navigate = useNavigate();
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, isProfileComplete } = useAuth();
   const { state, actions } = useData();
+
+  const queryClient = useQueryClient();
 
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
@@ -97,11 +104,26 @@ export default function PatientDashboard() {
     }
   }, []);
 
-  const handleSave = () => {
-    setIsEditing(false);
-    toast.success('Profile Updated', {
-      description: 'Your changes have been saved successfully.'
-    });
+  const handleSave = async () => {
+    try {
+      await authService.updateProfile({
+        bio: formData.bio,
+        location: formData.location,
+        language_preference: formData.language,
+        interests: formData.interests,
+      });
+      queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
+      setIsEditing(false);
+      toast.success("Profile Updated", {
+        description: "Your changes have been saved successfully.",
+      });
+    } catch (error: any) {
+      toast.error("Update Failed", {
+        description:
+          error?.response?.data?.detail ||
+          "Could not save changes. Please try again.",
+      });
+    }
   };
 
   const handleRemoveTrial = (trialId: string) => {
@@ -131,6 +153,15 @@ export default function PatientDashboard() {
       }
     }
   };
+
+  /**
+   * Redirect incomplete users
+   */
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && !isProfileComplete) {
+      navigate("/patientdashboard");
+    }
+  }, [isLoading, isAuthenticated, isProfileComplete, navigate]);
 
   const tabs = [
     { id: 'profile', label: 'Profile Settings', icon: User },

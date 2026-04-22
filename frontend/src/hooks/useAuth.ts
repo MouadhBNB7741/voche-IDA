@@ -70,10 +70,22 @@ export function useAuth() {
   };
 
   const isInitialLoading = isFetchingUser && !user;
+  
+  /**
+   * Profile completion
+  */
+  const isProfileComplete = !!(
+  user &&
+  user.display_name &&
+  user.location &&
+  user.language_preference &&
+  user.interests?.length > 0
+  );
 
   return {
     user: user || null,
     isAuthenticated: !!user,
+    isProfileComplete,
     isLoading: isInitialLoading || loginMutation.isPending || registerMutation.isPending,
     isFetchingUser,
     login: loginMutation.mutateAsync,
@@ -86,6 +98,8 @@ export function useAuth() {
     registerError: registerMutation.error,
     isProcessing: loginMutation.isPending || registerMutation.isPending
   };
+
+  
 }
 
 export default useAuth;
