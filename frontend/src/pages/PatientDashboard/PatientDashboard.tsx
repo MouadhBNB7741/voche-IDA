@@ -41,7 +41,7 @@ import { DangerZone } from '../../components/profile/DangerZone';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { compressImage } from '../../utils/imageUtils';
 
-import authService from '../../services/authService';
+import userService from '../../services/userService';
 import { useQueryClient } from '@tanstack/react-query';
 
 
@@ -106,7 +106,7 @@ export default function PatientDashboard() {
 
   const handleSave = async () => {
     try {
-      await authService.updateProfile({
+      await userService.updateProfile({
         bio: formData.bio,
         location: formData.location,
         language_preference: formData.language,

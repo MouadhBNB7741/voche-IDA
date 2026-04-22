@@ -113,19 +113,7 @@ export const authService = {
       throw err;
     }
   },
-
-  /**
-   * Update profile
-   */
-
-  updateProfile: async (data: Partial<User>): Promise<User> => {
-    try {
-      const response = await apiClient.patch<User>(USERS.ME, data);
-      return response.data;
-    } catch (err) {
-      throw err;
-    }
-  },
+  
 };
 
 export default authService;
