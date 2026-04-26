@@ -74,6 +74,7 @@ CREATE TABLE users (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     last_login TIMESTAMPTZ,
     updated_at TIMESTAMPTZ DEFAULT NOW(),
+    deletion_scheduled_at TIMESTAMPTZ,
     
     -- Constraints
     CONSTRAINT check_user_type CHECK (user_type IN ('patient', 'hcp', 'org_member', 'admin')),

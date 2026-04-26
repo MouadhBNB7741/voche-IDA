@@ -27,6 +27,8 @@ from app.api.v1.system import router as system_router, health_router
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+from app.core.cron_manager import cron_manager
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # --- Startup ---
@@ -42,9 +44,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Redis connection failed: {e}")
         
+    # Start all registered crons
+    cron_manager.start()
+
     yield
     # --- Shutdown ---
     logger.info("🛑 Voche Backend Shutting down...")
+    cron_manager.stop()
     await PostgresDB.disconnect()
     await disconnect_redis()
 

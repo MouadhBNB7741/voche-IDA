@@ -2,7 +2,7 @@
  * Utility functions for image processing
  */
 
-export const compressImage = async (file: File, maxWidth = 800, quality = 0.7): Promise<string> => {
+export const compressImage = async (file: File, maxWidth = 800, quality = 0.7): Promise<File> => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
@@ -28,9 +28,17 @@ export const compressImage = async (file: File, maxWidth = 800, quality = 0.7): 
                 }
 
                 ctx.drawImage(img, 0, 0, width, height);
-                // Convert to compressed data URL
-                const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
-                resolve(compressedDataUrl);
+                canvas.toBlob((blob) => {
+                    if (!blob) {
+                        reject(new Error('Failed to convert canvas to blob'));
+                        return;
+                    }
+                    const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", {
+                        type: 'image/webp',
+                        lastModified: Date.now()
+                    });
+                    resolve(compressedFile);
+                }, 'image/webp', quality);
             };
             img.onerror = (err) => reject(err);
         };

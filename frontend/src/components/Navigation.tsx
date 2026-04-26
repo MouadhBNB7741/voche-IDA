@@ -52,7 +52,7 @@ export default function Navigation() {
 
   const handleLogout = () => {
     logout();
-    toast.success("Logged out successfully");
+    toast.success("See you later!");
     navigate("/");
   };
 
@@ -65,6 +65,15 @@ export default function Navigation() {
         .substring(0, 2)
         .toUpperCase()
       : "U";
+  };
+
+  const getAvatarUrl = (avatar?: string) => {
+    if (!avatar) return undefined;
+    if (avatar.startsWith('http')) return avatar;
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+    const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    const cleanAvatarPath = avatar.startsWith('/') ? avatar : `/${avatar}`;
+    return `${cleanBaseUrl}${cleanAvatarPath}`;
   };
 
   const unreadCount = state.notifications.filter((n) => !n.read).length;
@@ -162,13 +171,13 @@ export default function Navigation() {
                 className="flex items-center gap-4 h-12 pl-1 pr-5 rounded-full bg-muted/20 border-0 hover:bg-primary-color/10 transition-all shadow-md group cursor-pointer"
               >
                 <Avatar className="h-10 w-10 border-2 border-primary-color/20 shadow-2xl group-hover:scale-105 transition-transform">
-                  <AvatarImage src={user.avatar} />
-                  <AvatarFallback className="bg-primary text-primary-foreground font-black text-[12px]">
+                  <AvatarImage src={getAvatarUrl(user.avatar)} />
+                  <AvatarFallback className="bg-primary-color/10 text-primary-color font-black text-[12px]">
                     {getInitials(user.display_name)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="hidden xl:block text-left">
-                  <p className="text-[11px] font-black truncate max-w-[120px] leading-none opacity-80">{user.display_name?.split(' ')[0]}</p>
+                  <p className="text-[11px] font-black truncate max-w-[120px] leading-none opacity-80">{user.display_name}</p>
                 </div>
                 <ChevronDown size={14} className="opacity-40 group-hover:opacity-100 group-hover:translate-y-0.5 transition-all" />
               </Button>
@@ -178,8 +187,8 @@ export default function Navigation() {
               <DropdownMenuLabel className="p-4 bg-muted/20 rounded-2xl mx-1 mb-2">
                 <div className="flex items-center gap-4">
                   <Avatar className="h-12 w-12 border border-primary-color/20">
-                     <AvatarImage src={user.avatar} />
-                     <AvatarFallback className="bg-primary text-primary-foreground font-black text-xs">
+                     <AvatarImage src={getAvatarUrl(user.avatar)} />
+                     <AvatarFallback className="bg-primary-color/10 text-primary-color font-black text-xs">
                         {getInitials(user.display_name)}
                      </AvatarFallback>
                   </Avatar>

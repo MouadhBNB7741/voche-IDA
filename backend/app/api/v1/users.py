@@ -22,30 +22,12 @@ async def get_my_profile(
     """
     Fetch the complete profile of the currently logged-in user using Model.
     """
-    # Prefer UserModel to fetch everything including new JSONB fields
-    # But UserDetailsResponse expects profile fields too.
-    # We fetch basic user data (with prefs) from UserModel
-    # And profile data from ProfileModel
-    
-    user_model = UserModel(conn)
     profile_model = ProfileModel(conn)
-    
-    user = await user_model.get_by_id(current_user["id"])
-    if not user:
+    profile = await profile_model.get_profile_by_user_id(current_user["id"])
+    if not profile:
         raise HTTPException(status_code=404, detail="User not found")
         
-    profile = await profile_model.get_profile_by_user_id(current_user["id"])
-    
-    # Merge them. User fields + Profile fields.
-    # UserDetailsResponse expects flat structure.
-    # user dict has id, email, notification_preferences, verification, etc.
-    # profile dict has bio, location, etc.
-    
-    response_data = {**user}
-    if profile:
-        response_data.update(profile)
-        
-    return response_data
+    return profile
 
 
 @router.patch("/me", response_model=UserDetailsResponse)
@@ -58,25 +40,116 @@ async def update_my_profile(
     Update user profile fields using Model.
     """
     profile_model = ProfileModel(conn)
-    user_model = UserModel(conn)
     user_id = current_user["id"]
     
     updates = update_data.model_dump(exclude_unset=True)
-    if not updates:
-        # Just return current state
-        pass
-    else:    
+    if updates:
+        if "email" in updates and updates["email"]:
+            new_email = updates["email"].strip().lower()
+            query = "SELECT id FROM users WHERE LOWER(email) = $1 AND id != $2"
+            existing_id = await conn.fetchval(query, new_email, user_id)
+            if existing_id:
+                raise HTTPException(status_code=400, detail="This email is already in use by another account.")
+            updates["email"] = new_email # Save normalized email
+
         await profile_model.update_profile(user_id, updates)
     
-    # Return updated profile (need merge)
-    user = await user_model.get_by_id(user_id)
     profile = await profile_model.get_profile_by_user_id(user_id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    return profile
+
+
+@router.post("/me/avatar")
+async def upload_avatar(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(auth_middleware),
+    conn=Depends(get_connection)
+):
+    """
+    Upload user avatar. Max 2MB, allowed formats: PNG, JPEG, JPG, WEBP.
+    """
+    allowed_content_types = ["image/png", "image/jpeg", "image/jpg", "image/webp"]
+    allowed_extensions = [".png", ".jpeg", ".jpg", ".webp"]
     
-    response_data = {**user}
-    if profile:
-        response_data.update(profile)
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in allowed_extensions:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Invalid file extension. Allowed extensions: {', '.join(allowed_extensions)}"
+        )
+        
+    if file.content_type not in allowed_content_types:
+        raise HTTPException(
+            status_code=400, 
+            detail="Invalid content type. Allowed formats: PNG, JPEG, JPG, WEBP."
+        )
+
+    # Check size
+    try:
+        file.file.seek(0, 2)
+        file_size = file.file.tell()
+        file.file.seek(0)
+    except Exception:
+        file_size = 0
+        
+    if file_size > 2 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File size exceeds the maximum limit of 2MB.")
+
+    # Save File
+    upload_dir = "uploads/avatars"
+    os.makedirs(upload_dir, exist_ok=True)
+    timestamp = int(datetime.now().timestamp())
+    filename = f"{current_user['id']}_{timestamp}{ext}"
+    file_path = os.path.join(upload_dir, filename)
     
-    return response_data
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="File upload failed")
+        
+    avatar_url = f"/static/avatars/{filename}"
+    
+    profile_model = ProfileModel(conn)
+    await profile_model.update_profile(current_user['id'], {"avatar": avatar_url})
+    
+    return {
+        "success": True,
+        "message": "Avatar uploaded successfully",
+        "avatar": avatar_url
+    }
+
+
+@router.delete("/me/avatar")
+async def delete_avatar(
+    current_user: dict = Depends(auth_middleware),
+    conn=Depends(get_connection)
+):
+    """
+    Delete user avatar.
+    """
+    profile_model = ProfileModel(conn)
+    profile = await profile_model.get_profile_by_user_id(current_user['id'])
+    
+    if not profile or not profile.avatar:
+        raise HTTPException(status_code=404, detail="Avatar not found")
+        
+    if profile.avatar.startswith("/static/"):
+        relative_path = profile.avatar.replace("/static/", "uploads/")
+        if os.path.exists(relative_path):
+            try:
+                os.remove(relative_path)
+            except Exception:
+                pass
+                
+    await profile_model.update_profile(current_user['id'], {"avatar": None})
+    
+    return {
+        "success": True,
+        "message": "Avatar deleted successfully"
+    }
 
 @router.get("/me/preferences/notifications")
 async def get_notification_preferences(
@@ -299,4 +372,24 @@ async def update_verification(
         "success": True,
         "message": "Verification updated successfully",
         "data": result.get("verification")
+    }
+
+@router.delete("/me", status_code=200)
+async def schedule_delete_my_account(
+    current_user: dict = Depends(auth_middleware),
+    conn=Depends(get_connection)
+):
+    """
+    Schedule the account for deletion in 7 days.
+    """
+    user_id = current_user['id']
+    query = """
+        UPDATE users 
+        SET deletion_scheduled_at = NOW() + INTERVAL '7 days' 
+        WHERE id = $1
+    """
+    await conn.execute(query, user_id)
+    return {
+        "success": True,
+        "message": "Your account has been scheduled for deletion in 7 days. Log in anytime before then to cancel."
     }

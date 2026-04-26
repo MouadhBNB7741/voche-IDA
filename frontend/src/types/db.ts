@@ -97,6 +97,7 @@ export interface User {
   created_at: string;
   updated_at: string;
   last_login?: string;
+  deletion_scheduled_at?: string | null;
 }
 
 export interface UserProfile {
@@ -500,6 +501,7 @@ export interface LoginResponse {
   access_token: string;
   token_type: 'bearer';
   user_type: UserType;
+  message?: string;
 }
 
 export interface PaginatedResponse<T> {

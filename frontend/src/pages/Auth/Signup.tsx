@@ -51,7 +51,6 @@ export default function Register() {
       toast.success('Registration successful!');
     } catch (error: any) {
       console.error('Registration error:', error);
-      toast.error(error.message || 'Registration failed. Please try again.');
     }
   };
 
