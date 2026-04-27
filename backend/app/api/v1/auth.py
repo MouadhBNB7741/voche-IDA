@@ -81,6 +81,12 @@ async def login(data: LoginRequest, conn=Depends(get_connection)):
     if not user["is_active"] or user["status"] != 'active':
         raise HTTPException(status_code=403, detail="Account is inactive or suspended")
 
+    # Check and annul account deletion schedule
+    deletion_message = None
+    if user.get("deletion_scheduled_at"):
+        await conn.execute("UPDATE users SET deletion_scheduled_at = NULL WHERE id = $1", user["id"])
+        deletion_message = "Your account deletion schedule has been annulled because you logged back in."
+
     # Update last login
     await user_model.update_last_login(str(user['id']))
     
@@ -92,7 +98,8 @@ async def login(data: LoginRequest, conn=Depends(get_connection)):
     return LoginResponse(
         access_token=token, 
         token_type="bearer",
-        user_type=user['user_type']
+        user_type=user['user_type'],
+        message=deletion_message
     )
 
 

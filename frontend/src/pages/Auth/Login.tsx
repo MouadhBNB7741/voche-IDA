@@ -6,7 +6,6 @@ import { Label } from '../../components/ui/label';
 import { useAuth } from '../../contexts/AuthContext';
 import { Checkbox } from '../../components/ui/checkbox';
 import { Eye, EyeOff, Loader2, KeyRound, Mail, ArrowRight } from 'lucide-react';
-import { toast } from 'sonner';
 import idaLogo from '../../assets/ida.webp';
 
 export default function Login() {
@@ -18,11 +17,9 @@ export default function Login() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await login({ email, password }); 
-      toast.success('Welcome back!');
+      await login({ email, password });
     } catch (error: any) {
       console.error('Login error:', error);
-      toast.error(error.message || 'Login failed. Please check your credentials.');
     }
   };
 

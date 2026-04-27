@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import Cookies from 'universal-cookie';
+import { toast } from 'sonner';
 import { authService } from '../services/authService';
 import type { User, LoginRequest, RegisterRequest } from '../types/db';
 
@@ -37,7 +38,7 @@ export function useAuth() {
     queryKey: ['auth', 'me'],
     queryFn: authService.getMe,
     enabled: hasTokenAvailable(),
-    staleTime: 60 * 60 * 1000,
+    staleTime: 5 * 1000,
     retry: 1, // Minimal retry for profile sync
   });
 
@@ -46,7 +47,12 @@ export function useAuth() {
    */
   const loginMutation = useMutation({
     mutationFn: (data: LoginRequest) => authService.login(data),
-    onSuccess: async () => {
+    onSuccess: async (data) => {
+      if (data.message) {
+        toast.info(data.message, { duration: 6000 });
+      } else {
+        toast.success('Welcome back!');
+      }
       // Invalidate and refetch immediately
       await queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
       navigate('/patientdashboard');

@@ -20,7 +20,8 @@ import {
   ChevronRight,
   Trash2,
   Palette,
-  Loader2
+  Loader2,
+  X
 } from 'lucide-react';
 import { DesignSettings } from '../../components/profile/DesignSettings';
 import { useAuth } from '../../contexts/AuthContext';
@@ -67,21 +68,25 @@ export default function PatientDashboard() {
 
   // Form states
   const [formData, setFormData] = useState({
-    name: user?.display_name || 'Guest User',
+    first_name: user?.first_name || '',
+    last_name: user?.last_name || '',
+    display_name: user?.display_name || '',
     email: user?.email || 'guest@example.com',
     role: user?.user_type || 'patient',
     organization: '',
     location: user?.location || 'Not specified',
     language: user?.language_preference || 'English',
     bio: user?.bio || 'Passionate about advancing health equity and improving access to clinical trials in underserved communities.',
-    interests: (user?.interests as string[]) || ['HIV Prevention', 'Clinical Trials']
+    interests: (user?.interests as string[]) || []
   });
 
   // Sync form data when user data loads
   useEffect(() => {
     if (user) {
       setFormData({
-        name: user.display_name || '',
+        first_name: user.first_name || '',
+        last_name: user.last_name || '',
+        display_name: user.display_name || '',
         email: user.email || '',
         role: user.user_type || 'patient',
         organization: '',
@@ -93,20 +98,31 @@ export default function PatientDashboard() {
     }
   }, [user]);
 
+  // Sync profile image from backend
+  useEffect(() => {
+    if (user?.avatar) {
+      if (user.avatar.startsWith('http')) {
+        setProfileImage(user.avatar);
+      } else {
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+        const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+        const cleanAvatarPath = user.avatar.startsWith('/') ? user.avatar : `/${user.avatar}`;
+        setProfileImage(`${cleanBaseUrl}${cleanAvatarPath}`);
+      }
+    } else {
+      setProfileImage(null);
+    }
+  }, [user]);
+
   // Derived state for saved trials
   const savedTrials = state.trials.filter(trial => state.savedTrials.includes(trial.trial_id));
-
-  useEffect(() => {
-    // Load mock profile image
-    const storedImage = localStorage.getItem('voce_profile_image');
-    if (storedImage) {
-      setProfileImage(storedImage);
-    }
-  }, []);
 
   const handleSave = async () => {
     try {
       await userService.updateProfile({
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        display_name: formData.display_name,
         bio: formData.bio,
         location: formData.location,
         language_preference: formData.language,
@@ -121,6 +137,7 @@ export default function PatientDashboard() {
       toast.error("Update Failed", {
         description:
           error?.response?.data?.detail ||
+          error?.message ||
           "Could not save changes. Please try again.",
       });
     }
@@ -140,17 +157,49 @@ export default function PatientDashboard() {
         toast.error('Invalid file type', { description: 'Please upload an image file.' });
         return;
       }
+      
+      const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        toast.error('Invalid format', { description: 'Allowed formats: PNG, JPEG, JPG, WEBP.' });
+        return;
+      }
+      
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error('File too large', { description: 'File size must be less than 2MB.' });
+        return;
+      }
 
       try {
-        const compressedImage = await compressImage(file);
-        setProfileImage(compressedImage);
-        localStorage.setItem('voce_profile_image', compressedImage);
+        let finalFile = file;
+        try {
+          finalFile = await compressImage(file);
+        } catch (e) {
+          console.error("Silent compression failure:", e);
+        }
+        const response = await userService.uploadAvatar(finalFile);
+        queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
         toast.success('Profile Photo Updated', {
-          description: 'Your new profile photo has been saved and optimized.'
+          description: response.message || 'Your new profile photo has been uploaded successfully.'
         });
-      } catch (error) {
-        toast.error('Upload Failed', { description: 'Could not process image. Please try again.' });
+      } catch (error: any) {
+        toast.error('Upload Failed', { 
+          description: error?.message || 'Could not upload avatar. Please try again.' 
+        });
       }
+    }
+  };
+
+  const handleDeleteAvatar = async () => {
+    try {
+      const response = await userService.deleteAvatar();
+      queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
+      toast.success('Profile Photo Deleted', {
+        description: response.message || 'Your profile photo has been deleted.'
+      });
+    } catch (error: any) {
+      toast.error('Delete Failed', { 
+        description: error?.message || 'Could not delete avatar. Please try again.' 
+      });
     }
   };
 
@@ -206,29 +255,42 @@ export default function PatientDashboard() {
   return (
     <div className="container mx-auto p-4 md:p-8 max-w-7xl space-y-8 animate-in fade-in duration-500">
       <PageHeader
-        title={formData.name}
+        title={formData.first_name && formData.last_name ? `${formData.first_name} ${formData.last_name}` : formData.display_name || 'Guest User'}
         description={formData.bio}
         badgeText={user?.user_type === 'hcp' ? 'Healthcare Professional' : 'Patient Advocate'}
         variant="green"
         className="mb-0"
         action={
           <div className="relative group">
-            <div className="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-white/20 shadow-xl overflow-hidden bg-white/10 flex items-center justify-center backdrop-blur-sm">
+            <div className="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-white/40 shadow-2xl overflow-hidden bg-white/10 flex items-center justify-center backdrop-blur-md">
               {profileImage ? (
                 <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
               ) : (
-                <User size={48} className="text-white/80" />
+                <User size={48} className="text-white" />
               )}
             </div>
-            <label className="absolute bottom-0 right-0 p-2.5 bg-background text-foreground rounded-full cursor-pointer hover:bg-muted transition-all shadow-lg border border-border" title="Upload Photo">
-              <Camera size={16} />
-              <input
-                type="file"
-                className="hidden"
-                accept="image/*"
-                onChange={handleProfileImageUpload}
-              />
-            </label>
+            
+            {profileImage && (
+              <button
+                onClick={handleDeleteAvatar}
+                className="absolute -top-1 -right-1 p-1.5 bg-destructive hover:bg-destructive/90 text-red-500 rounded-full cursor-pointer transition-all shadow-xl border-2 border-background z-20 hover:scale-110 flex items-center justify-center"
+                title="Delete Photo"
+              >
+                <X size={18} className="stroke-[3] text-red-500 hover:text-red-600" />
+              </button>
+            )}
+
+            <div className="absolute bottom-0 right-0">
+              <label className="p-2.5 bg-primary-color hover:bg-primary-color/90 text-white rounded-full cursor-pointer transition-all shadow-xl border-2 border-background flex items-center justify-center z-20 hover:scale-110" title="Upload Photo">
+                <Camera size={16} />
+                <input
+                  type="file"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={handleProfileImageUpload}
+                />
+              </label>
+            </div>
           </div>
         }
       />
@@ -286,11 +348,31 @@ export default function PatientDashboard() {
               <Card className="p-6 border-border/60 shadow-sm">
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Full Name</Label>
+                    <Label htmlFor="first_name">First Name</Label>
                     <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                      id="first_name"
+                      value={formData.first_name}
+                      onChange={(e) => setFormData(prev => ({ ...prev, first_name: e.target.value }))}
+                      disabled={!isEditing}
+                      className="bg-muted/30"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="last_name">Last Name</Label>
+                    <Input
+                      id="last_name"
+                      value={formData.last_name}
+                      onChange={(e) => setFormData(prev => ({ ...prev, last_name: e.target.value }))}
+                      disabled={!isEditing}
+                      className="bg-muted/30"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="display_name">Display Name</Label>
+                    <Input
+                      id="display_name"
+                      value={formData.display_name}
+                      onChange={(e) => setFormData(prev => ({ ...prev, display_name: e.target.value }))}
                       disabled={!isEditing}
                       className="bg-muted/30"
                     />

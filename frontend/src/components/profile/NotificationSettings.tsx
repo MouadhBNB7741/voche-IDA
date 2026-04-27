@@ -15,7 +15,7 @@ export function NotificationSettings() {
         { key: 'eventReminders', label: 'Event Reminders', desc: 'Get reminders for upcoming events you are attending.' },
         { key: 'weeklyDigest', label: 'Weekly Digest', desc: 'A weekly summary of top trials and community news.' },
         { key: 'researchUpdates', label: 'Research Updates', desc: 'Stay updated on the latest research findings.' },
-        { key: 'communityNews', label: 'Community News', desc: 'News and stories from the VOCE community.' },
+        { key: 'communityNews', label: 'Community News', desc: 'News and stories from the VOCHE community.' },
     ] as const;
 
     return (

@@ -7,7 +7,7 @@ export default function Footer() {
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-md gradient-primary flex items-center justify-center">
             </div>
-            <span className="font-semibold text-sm text-foreground">VOCE Platform</span>
+            <span className="font-semibold text-sm text-foreground">VOCHE Platform</span>
           </div>
           <p className="text-sm text-muted-foreground">
             © {new Date().getFullYear()} Platform. All rights reserved.

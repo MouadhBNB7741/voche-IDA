@@ -10,6 +10,7 @@ class VerificationPayload(BaseModel):
     expirationDate: datetime
 
 class UserProfileUpdate(BaseModel):
+    email: Optional[EmailStr] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     display_name: Optional[str] = None
@@ -50,5 +51,6 @@ class UserDetailsResponse(BaseModel):
     created_at: datetime
     notification_preferences: Optional[Dict[str, Any]] = None
     verification: Optional[Dict[str, Any]] = None
+    deletion_scheduled_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)

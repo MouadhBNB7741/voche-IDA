@@ -282,5 +282,5 @@ export const mockChatResponses: Record<string, string> = {
   'trials in kenya': 'I found 3 active clinical trials in Kenya focusing on HIV prevention, malaria treatment, and tuberculosis. Would you like me to show you the eligibility criteria for any of these?',
   'join forum': 'To join a forum discussion, go to the Community tab, select your disease area or topic of interest, and click on any post to read and reply. You can also start a new discussion by clicking the "New Post" button.',
   'informed consent': 'Informed consent is your right to understand and agree to participate in research. Key elements include: understanding the study purpose, knowing potential risks and benefits, voluntary participation, and the right to withdraw anytime. Would you like me to explain any specific aspect?',
-  'default': 'I\'m here to help you navigate the VOCE platform. You can ask me about finding clinical trials, joining community discussions, accessing educational resources, or understanding your rights as a participant.'
+  'default': 'I\'m here to help you navigate the VOCHE platform. You can ask me about finding clinical trials, joining community discussions, accessing educational resources, or understanding your rights as a participant.'
 };

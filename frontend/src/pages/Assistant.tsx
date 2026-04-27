@@ -60,7 +60,7 @@ export default function Assistant() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      content: "Hello! I'm your VOCE Platform assistant. I'm here to help you navigate clinical trials, community resources, and answer questions about participating in health research. How can I help you today?",
+      content: "Hello! I'm your VOCHE Platform assistant. I'm here to help you navigate clinical trials, community resources, and answer questions about participating in health research. How can I help you today?",
       sender: 'assistant',
       timestamp: new Date(),
     }
@@ -136,7 +136,7 @@ export default function Assistant() {
   return (
     <div className="container mx-auto p-4 md:p-8 max-w-5xl animate-in fade-in duration-500">
       <PageHeader
-        title="VOCE AI Assistant"
+        title="VOCHE AI Assistant"
         description="Your intelligent companion for navigating health research and clinical trials."
         variant="green"
         action={

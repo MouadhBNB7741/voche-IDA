@@ -39,6 +39,15 @@ export default function Dashboard() {
   const upcomingEvents = events.slice(0, 3);
   const recentNotifications = notifications.slice(0, 3);
 
+  const getAvatarUrl = (avatar?: string) => {
+    if (!avatar) return undefined;
+    if (avatar.startsWith('http')) return avatar;
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+    const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    const cleanAvatarPath = avatar.startsWith('/') ? avatar : `/${avatar}`;
+    return `${cleanBaseUrl}${cleanAvatarPath}`;
+  };
+
   const handleRegister = (e: React.MouseEvent, eventId: string, eventName: string) => {
     e.stopPropagation();
     if (state.registeredEvents.includes(eventId)) {
@@ -172,12 +181,12 @@ export default function Dashboard() {
   }
 
   // Authenticated View
-  const firstName = user.first_name || user.display_name?.split(' ')[0] || 'Member';
+  const displayName = user.display_name || 'Member';
   
   return (
     <div className="container mx-auto p-4 md:p-8 space-y-14 animate-in fade-in duration-1000">
       <PageHeader
-        title={`Hi, ${firstName}!`}
+        title={`Hi, ${displayName}!`}
         description="Your gateway to inclusive clinical research and community support. Ready to contribute today?"
         badgeText={`Active ${user.user_type || 'member'}`}
         variant="green"
@@ -199,12 +208,12 @@ export default function Dashboard() {
           <div className="flex flex-col lg:flex-row gap-10 items-center relative z-10">
             <div className="relative">
               <Avatar className="w-32 h-32 border-4 border-primary-color/20 shadow-2xl ring-8 ring-primary-color/5 group-hover:ring-primary-color/10 transition-all duration-700">
-                <AvatarImage src={user.avatar} />
-                <AvatarFallback className="bg-primary text-primary-foreground text-4xl font-black">
+                <AvatarImage src={getAvatarUrl(user.avatar)} />
+                <AvatarFallback className="bg-primary-color/10 text-primary-color text-4xl font-black">
                   {user.display_name?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'V'}
                 </AvatarFallback>
               </Avatar>
-              <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-success-color rounded-[1.2rem] border-4 border-card flex items-center justify-center shadow-2xl">
+              <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-primary-color rounded-[1.2rem] flex items-center justify-center shadow-2xl">
                 <CheckCircle2 size={20} className="text-white" />
               </div>
             </div>

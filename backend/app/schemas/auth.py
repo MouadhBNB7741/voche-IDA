@@ -31,3 +31,4 @@ class LoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user_type: str
+    message: Optional[str] = None

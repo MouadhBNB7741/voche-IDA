@@ -20,7 +20,7 @@ class ProfileModel(DBModel):
                 u.id, u.email, u.user_type, u.display_name, u.first_name, u.last_name, 
                 u.country, u.language_preference, u.avatar, u.is_verified, 
                 u.profile_completed, u.created_at, u.is_active,
-                u.verification, u.notification_preferences,
+                u.verification, u.notification_preferences, u.deletion_scheduled_at,
                 up.bio, up.interests, up.location, up.profile_visibility,
                 up.notification_enabled, up.email_alerts, up.push_notifications
             FROM users u
@@ -65,7 +65,7 @@ class ProfileModel(DBModel):
         Separates user fields from profile fields.
         """
         users_fields = {
-            "first_name", "last_name", "display_name", "country", "language_preference", "avatar"
+            "email", "first_name", "last_name", "display_name", "country", "language_preference", "avatar"
         }
         profiles_fields = {
             "bio", "interests", "location", "profile_visibility", 

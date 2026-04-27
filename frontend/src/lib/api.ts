@@ -16,6 +16,7 @@ export const AUTH = {
 
 export const USERS = {
   ME: `${API_BASE}/users/me`,
+  ME_AVATAR: `${API_BASE}/users/me/avatar`,
   PROFILE: `${API_BASE}/users/profile`,
   ME_SAVED_TRIALS: `${API_BASE}/users/me/saved-trials`,
   NOTIFICATIONS: `${API_BASE}/notifications`,

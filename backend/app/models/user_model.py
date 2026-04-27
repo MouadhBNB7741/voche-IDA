@@ -11,7 +11,7 @@ class UserModel(DBModel):
     async def get_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         """Fetch user by email."""
         query = """
-            SELECT id, email, password_hash, user_type, is_active, status
+            SELECT id, email, password_hash, user_type, is_active, status, deletion_scheduled_at
             FROM users
             WHERE email = $1
         """
@@ -23,7 +23,7 @@ class UserModel(DBModel):
         query = """
             SELECT id, email, user_type, is_active, status, 
                    first_name, last_name, display_name, profile_completed, is_verified,
-                   last_login, created_at, notification_preferences, verification
+                   last_login, created_at, notification_preferences, verification, deletion_scheduled_at
             FROM users
             WHERE id = $1
         """

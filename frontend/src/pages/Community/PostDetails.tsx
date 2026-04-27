@@ -321,7 +321,7 @@ export default function PostDetail() {
         <div>
           <h4 className="font-semibold text-info mb-1 text-sm">Community Guidelines</h4>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            VOCE is a safe space for support and information. Please be respectful and constructive.
+            VOCHE is a safe space for support and information. Please be respectful and constructive.
             Medical advice should only come from qualified professionals. content violating our policies will be removed.
           </p>
         </div>

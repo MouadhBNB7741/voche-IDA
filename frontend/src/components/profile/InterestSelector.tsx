@@ -21,7 +21,18 @@ const predefinedInterests = [
     'Diabetes',
     'Cardiovascular',
     'Mental Health',
-    'Nutrition'
+    'Nutrition',
+    'Neurology',
+    'Dermatology',
+    'Pediatrics',
+    'Infectious Diseases',
+    'Rare Diseases',
+    'Geriatrics',
+    'Autoimmune Diseases',
+    'Gastroenterology',
+    'Respiratory Health',
+    'Ophthalmology',
+    'Genomics'
 ];
 
 export function InterestSelector({ selectedInterests, onChange, isEditing }: InterestSelectorProps) {

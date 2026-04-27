@@ -16,7 +16,7 @@ export const extendedResources: ExtendedResource[] = mockResources.map((resource
   featured: index < 2, // First 2 are featured
   requiresAuth: index < 2, // Featured resources require auth
   tags: ['healthcare', 'education', resource.category.toLowerCase().replace(' ', '-')],
-  author: 'VOCE Editorial Team',
+  author: 'VOCHE Editorial Team',
   publishedDate: '2024-12-01',
 }));
 
