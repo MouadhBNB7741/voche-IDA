@@ -23,12 +23,20 @@ export const USERS = {
 };
 
 export const CLINICAL = {
-  TRIALS: `${API_BASE}/clinical/trials`,
-  TRIAL_BY_ID: (id: string) => `${API_BASE}/clinical/trials/${id}`,
-  SAVE_TRIAL: (id: string) => `${API_BASE}/clinical/trials/${id}/save`,
-  INTEREST: (id: string) => `${API_BASE}/clinical/trials/${id}/interest`,
-  ALERTS: `${API_BASE}/clinical/alerts/trials`,
-  ALERT_BY_ID: (id: string) => `${API_BASE}/clinical/alerts/trials/${id}`,
+  TRIALS: `${API_BASE}/trials`,
+  TRIAL_BY_ID: (id: string) => `${API_BASE}/trials/${id}`,
+  SAVE_TRIAL: (id: string) => `${API_BASE}/trials/${id}/save`,
+  INTEREST: (id: string) => `${API_BASE}/trials/${id}/interest`,
+  ALERTS: `${API_BASE}/alerts/trials`,
+  ALERT_BY_ID: (id: string) => `${API_BASE}/alerts/trials/${id}`,
+};
+
+export const SURVEYS = {
+  LIST: `${API_BASE}/surveys`,
+  BY_ID: (id: string) => `${API_BASE}/surveys/${id}`,
+  SUBMIT: (id: string) => `${API_BASE}/surveys/${id}/responses`,
+  COMPLETED: `${API_BASE}/surveys/completed`,
+  COMPLETED_BY_ID: (id: string) => `${API_BASE}/surveys/completed/${id}`,
 };
 
 export const COMMUNITY = {
