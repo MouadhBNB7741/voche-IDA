@@ -43,6 +43,10 @@ import { PageHeader } from '../../components/ui/PageHeader';
 import { compressImage } from '../../utils/imageUtils';
 
 import userService from '../../services/userService';
+import { useSavedTrials } from "../../hooks/useSavedTrials";
+import { useTrials } from "../../hooks/useTrials";
+import { useSaveTrial } from "../../hooks/useSaveTrial";
+
 import { useQueryClient } from '@tanstack/react-query';
 
 
@@ -59,6 +63,10 @@ export default function PatientDashboard() {
   const navigate = useNavigate();
   const { user, isAuthenticated, isLoading, isProfileComplete } = useAuth();
   const { state, actions } = useData();
+
+  useSavedTrials();
+  const { data: allTrials = [] } = useTrials();
+  const { toggleSave } = useSaveTrial();
 
   const queryClient = useQueryClient();
 
@@ -115,7 +123,7 @@ export default function PatientDashboard() {
   }, [user]);
 
   // Derived state for saved trials
-  const savedTrials = state.trials.filter(trial => state.savedTrials.includes(trial.trial_id));
+  const savedTrials = allTrials.filter(trial => state.savedTrials.includes(trial.id));
 
   const handleSave = async () => {
     try {
@@ -144,10 +152,7 @@ export default function PatientDashboard() {
   };
 
   const handleRemoveTrial = (trialId: string) => {
-    actions.unsaveTrial(trialId);
-    toast.info('Trial Removed', {
-      description: 'The trial has been removed from your saved list.'
-    });
+    toggleSave(trialId);
   };
 
   const handleProfileImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -472,19 +477,19 @@ export default function PatientDashboard() {
               ) : (
                 <div className="grid gap-4">
                   {savedTrials.map((trial) => (
-                    <Card key={trial.trial_id} className="p-5 group hover:border-primary-color/50 hover:shadow-md transition-all">
+                    <Card key={trial.id} className="p-5 group hover:border-primary-color/50 hover:shadow-md transition-all">
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">
                           <div className="flex gap-2 mb-3">
-                            <Badge variant="outline" className="border-primary-color/20 text-primary-color bg-primary/5">{trial.disease_area}</Badge>
+                            <Badge variant="outline" className="border-primary-color/20 text-primary-color bg-primary/5">{trial.disease}</Badge>
                             <Badge variant="secondary" className="font-normal">{trial.phase}</Badge>
                           </div>
-                          <h4 className="font-bold text-lg mb-2 group-hover:text-primary-color transition-colors cursor-pointer" onClick={() => navigate(`/trials/${trial.trial_id}`)}>{trial.title}</h4>
-                          <p className="text-muted-foreground line-clamp-2 mb-4 text-sm">{trial.summary}</p>
+                          <h4 className="font-bold text-lg mb-2 group-hover:text-primary-color transition-colors cursor-pointer" onClick={() => navigate(`/trials/${trial.id}`)}>{trial.title}</h4>
+                          <p className="text-muted-foreground line-clamp-2 mb-4 text-sm">{trial.description}</p>
                           <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground">
                             <span className="flex items-center gap-1.5">
                               <MapPin size={14} className="text-primary-color" />
-                              {trial.countries?.[0] || 'Remote'}
+                              {trial.location?.[0] || 'Remote'}
                             </span>
                             <span className="flex items-center gap-1.5">
                               <FileText size={14} className="text-primary-color" />
@@ -493,14 +498,14 @@ export default function PatientDashboard() {
                           </div>
                         </div>
                         <div className="flex flex-col gap-2">
-                          <Button size="sm" variant="outline" onClick={() => navigate(`/trials/${trial.trial_id}`)}>
+                          <Button size="sm" variant="outline" onClick={() => navigate(`/trials/${trial.id}`)}>
                             View
                           </Button>
                           <Button
                             size="sm"
                             variant="ghost"
                             className="text-destructive hover:bg-destructive/10 hover:text-destructive transition-colors"
-                            onClick={() => handleRemoveTrial(trial.trial_id)}
+                            onClick={() => handleRemoveTrial(trial.id)}
                             title="Remove"
                           >
                             <Trash2 size={16} />

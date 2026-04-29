@@ -1,3 +1,5 @@
+import apiClient from './axiosInterceptor';
+import { CLINICAL } from '../lib/api';
 import { mockTrials } from '../data/mockData';
 import type { Trial } from '../data/mockData';
 
@@ -5,12 +7,21 @@ const SAVED_TRIALS_KEY = 'voce_saved_trials';
 const CONNECTED_TRIALS_KEY = 'voce_connected_trials';
 
 export const trialService = {
-  getAll(): Trial[] {
-    return mockTrials;
+
+  async getTrials(filters: { search?: string; disease?: string; phase?: string } = {}): Promise<Trial[]> {
+    const params: Record<string, string> = {};
+
+    if (filters.search)                               params.search  = filters.search;
+    if (filters.disease && filters.disease !== 'all') params.disease = filters.disease;
+    if (filters.phase   && filters.phase   !== 'all') params.phase   = filters.phase;
+
+    const response = await apiClient.get(CLINICAL.TRIALS, { params });
+    return response.data;
   },
 
-  getById(id: string): Trial | undefined {
-    return mockTrials.find(trial => trial.id === id);
+  async getById(id: string): Promise<Trial> {
+    const response = await apiClient.get(CLINICAL.TRIAL_BY_ID(id));
+    return response.data;
   },
 
   getSavedTrials(): string[] {
@@ -50,7 +61,7 @@ export const trialService = {
     return mockTrials.filter(trial => savedIds.includes(trial.id));
   },
 
-  // Connection Logic
+
   getConnectedTrials(): string[] {
     const stored = localStorage.getItem(CONNECTED_TRIALS_KEY);
     return stored ? JSON.parse(stored) : [];
