@@ -1,55 +1,72 @@
-// Mock Resource Service
-import { mockResources } from '../data/mockData';
-import type { Resource } from '../data/mockData';
+import { apiClient } from "../lib/apiClient";
+import { RESOURCES } from "../lib/api";
+import type { Resource } from "../types/db";
 
-export interface ExtendedResource extends Resource {
-  featured?: boolean;
-  requiresAuth?: boolean;
-  tags?: string[];
-  author?: string;
-  publishedDate?: string;
+export interface ResourceFilters {
+  search?: string;
+  type?: string;
+  category?: string;
+  page?: number;
+  limit?: number;
 }
 
-// Extended mock resources with additional fields
-export const extendedResources: ExtendedResource[] = mockResources.map((resource, index) => ({
-  ...resource,
-  featured: index < 2, // First 2 are featured
-  requiresAuth: index < 2, // Featured resources require auth
-  tags: ['healthcare', 'education', resource.category.toLowerCase().replace(' ', '-')],
-  author: 'VOCHE Editorial Team',
-  publishedDate: '2024-12-01',
-}));
+export interface ResourcesResponse {
+  data: Resource[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    pages: number;
+  };
+}
 
 export const resourceService = {
-  getAll(): ExtendedResource[] {
-    return extendedResources;
+  getAll: async (filters: ResourceFilters = {}): Promise<ResourcesResponse> => {
+    const params = new URLSearchParams();
+    if (filters.search) params.append("search", filters.search);
+    if (filters.type && filters.type !== "all")
+      params.append("type", filters.type);
+    if (filters.category && filters.category !== "All")
+      params.append("category", filters.category);
+    if (filters.page) params.append("page", String(filters.page));
+    if (filters.limit) params.append("limit", String(filters.limit));
+
+    const response = await apiClient.get<ResourcesResponse>(
+      `${RESOURCES.LIST}?${params.toString()}`,
+    );
+    return response.data;
   },
 
-  getById(id: string): ExtendedResource | undefined {
-    return extendedResources.find(resource => resource.id === id);
+  // Fetch single resource
+  getById: async (id: string): Promise<Resource> => {
+    const response = await apiClient.get<Resource>(RESOURCES.DETAILS(id));
+    return response.data;
   },
 
-  getFeatured(): ExtendedResource[] {
-    return extendedResources.filter(resource => resource.featured);
-  },
-
-  search(query: string, filters?: { type?: string; category?: string }): ExtendedResource[] {
-    return extendedResources.filter(resource => {
-      const matchesSearch = !query ||
-        resource.title.toLowerCase().includes(query.toLowerCase()) ||
-        resource.description.toLowerCase().includes(query.toLowerCase());
-      
-      const matchesType = !filters?.type || filters.type === 'all' || resource.type === filters.type;
-      const matchesCategory = !filters?.category || filters.category === 'All' || resource.category === filters.category;
-      
-      return matchesSearch && matchesType && matchesCategory;
-    });
-  },
-
-  canAccess(resourceId: string, isAuthenticated: boolean): boolean {
-    const resource = this.getById(resourceId);
-    if (!resource) return false;
-    if (!resource.requiresAuth) return true;
+  canAccess: (requiresAuth: boolean, isAuthenticated: boolean): boolean => {
+    if (!requiresAuth) return true;
     return isAuthenticated;
   },
+
+  rateResource: async (
+    id: string,
+    rating: number,
+    review?: string,
+  ): Promise<{ new_average: number }> => {
+    const response = await apiClient.post(RESOURCES.RATE(id), {
+      rating,
+      review,
+    });
+    return response.data?.data ?? response.data;
+  },
+
+  updateProgress: async (
+    id: string,
+    progress: number,
+    last_position?: string,
+  ): Promise<void> => {
+    await apiClient.patch(RESOURCES.PROGRESS(id), { progress, last_position });
+  },
 };
+
+export default resourceService;

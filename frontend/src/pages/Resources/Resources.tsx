@@ -1,11 +1,10 @@
-
-import { PageHeader } from '../../components/ui/PageHeader';
-
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Card } from '../../components/ui/card';
-import { Button } from '../../components/ui/button';
-import { Badge } from '../../components/ui/badge';
+import { PageHeader } from "../../components/ui/PageHeader";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { Card } from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
+import { Badge } from "../../components/ui/badge";
 import {
   BookOpen,
   Video,
@@ -18,52 +17,76 @@ import {
   Filter,
   Play,
   Award,
-  TrendingUp
-} from 'lucide-react';
-import { mockResources } from '../../data/mockData';
-import { Input } from '../../components/ui/input';
+  TrendingUp,
+  Loader2,
+} from "lucide-react";
+import { Input } from "../../components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../../components/ui/select';
+} from "../../components/ui/select";
+import { resourceService } from "../../services/resourceService";
+import type { Resource } from "../../types/db";
 
 const resourceTypes = [
-  { id: 'all', name: 'All Resources', icon: BookOpen, color: 'bg-primary-color' },
-  { id: 'video', name: 'Videos', icon: Video, color: 'bg-red-500' },
-  { id: 'document', name: 'Documents', icon: FileText, color: 'bg-blue-500' },
-  { id: 'toolkit', name: 'Toolkits', icon: Download, color: 'bg-green-500' },
-  { id: 'course', name: 'Courses', icon: Award, color: 'bg-purple-500' }
+  {
+    id: "all",
+    name: "All Resources",
+    icon: BookOpen,
+    color: "bg-primary-color",
+  },
+  { id: "video", name: "Videos", icon: Video, color: "bg-red-500" },
+  { id: "document", name: "Documents", icon: FileText, color: "bg-blue-500" },
+  { id: "toolkit", name: "Toolkits", icon: Download, color: "bg-green-500" },
+  { id: "course", name: "Courses", icon: Award, color: "bg-purple-500" },
 ];
 
-const categories = ['All', 'Education', 'Professional Development', 'Public Health', 'Advocacy'];
+const categories = [
+  "All",
+  "Education",
+  "Professional Development",
+  "Public Health",
+  "Advocacy",
+  "Disease Management",
+];
 
-import { useData } from '../../contexts/DataContext';
-
- 
 export default function ResourceLibrary() {
+  const navigate = useNavigate();
 
-   const navigate = useNavigate();
-  const { state } = useData();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedType, setSelectedType] = useState('all');
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [sortBy, setSortBy] = useState('popular');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedType, setSelectedType] = useState("all");
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [sortBy, setSortBy] = useState("popular");
+  const [currentPage, setCurrentPage] = useState(1);
 
-  // Filter resources
-  const filteredResources = state.resources.filter(resource => {
-    const matchesSearch = resource.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      resource.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesType = selectedType === 'all' || resource.type === selectedType;
-    const matchesCategory = selectedCategory === 'All' || resource.category === selectedCategory;
-
-    return matchesSearch && matchesType && matchesCategory;
+  // Task 1: useQuery(['resources'], getAll)
+  const { data, isLoading, isError } = useQuery({
+    queryKey: [
+      "resources",
+      searchQuery,
+      selectedType,
+      selectedCategory,
+      currentPage,
+    ],
+    queryFn: () =>
+      resourceService.getAll({
+        search: searchQuery,
+        type: selectedType,
+        category: selectedCategory,
+        page: currentPage,
+        limit: 9,
+      }),
+    staleTime: 5 * 60 * 1000,
   });
 
+  const resources = data?.data || [];
+  const totalPages = data?.meta?.pages || 1;
+
   const getTypeIcon = (type: string) => {
-    const typeConfig = resourceTypes.find(t => t.id === type);
+    const typeConfig = resourceTypes.find((t) => t.id === type);
     return typeConfig ? typeConfig.icon : FileText;
   };
 
@@ -72,23 +95,57 @@ export default function ResourceLibrary() {
       <Star
         key={i}
         size={12}
-        className={i < Math.floor(rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}
+        className={
+          i < Math.floor(rating)
+            ? "fill-yellow-400 text-yellow-400"
+            : "text-gray-300"
+        }
       />
     ));
   };
-  
-  return (
 
-  <div className="container mx-auto p-4 md:p-8 space-y-8 animate-in fade-in duration-500">
-    <PageHeader
-    title="Educational Hub & Resources"
-    description="Access comprehensive educational materials, toolkits, and training resources."
-    variant="green" 
-    action={
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-10 w-10 animate-spin text-primary-color" />
+          <p className="text-muted-foreground animate-pulse">
+            Loading resources...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="p-12 text-center max-w-md">
+          <BookOpen
+            className="mx-auto mb-4 text-muted-foreground/30"
+            size={48}
+          />
+          <h3 className="text-xl font-bold mb-2">Failed to load resources</h3>
+          <p className="text-muted-foreground mb-6">
+            Could not connect to the server. Please try again.
+          </p>
+          <Button onClick={() => window.location.reload()}>Retry</Button>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto p-4 md:p-8 space-y-8 animate-in fade-in duration-500">
+      <PageHeader
+        title="Educational Hub & Resources"
+        description="Access comprehensive educational materials, toolkits, and training resources."
+        variant="green"
+        action={
           <div className="flex gap-4 text-sm font-medium bg-white/10 backdrop-blur-md p-4 rounded-xl shadow-inner text-white">
             <div className="flex flex-col items-center gap-1">
               <BookOpen size={20} />
-              <span>500+ Items</span>
+              <span>{data?.meta?.total || 0}+ Items</span>
             </div>
             <div className="w-px bg-white/20 h-full"></div>
             <div className="flex flex-col items-center gap-1">
@@ -102,9 +159,7 @@ export default function ResourceLibrary() {
             </div>
           </div>
         }
-    
-    
-    />
+      />
 
       {/* Resource Types */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -113,13 +168,19 @@ export default function ResourceLibrary() {
           return (
             <Card
               key={type.id}
-              className={`p-4 cursor-pointer transition-all duration-200 ${selectedType === type.id
-                ? 'bg-accent-color text-accent-foreground border-accent shadow-md scale-105 ring-2 ring-accent ring-offset-2 ring-offset-background'
-                : 'hover:shadow-md hover:bg-muted/50'
-                }`}
-              onClick={() => setSelectedType(type.id)}
+              className={`p-4 cursor-pointer transition-all duration-200 ${
+                selectedType === type.id
+                  ? "bg-accent-color text-accent-foreground border-accent shadow-md scale-105 ring-2 ring-accent ring-offset-2 ring-offset-background"
+                  : "hover:shadow-md hover:bg-muted/50"
+              }`}
+              onClick={() => {
+                setSelectedType(type.id);
+                setCurrentPage(1);
+              }}
             >
-              <div className={`w-10 h-10 ${type.color} rounded-lg flex items-center justify-center mb-3 text-white shadow-sm`}>
+              <div
+                className={`w-10 h-10 ${type.color} rounded-lg flex items-center justify-center mb-3 text-white shadow-sm`}
+              >
                 <Icon size={20} />
               </div>
               <h3 className="font-semibold text-sm">{type.name}</h3>
@@ -136,20 +197,31 @@ export default function ResourceLibrary() {
             <Input
               placeholder="Search resources by title, topic, or description..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
               className="pl-10 h-11"
             />
           </div>
 
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">Category</label>
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
+                Category
+              </label>
+              <Select
+                value={selectedCategory}
+                onValueChange={(v) => {
+                  setSelectedCategory(v);
+                  setCurrentPage(1);
+                }}
+              >
                 <SelectTrigger className="h-10">
                   <SelectValue placeholder="All Categories" />
                 </SelectTrigger>
                 <SelectContent>
-                  {categories.map(category => (
+                  {categories.map((category) => (
                     <SelectItem key={category} value={category}>
                       {category}
                     </SelectItem>
@@ -159,7 +231,9 @@ export default function ResourceLibrary() {
             </div>
 
             <div className="flex-1">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">Sort By</label>
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
+                Sort By
+              </label>
               <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="h-10">
                   <SelectValue />
@@ -184,68 +258,98 @@ export default function ResourceLibrary() {
       </Card>
 
       {/* Featured Resources */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="bg-accent/10 p-2 rounded-lg"><TrendingUp className="text-accent" size={20} /></div>
-          <h2 className="text-xl font-bold">Featured & Trending</h2>
+      {resources.filter((r: Resource) => r.featured).length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="bg-accent/10 p-2 rounded-lg">
+              <TrendingUp className="text-accent" size={20} />
+            </div>
+            <h2 className="text-xl font-bold">Featured & Trending</h2>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {resources
+              .filter((r: Resource) => r.featured)
+              .slice(0, 3)
+              .map((resource: Resource) => {
+                const TypeIcon = getTypeIcon(resource.type);
+                return (
+                  <Card
+                    key={resource.resource_id}
+                    className="p-6 bg-gradient-to-br from-card to-accent/5 border-accent/20 hover:shadow-lg transition-all hover:border-accent/40 group"
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="bg-white dark:bg-accent/20 text-accent p-2.5 rounded-xl shadow-sm">
+                        <TypeIcon size={24} className="text-primary-color" />
+                      </div>
+                      <Badge
+                        variant="secondary"
+                        className="bg-accent text-accent-foreground hover:bg-accent/90"
+                      >
+                        Featured
+                      </Badge>
+                    </div>
+                    <h3 className="font-bold text-lg mb-2 group-hover:text-accent transition-colors line-clamp-2">
+                      {resource.title}
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                      {resource.description}
+                    </p>
+                    <div className="flex items-center justify-between text-xs font-medium text-muted-foreground mb-5 bg-background/50 p-2 rounded-lg">
+                      <span className="capitalize">{resource.type}</span>
+                      <div className="flex items-center gap-1">
+                        {renderStars(resource.rating)}
+                        <span className="ml-1 text-foreground">
+                          ({resource.rating})
+                        </span>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      className="w-full shadow-md group-hover:scale-[1.02] transition-transform"
+                      style={{
+                        backgroundColor: "hsl(var(--lime))",
+                        color: "white",
+                      }}
+                      onClick={() =>
+                        navigate(`/resources/${resource.resource_id}`)
+                      }
+                    >
+                      Access Resource
+                    </Button>
+                  </Card>
+                );
+              })}
+          </div>
         </div>
-        <div className="grid md:grid-cols-3 gap-6">
-          {state.resources.slice(0, 3).map((resource) => {
-            const TypeIcon = getTypeIcon(resource.type);
-            return (
-              <Card key={resource.id} className="p-6 bg-gradient-to-br from-card to-accent/5 border-accent/20 hover:shadow-lg transition-all hover:border-accent/40 group">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="bg-white dark:bg-accent/20 text-accent p-2.5 rounded-xl shadow-sm">
-                    <TypeIcon size={24} className="text-primary-color"/>
-                  </div>
-                  <Badge variant="secondary" className="bg-accent text-accent-foreground hover:bg-accent/90">
-                    Featured
-                  </Badge>
-                </div>
-                <h3 className="font-bold text-lg mb-2 group-hover:text-accent transition-colors line-clamp-2">{resource.title}</h3>
-                <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{resource.description}</p>
+      )}
 
-                <div className="flex items-center justify-between text-xs font-medium text-muted-foreground mb-5 bg-background/50 p-2 rounded-lg">
-                  <span className="capitalize">{resource.type}</span>
-                  <div className="flex items-center gap-1">
-                    {renderStars(resource.rating)}
-                    <span className="ml-1 text-foreground">({resource.rating})</span>
-                  </div>
-                </div>
-
-                <Button size="sm" className="w-full bg-accent hover:bg-accent/90 text-white shadow-md group-hover:scale-[1.02] transition-transform" 
-                style={{ backgroundColor: 'hsl(var(--lime))', color: 'white' }}
-                onClick={() => navigate(`/resources/${resource.id}`)}>
-                  Access Resource
-                </Button>
-              </Card>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Resources Grid */}
+      {/* All Resources Grid */}
       <div className="space-y-4 pt-4">
         <h2 className="text-xl font-bold text-foreground">All Resources</h2>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredResources.map((resource) => {
+          {resources.map((resource: Resource) => {
             const TypeIcon = getTypeIcon(resource.type);
             return (
               <Card
-                key={resource.id}
+                key={resource.resource_id}
                 className="p-5 hover:shadow-xl transition-all duration-300 cursor-pointer border-transparent hover:border-border/80 group flex flex-col h-full bg-card"
-                onClick={() => navigate(`/resources/${resource.id}`)}
+                onClick={() => navigate(`/resources/${resource.resource_id}`)}
               >
                 <div className="flex items-start justify-between mb-4">
-                  <div className="bg-muted p-2.5 rounded-xl group-hover:bg-primary/10 group-hover:text-primary-color transition-colors">
-                    <TypeIcon size={20} className="text-muted-foreground group-hover:text-primary-color" />
+                  <div className="bg-muted p-2.5 rounded-xl group-hover:bg-primary/10 transition-colors">
+                    <TypeIcon
+                      size={20}
+                      className="text-muted-foreground group-hover:text-primary-color"
+                    />
                   </div>
                   <Badge variant="outline" className="text-xs bg-muted/30">
                     {resource.category}
                   </Badge>
                 </div>
 
-                <h3 className="font-bold mb-2 line-clamp-2 group-hover:text-primary-color transition-colors">{resource.title}</h3>
+                <h3 className="font-bold mb-2 line-clamp-2 group-hover:text-primary-color transition-colors">
+                  {resource.title}
+                </h3>
                 <p className="text-sm text-muted-foreground mb-4 line-clamp-3 flex-grow">
                   {resource.description}
                 </p>
@@ -263,7 +367,6 @@ export default function ResourceLibrary() {
                       </span>
                     )}
                   </div>
-
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1">
                       {renderStars(resource.rating)}
@@ -281,43 +384,68 @@ export default function ResourceLibrary() {
                 </div>
 
                 <div className="flex gap-2.5 mt-auto">
-                  {resource.type === 'video' ? (
-                    <Button size="sm" className="flex-1 gap-2 shadow-sm" 
-                    style={{ backgroundColor: 'hsl(var(--primary))', color: 'white' }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/resources/${resource.id}`);
-                    }}>
+                  {resource.type === "video" ? (
+                    <Button
+                      size="sm"
+                      className="flex-1 gap-2 shadow-sm"
+                      style={{
+                        backgroundColor: "hsl(var(--primary))",
+                        color: "white",
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/resources/${resource.resource_id}`);
+                      }}
+                    >
                       <Play size={14} />
                       Watch
                     </Button>
-                  ) : resource.type === 'course' ? (
-                    <Button size="sm" className="flex-1 gap-2 shadow-sm" 
-                    style={{ backgroundColor: 'hsl(var(--primary))', color: 'white' }} 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/resources/${resource.id}`);
-                    }}>
+                  ) : resource.type === "course" ? (
+                    <Button
+                      size="sm"
+                      className="flex-1 gap-2 shadow-sm"
+                      style={{
+                        backgroundColor: "hsl(var(--primary))",
+                        color: "white",
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/resources/${resource.resource_id}`);
+                      }}
+                    >
                       <Award size={14} />
                       Start
                     </Button>
                   ) : (
-                    <Button size="sm" className="flex-1 gap-2 shadow-sm" 
-                    style={{ backgroundColor: 'hsl(var(--primary))', color: 'white' }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/resources/${resource.id}`);
-                    }}>
+                    <Button
+                      size="sm"
+                      className="flex-1 gap-2 shadow-sm"
+                      style={{
+                        backgroundColor: "hsl(var(--primary))",
+                        color: "white",
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/resources/${resource.resource_id}`);
+                      }}
+                    >
                       <Download size={14} />
                       Get
                     </Button>
                   )}
-                  <Button size="sm" variant="secondary" className="px-3" 
-                  style={{ backgroundColor: 'hsl(var(--teal))', color: 'white' }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/resources/${resource.id}`);
-                  }}>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="px-3"
+                    style={{
+                      backgroundColor: "hsl(var(--teal))",
+                      color: "white",
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/resources/${resource.resource_id}`);
+                    }}
+                  >
                     Details
                   </Button>
                 </div>
@@ -327,9 +455,13 @@ export default function ResourceLibrary() {
         </div>
       </div>
 
-      {filteredResources.length === 0 && (
+      {/* Empty State */}
+      {resources.length === 0 && (
         <Card className="p-16 text-center">
-          <BookOpen size={64} className="mx-auto mb-4 text-muted-foreground opacity-20" />
+          <BookOpen
+            size={64}
+            className="mx-auto mb-4 text-muted-foreground opacity-20"
+          />
           <h3 className="text-lg font-bold mb-2">No resources found</h3>
           <p className="text-sm text-muted-foreground">
             Try adjusting your search criteria or filters.
@@ -337,14 +469,39 @@ export default function ResourceLibrary() {
         </Card>
       )}
 
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-4 py-8">
+          <Button
+            variant="outline"
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((p) => p - 1)}
+          >
+            Previous
+          </Button>
+          <span className="text-sm font-medium">
+            Page {currentPage} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage((p) => p + 1)}
+          >
+            Next
+          </Button>
+        </div>
+      )}
+
       {/* Learning Paths */}
       <Card className="p-8 bg-card border border-border/60 shadow-sm">
         <div className="flex items-center gap-4 mb-6">
           <div className="bg-secondary/10 text-secondary p-3 rounded-xl shadow-sm">
-            <Award size={24} className="text-teal-color"/>
+            <Award size={24} className="text-teal-color" />
           </div>
           <div>
-            <h3 className="font-bold text-lg text-foreground">Structured Learning Paths</h3>
+            <h3 className="font-bold text-lg text-foreground">
+              Structured Learning Paths
+            </h3>
             <p className="text-sm text-muted-foreground">
               Follow curated sequences of resources for comprehensive learning
             </p>
@@ -352,15 +509,35 @@ export default function ResourceLibrary() {
         </div>
         <div className="grid md:grid-cols-3 gap-6">
           {[
-            { title: "Clinical Trial Participation", modules: 4, duration: "6 hours" },
-            { title: "Healthcare Advocacy 101", modules: 6, duration: "8 hours" },
-            { title: "Understanding Infectious Diseases", modules: 5, duration: "10 hours" }
+            {
+              title: "Clinical Trial Participation",
+              modules: 4,
+              duration: "6 hours",
+            },
+            {
+              title: "Healthcare Advocacy 101",
+              modules: 6,
+              duration: "8 hours",
+            },
+            {
+              title: "Understanding Infectious Diseases",
+              modules: 5,
+              duration: "10 hours",
+            },
           ].map((path, i) => (
-            <Button key={i} variant="outline" className="h-auto p-5 text-left bg-background hover:bg-secondary/5 hover:border-secondary/50 group whitespace-normal transition-all">
+            <Button
+              key={i}
+              variant="outline"
+              className="h-auto p-5 text-left bg-background hover:bg-secondary/5 hover:border-secondary/50 group whitespace-normal transition-all"
+            >
               <div>
-                <div className="font-bold mb-1 group-hover:text-secondary transition-colors text-foreground">{path.title}</div>
+                <div className="font-bold mb-1 group-hover:text-secondary transition-colors text-foreground">
+                  {path.title}
+                </div>
                 <div className="text-xs text-muted-foreground font-medium flex items-center gap-2">
-                  <span className="bg-secondary/10 text-teal-color px-2 py-0.5 rounded text-[10px] uppercase tracking-wide">Path</span>
+                  <span className="bg-secondary/10 text-teal-color px-2 py-0.5 rounded text-[10px] uppercase tracking-wide">
+                    Path
+                  </span>
                   {path.modules} modules • {path.duration}
                 </div>
               </div>
@@ -368,7 +545,6 @@ export default function ResourceLibrary() {
           ))}
         </div>
       </Card>
-
-  </div>
-);
+    </div>
+  );
 }

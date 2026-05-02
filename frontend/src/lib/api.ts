@@ -74,6 +74,8 @@ export const EVENTS = {
 export const RESOURCES = {
   LIST: `${API_BASE}/resources`,
   DETAILS: (id: string) => `${API_BASE}/resources/${id}`,
+  RATE: (id: string) => `${API_BASE}/resources/${id}/rating`,
+  PROGRESS: (id: string) => `${API_BASE}/resources/${id}/progress`,
 };
 
 export const SYSTEM = {
