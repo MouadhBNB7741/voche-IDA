@@ -32,12 +32,19 @@ import {
   Clock,
 } from "lucide-react";
 
+const DISEASE_OPTIONS = [
+  "all", "HIV", "Cancer", "Diabetes",
+  "Cardiovascular", "Alzheimer's", "Lung Cancer", "Breast Cancer",
+];
+
+const PHASE_OPTIONS = [
+  "all", "Phase 1", "Phase 2", "Phase 3", "Phase 4", "Post-Market",
+];
+
 export default function Trials() {
   const navigate = useNavigate();
   const { state } = useData();
-
   const { toggleSave, isSaved } = useSaveTrial();
-
   const savedTrials = state.savedTrials;
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -55,12 +62,6 @@ export default function Trials() {
     disease: selectedDisease,
     phase: selectedPhase,
   });
-
-  const diseases = [
-    "all",
-    ...Array.from(new Set(trials.map((t) => t.disease))),
-  ];
-  const phases = ["all", ...Array.from(new Set(trials.map((t) => t.phase)))];
 
   const totalPages = Math.ceil(trials.length / itemsPerPage);
   const paginatedTrials = trials.slice(
@@ -92,7 +93,6 @@ export default function Trials() {
       />
 
       {/* Search + Filters */}
-
       <Card className="p-6 border-0 shadow-sm bg-background/60 backdrop-blur-sm">
         <div className="space-y-5">
           <div className="relative">
@@ -120,7 +120,7 @@ export default function Trials() {
                 <SelectValue placeholder="Disease Area" />
               </SelectTrigger>
               <SelectContent>
-                {diseases.map((disease) => (
+                {DISEASE_OPTIONS.map((disease) => (
                   <SelectItem key={disease} value={disease}>
                     {disease === "all" ? "All Diseases" : disease}
                   </SelectItem>
@@ -139,7 +139,7 @@ export default function Trials() {
                 <SelectValue placeholder="Trial Phase" />
               </SelectTrigger>
               <SelectContent>
-                {phases.map((phase) => (
+                {PHASE_OPTIONS.map((phase) => (
                   <SelectItem key={phase} value={phase}>
                     {phase === "all" ? "All Phases" : phase}
                   </SelectItem>
@@ -156,33 +156,16 @@ export default function Trials() {
       </Card>
 
       {/* Stats */}
-
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          {
-            label: "Total Trials",
-            value: trials.length,
-            color: "text-[hsl(var(--primary))]",
-          },
-          {
-            label: "Disease Areas",
-            value: diseases.length - 1,
-            color: "text-[hsl(var(--teal))]",
-          },
+          { label: "Total Trials", value: trials.length, color: "text-[hsl(var(--primary))]" },
+          { label: "Disease Areas", value: DISEASE_OPTIONS.length - 1, color: "text-[hsl(var(--teal))]" },
           { label: "Countries", value: 12, color: "text-[hsl(var(--lime))]" },
-          {
-            label: "Saved Trials",
-            value: savedTrials.length,
-            color: "text-[hsl(var(--blue))]",
-          },
+          { label: "Saved Trials", value: savedTrials.length, color: "text-[hsl(var(--blue))]" },
         ].map((stat, i) => (
           <Card key={i} className="p-5 text-center rounded-xl border-0">
-            <div className={`text-3xl font-bold ${stat.color} mb-1`}>
-              {stat.value}
-            </div>
-            <div className="text-xs uppercase text-muted-foreground tracking-wide mt-1">
-              {stat.label}
-            </div>
+            <div className={`text-3xl font-bold ${stat.color} mb-1`}>{stat.value}</div>
+            <div className="text-xs uppercase text-muted-foreground tracking-wide mt-1">{stat.label}</div>
           </Card>
         ))}
       </div>
@@ -221,14 +204,8 @@ export default function Trials() {
             <FileText size={30} className="text-red-400" />
           </div>
           <h3 className="text-xl font-semibold mb-2">Failed to load trials</h3>
-          <p className="text-muted-foreground text-sm">
-            Something went wrong. Please try again.
-          </p>
-          <Button
-            variant="outline"
-            className="mt-6 border-0"
-            onClick={() => window.location.reload()}
-          >
+          <p className="text-muted-foreground text-sm">Something went wrong. Please try again.</p>
+          <Button variant="outline" className="mt-6 border-0" onClick={() => window.location.reload()}>
             Retry
           </Button>
         </Card>
@@ -236,45 +213,34 @@ export default function Trials() {
         <div className="space-y-4">
           {paginatedTrials.map((trial) => (
             <Card
-              key={trial.id}
+              key={trial.trial_id} 
               className="group p-6 hover:shadow-xl transition-all duration-300 cursor-pointer border-transparent hover:border-primary/20"
-              onClick={() => navigate(`/trials/${trial.id}`)}
+              onClick={() => navigate(`/trials/${trial.trial_id}`)} 
             >
               <div className="flex flex-col lg:flex-row lg:items-start gap-6">
                 <div className="flex-1 space-y-4">
                   <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
                     <div className="flex flex-wrap gap-2">
-                      <Badge
-                        variant="default"
-                        className="bg-primary/90 hover:bg-primary"
-                      >
-                        {trial.disease}
+                      <Badge variant="default" className="bg-primary/90 hover:bg-primary">
+                        {trial.disease_area} 
                       </Badge>
-                      <Badge
-                        variant="outline"
-                        className="border-primary/20 text-primary"
-                      >
+                      <Badge variant="outline" className="border-primary/20 text-primary">
                         {trial.phase}
                       </Badge>
-                      <Badge
-                        variant="secondary"
-                        className="bg-secondary/10 text-secondary hover:bg-secondary/20"
-                      >
-                        Enrolling: {trial.enrollment}/{trial.maxEnrollment}
+                      <Badge variant="secondary" className="bg-secondary/10 text-secondary hover:bg-secondary/20">
+                        {trial.status} {/* ← was Enrolling: enrollment/maxEnrollment */}
                       </Badge>
                     </div>
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={(e) => { e.stopPropagation(); toggleSave(trial.id); }}
-                      className={`transition-colors duration-300 ${
-                        isSaved(trial.id) ? 'fill-red-500 text-red-500' : 'text-muted-foreground group-hover:text-red-500'
-                      }`}
+                      onClick={(e) => { e.stopPropagation(); toggleSave(trial.trial_id); }} 
+                      className="rounded-full hover:bg-muted"
                     >
                       <Heart
                         size={20}
                         className={`transition-colors duration-300 ${
-                          savedTrials.includes(trial.id)
+                          isSaved(trial.trial_id) 
                             ? "fill-red-500 text-red-500"
                             : "text-muted-foreground group-hover:text-red-500"
                         }`}
@@ -287,7 +253,7 @@ export default function Trials() {
                       {trial.title}
                     </h3>
                     <p className="text-muted-foreground leading-relaxed">
-                      {trial.description}
+                      {trial.summary || "No description available."} 
                     </p>
                   </div>
 
@@ -296,19 +262,17 @@ export default function Trials() {
                       <div className="flex items-center gap-3 text-sm p-2 rounded-lg bg-muted/30">
                         <Building size={16} className="text-primary-color" />
                         <div>
-                          <span className="text-xs font-semibold text-muted-foreground uppercase block">
-                            Sponsor
-                          </span>
-                          <span className="font-medium">{trial.sponsor}</span>
+                          <span className="text-xs font-semibold text-muted-foreground uppercase block">Sponsor</span>
+                          <span className="font-medium">{trial.sponsor || "N/A"}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-3 text-sm p-2 rounded-lg bg-muted/30">
                         <MapPin size={16} className="text-primary-color" />
                         <div>
-                          <span className="text-xs font-semibold text-muted-foreground uppercase block">
-                            Location
+                          <span className="text-xs font-semibold text-muted-foreground uppercase block">Location</span>
+                          <span className="font-medium">
+                            {trial.countries?.[0] || "Not specified"} 
                           </span>
-                          <span className="font-medium">{trial.location}</span>
                         </div>
                       </div>
                     </div>
@@ -316,66 +280,48 @@ export default function Trials() {
                       <div className="flex items-center gap-3 text-sm p-2 rounded-lg bg-muted/30">
                         <Calendar size={16} className="text-primary-color" />
                         <div>
-                          <span className="text-xs font-semibold text-muted-foreground uppercase block">
-                            Started
-                          </span>
+                          <span className="text-xs font-semibold text-muted-foreground uppercase block">Started</span>
                           <span className="font-medium">
-                            {new Date(trial.startDate).toLocaleDateString()}
+                            {trial.start_date 
+                              ? new Date(trial.start_date).toLocaleDateString()
+                              : "TBD"}
                           </span>
                         </div>
                       </div>
                       <div className="flex items-center gap-3 text-sm p-2 rounded-lg bg-muted/30">
                         <Clock size={16} className="text-primary-color" />
                         <div>
-                          <span className="text-xs font-semibold text-muted-foreground uppercase block">
-                            Est. Completion
-                          </span>
+                          <span className="text-xs font-semibold text-muted-foreground uppercase block">Est. Completion</span>
                           <span className="font-medium">
-                            {new Date(
-                              trial.estimatedCompletion,
-                            ).toLocaleDateString()}
+                            {trial.estimated_completion 
+                              ? new Date(trial.estimated_completion).toLocaleDateString()
+                              : "TBD"}
                           </span>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-muted/10 rounded-xl p-4 border border-dashed border-border">
-                    <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
-                      <FileText size={14} /> Key Eligibility
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {trial.eligibility.slice(0, 3).map((criteria, index) => (
-                        <Badge
-                          key={index}
-                          variant="outline"
-                          className="text-xs bg-background"
-                        >
-                          {criteria}
-                        </Badge>
-                      ))}
-                      {trial.eligibility.length > 3 && (
-                        <Badge
-                          variant="outline"
-                          className="text-xs text-muted-foreground"
-                        >
-                          +{trial.eligibility.length - 3} more
-                        </Badge>
-                      )}
+                  {/* Eligibility criteria */}
+                  {trial.eligibility_criteria && ( 
+                    <div className="bg-muted/10 rounded-xl p-4 border border-dashed border-border">
+                      <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                        <FileText size={14} /> Key Eligibility
+                      </h4>
+                      <p className="text-sm text-muted-foreground line-clamp-3">
+                        {trial.eligibility_criteria}
+                      </p>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 <div className="lg:w-56 space-y-3 lg:border-l lg:pl-6 lg:border-border/50">
                   <Button
-                    className="w-full gap-2 shadow-md group-hover:bg-primary group-hover:text-primary-foreground transition-all"
-                    style={{
-                      backgroundColor: "hsl(var(--primary))",
-                      color: "white",
-                    }}
+                    className="w-full gap-2 shadow-md"
+                    style={{ backgroundColor: "hsl(var(--primary))", color: "white" }}
                     onClick={(e) => {
                       e.stopPropagation();
-                      navigate(`/trials/${trial.id}`);
+                      navigate(`/trials/${trial.trial_id}`);
                     }}
                   >
                     View Details
@@ -386,7 +332,7 @@ export default function Trials() {
                     className="w-full gap-2 border-primary/20 text-primary hover:bg-primary/60"
                     onClick={(e) => {
                       e.stopPropagation();
-                      navigate(`/trials/${trial.id}`);
+                      navigate(`/trials/${trial.trial_id}`);
                     }}
                   >
                     <FileText size={16} />
@@ -394,10 +340,10 @@ export default function Trials() {
                   </Button>
                   <div className="text-center pt-2">
                     <div className="text-[10px] uppercase font-bold text-muted-foreground">
-                      Primary Contact
+                      Enrollment
                     </div>
-                    <div className="text-xs font-medium text-primary mt-1 break-words">
-                      {trial.contact.split(" - ")[0]}
+                    <div className="text-xs font-medium text-primary mt-1">
+                      {trial.enrollment} enrolled 
                     </div>
                   </div>
                 </div>
@@ -418,11 +364,9 @@ export default function Trials() {
           >
             Previous
           </Button>
-
           <span className="text-sm font-medium">
             Page {currentPage} of {totalPages}
           </span>
-
           <Button
             variant="outline"
             className="border-0"
@@ -434,16 +378,14 @@ export default function Trials() {
         </div>
       )}
 
+      {/* Empty state */}
       {!isLoading && !error && trials.length === 0 && (
         <Card className="p-16 text-center border-0">
           <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
             <FileText size={30} className="opacity-50" />
           </div>
           <h3 className="text-xl font-semibold mb-2">No trials found</h3>
-          <p className="text-muted-foreground text-sm">
-            Try adjusting your search or filters.
-          </p>
-
+          <p className="text-muted-foreground text-sm">Try adjusting your search or filters.</p>
           <Button
             variant="outline"
             className="mt-6 border-0"

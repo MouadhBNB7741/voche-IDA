@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useData } from "../contexts/DataContext";
 import { toast } from "sonner";
-import apiClient from "../services/axiosInterceptor";
+import { apiClient } from "../lib/apiClient";
 import { CLINICAL } from "../lib/api";
 
 export function useSaveTrial() {

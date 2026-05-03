@@ -1,26 +1,27 @@
-import apiClient from './axiosInterceptor';
+import { apiClient } from '../lib/apiClient';
 import { CLINICAL } from '../lib/api';
-import { mockTrials } from '../data/mockData';
-import type { Trial } from '../data/mockData';
+import type { ClinicalTrial, PaginatedResponse } from '../types/db';
 
 const SAVED_TRIALS_KEY = 'voce_saved_trials';
 const CONNECTED_TRIALS_KEY = 'voce_connected_trials';
 
 export const trialService = {
 
-  async getTrials(filters: { search?: string; disease?: string; phase?: string } = {}): Promise<Trial[]> {
+  async getTrials(filters: { search?: string; disease?: string; phase?: string } = {}): Promise<ClinicalTrial[]> {
     const params: Record<string, string> = {};
+    if (filters.search) params.search = filters.search;
+    if (filters.disease && filters.disease !== 'all') params.disease_area = filters.disease;
+    if (filters.phase && filters.phase !== 'all') params.phase = filters.phase;
 
-    if (filters.search)                               params.search  = filters.search;
-    if (filters.disease && filters.disease !== 'all') params.disease = filters.disease;
-    if (filters.phase   && filters.phase   !== 'all') params.phase   = filters.phase;
-
-    const response = await apiClient.get(CLINICAL.TRIALS, { params });
-    return response.data;
+    const response = await apiClient.get<PaginatedResponse<ClinicalTrial>>(
+      CLINICAL.TRIALS,
+      { params }
+    );
+    return response.data?.items ?? [];
   },
 
-  async getById(id: string): Promise<Trial> {
-    const response = await apiClient.get(CLINICAL.TRIAL_BY_ID(id));
+  async getById(id: string): Promise<ClinicalTrial> {
+    const response = await apiClient.get<ClinicalTrial>(CLINICAL.TRIAL_BY_ID(id));
     return response.data;
   },
 
@@ -56,11 +57,9 @@ export const trialService = {
     }
   },
 
-  getSavedTrialDetails(): Trial[] {
-    const savedIds = this.getSavedTrials();
-    return mockTrials.filter(trial => savedIds.includes(trial.id));
+  getSavedTrialDetails(): ClinicalTrial[] {
+    return [];
   },
-
 
   getConnectedTrials(): string[] {
     const stored = localStorage.getItem(CONNECTED_TRIALS_KEY);
@@ -77,19 +76,5 @@ export const trialService = {
 
   isTrialConnected(trialId: string): boolean {
     return this.getConnectedTrials().includes(trialId);
-  },
-
-  search(query: string, filters?: { disease?: string; phase?: string }): Trial[] {
-    return mockTrials.filter(trial => {
-      const matchesSearch = !query ||
-        trial.title.toLowerCase().includes(query.toLowerCase()) ||
-        trial.description.toLowerCase().includes(query.toLowerCase()) ||
-        trial.location.toLowerCase().includes(query.toLowerCase());
-
-      const matchesDisease = !filters?.disease || filters.disease === 'all' || trial.disease === filters.disease;
-      const matchesPhase = !filters?.phase || filters.phase === 'all' || trial.phase === filters.phase;
-
-      return matchesSearch && matchesDisease && matchesPhase;
-    });
   },
 };

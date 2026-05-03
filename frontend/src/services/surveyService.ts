@@ -1,4 +1,4 @@
-import apiClient from './axiosInterceptor';
+import { apiClient } from "../lib/apiClient";
 import { SURVEYS } from '../lib/api';
 
 
