@@ -69,6 +69,7 @@ export const EVENTS = {
   LIST: `${API_BASE}/events`,
   DETAILS: (id: string) => `${API_BASE}/events/${id}`,
   REGISTER: (id: string) => `${API_BASE}/events/${id}/register`,
+  MY_EVENTS: `${API_BASE}/users/me/events`,
 };
 
 export const RESOURCES = {

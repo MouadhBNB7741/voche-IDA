@@ -12,23 +12,41 @@ import {
   Share2,
   CalendarPlus,
   CheckCircle2,
-  Video
+  Video,
+  Loader2
 } from 'lucide-react';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { toast } from 'sonner';
-import { useData } from '../../contexts/DataContext';
+
+import {
+  useEventById,
+  useRegisterEvent,
+  useCancelRegistration
+} from '../../hooks/useEvents';
 
 export default function EventDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { state, actions } = useData();
 
-  const event = state.events.find(e => e.event_id === id);
-  const isRegistered = id ? state.registeredEvents.includes(id) : false;
+  const { data: event, isLoading, isError } = useEventById(id);
+  const registerMutation = useRegisterEvent(id);
+  const cancelMutation = useCancelRegistration(id);
 
-  if (!event) {
+  const isRegistered = event?.is_registered;
+
+  // Loading state
+  if (isLoading) {
     return (
-      <div className="container mx-auto p-8 text-center animate-in fade-in">
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-primary-color" />
+      </div>
+    );
+  }
+
+  // Error 
+  if (isError || !event) {
+    return (
+      <div className="container mx-auto p-8 text-center">
         <h2 className="text-2xl font-bold mb-4">Event not found</h2>
         <Button onClick={() => navigate('/events')}>Return to Events</Button>
       </div>
@@ -37,38 +55,28 @@ export default function EventDetail() {
 
   const handleRegister = () => {
     if (isRegistered) {
-      actions.unregisterEvent(event.event_id);
-      toast.info("Registration Cancelled", {
-        description: `You are no longer registered for ${event.title}.`
-      });
+      cancelMutation.mutate();
     } else {
-      actions.registerEvent(event.event_id, event.title);
-      toast.success("Registration Successful", {
-        description: `You have been registered for ${event.title}. Check your email for details.`
-      });
+      registerMutation.mutate();
     }
   };
 
   const handleShare = () => {
     navigator.clipboard.writeText(window.location.href);
-    toast.success("Link Copied", {
-      description: "Event link copied to clipboard."
+    toast.success('Link Copied', {
+      description: 'Event link copied to clipboard.'
     });
   };
 
   const handleAddToCalendar = () => {
-    toast.success("Added to Calendar", {
-      description: "Event has been added to your calendar."
+    toast.success('Added to Calendar', {
+      description: 'Event has been added to your calendar.'
     });
   };
 
-  // Mock related events based on type
-  const relatedEvents = state.events
-    .filter(e => e.type === event.type && e.event_id !== event.event_id)
-    .slice(0, 3);
+  const locationText =
+    event.location || (event.type === 'webinar' ? 'Online' : 'Global');
 
-  // Helper for safe distance access
-  const locationText = event.location || (event.type === 'webinar' ? 'Online' : 'Global');
   const distanceText = event.timezone ?? 'Online';
 
   return (
@@ -85,7 +93,7 @@ export default function EventDetail() {
         title={event.title}
         description={event.description}
         variant="green"
-        badgeText={`${event.type.charAt(0).toUpperCase() + event.type.slice(1)} • ${distanceText}`}
+        badgeText={`${event.type} • ${distanceText}`}
         action={
           <div className="flex gap-3">
             <Button
@@ -97,20 +105,27 @@ export default function EventDetail() {
               <CalendarPlus size={20} />
               Add to Calendar
             </Button>
+
             <Button
               size="lg"
-              className={`shadow-lg hover:scale-105 transition-transform font-bold gap-2 ${isRegistered ? "bg-primary-color hover:bg-primary-color text-white border-green-600" : "bg-white text-orange-600 hover:bg-gray-100"}`}
+              className={`shadow-lg hover:scale-105 transition-transform font-bold gap-2 ${
+                isRegistered
+                  ? 'bg-primary-color text-white'
+                  : 'bg-white text-orange-600 hover:bg-gray-100'
+              }`}
               onClick={handleRegister}
+              disabled={
+                registerMutation.isPending || cancelMutation.isPending
+              }
             >
-              {isRegistered ? <CheckCircle2 size={20} /> : <CheckCircle2 size={20} className="hidden" />}
-              {isRegistered ? "Registered" : "Register Now"}
+              {isRegistered && <CheckCircle2 size={20} />}
+              {isRegistered ? 'Registered' : 'Register Now'}
             </Button>
           </div>
         }
       />
 
       <div className="grid lg:grid-cols-3 gap-8">
-        {/* Main Content */}
         <div className="lg:col-span-2 space-y-8">
           <Card className="p-8 border-border/60 shadow-sm">
             <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
@@ -120,60 +135,55 @@ export default function EventDetail() {
 
             <div className="grid md:grid-cols-2 gap-6 mb-8">
               <div className="space-y-4">
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-orange-50 dark:bg-orange-900/10">
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-orange-50">
                   <Calendar className="text-orange-600 mt-1" size={20} />
                   <div>
                     <h4 className="font-semibold text-sm">Date</h4>
-                    <p className="text-muted-foreground">{new Date(event.event_date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                    <p className="text-muted-foreground">
+                      {new Date(event.event_date).toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/10">
+
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-blue-50">
                   <Clock className="text-blue-600 mt-1" size={20} />
                   <div>
                     <h4 className="font-semibold text-sm">Time</h4>
-                    <p className="text-muted-foreground">{event.event_time} (UTC)</p>
+                    <p className="text-muted-foreground">
+                      {event.event_time}
+                    </p>
                   </div>
                 </div>
               </div>
 
               <div className="space-y-4">
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-green-50 dark:bg-green-900/10">
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-green-50">
                   <MapPin className="text-green-600 mt-1" size={20} />
                   <div>
                     <h4 className="font-semibold text-sm">Location</h4>
                     <p className="text-muted-foreground">{locationText}</p>
                   </div>
                 </div>
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-purple-50 dark:bg-purple-900/10">
+
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-purple-50">
                   <Users className="text-purple-600 mt-1" size={20} />
                   <div>
                     <h4 className="font-semibold text-sm">Organizer</h4>
-                    <p className="text-muted-foreground">{event.organizer}</p>
+                    <p className="text-muted-foreground">
+                      {event.organizer}
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="prose dark:prose-invert max-w-none">
-              <h3 className="font-bold text-lg mb-3">About this Event</h3>
-              <p className="text-muted-foreground leading-relaxed mb-6">
-                This event brings together experts, advocates, and community members to discuss critical issues in health equity.
-                Participants will have the opportunity to engage in Q&A sessions, network with peers, and access exclusive resources.
-                {event.description}
-              </p>
+            <p className="text-muted-foreground leading-relaxed">
+              {event.description}
+            </p>
 
-              <h3 className="font-bold text-lg mb-3">Agenda Highlights</h3>
-              <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
-                <li>Opening Keynote: The Future of Global Health Equity</li>
-                <li>Panel Discussion: Barriers to Clinical Trial Participation</li>
-                <li>Interactive Workshop: Community Advocacy Strategies</li>
-                <li>Networking & Resource Sharing</li>
-              </ul>
-            </div>
-
-            <div className="mt-8 pt-6 border-t flex flex-wrap gap-2">
-              {event.tags.map(tag => (
-                <Badge key={tag} variant="secondary" className="px-3 py-1 text-white">#{tag}</Badge>
+            <div className="mt-6 flex flex-wrap gap-2">
+              {event.tags?.map(tag => (
+                <Badge key={tag}>#{tag}</Badge>
               ))}
             </div>
           </Card>
@@ -183,27 +193,27 @@ export default function EventDetail() {
         <div className="space-y-6">
           <Card className="p-6 border-border/60 shadow-sm sticky top-24">
             <h3 className="font-bold mb-4">Registration Status</h3>
+
             {isRegistered ? (
-              <div className="text-center p-6 bg-primary-color dark:bg-green-900/10 rounded-xl border border-green-100 dark:border-green-900/30 mb-4 animate-in zoom-in">
-                <div className="w-12 h-12 bg-green-100 dark:bg-primary-color rounded-full flex items-center justify-center mx-auto mb-3 text-green-600">
-                  <CheckCircle2 size={24} />
-                </div>
-                <h4 className="font-bold text-primary-color dark:text-primary-color mb-1">You are Registered!</h4>
-                <p className="text-xs text-primary-color dark:text-primary-color">Check your email for access link.</p>
+              <div className="text-center p-4 bg-green-100 rounded-xl mb-4">
+                <CheckCircle2 className="mx-auto mb-2 text-green-600" />
+                <p className="text-sm font-semibold">
+                  You are registered
+                </p>
               </div>
             ) : (
-              <div className="text-center p-6 bg-muted/30 rounded-xl border border-border/50 mb-4">
-                <p className="text-sm text-muted-foreground mb-4">Registration is open to all community members.</p>
-                <Button className="w-full" onClick={handleRegister}>Register Now</Button>
-              </div>
+              <Button className="w-full mb-4" onClick={handleRegister}>
+                Register Now
+              </Button>
             )}
 
             <div className="space-y-3">
-              <Button variant="outline" className="w-full justify-start gap-3" onClick={handleShare}>
-                <Share2 size={16} /> Share Event
+              <Button variant="outline" className="w-full" onClick={handleShare}>
+                <Share2 size={16} /> Share
               </Button>
+
               {event.type === 'webinar' && (
-                <Button variant="outline" className="w-full justify-start gap-3">
+                <Button variant="outline" className="w-full">
                   <Video size={16} /> Test Video Access
                 </Button>
               )}
