@@ -457,8 +457,13 @@ export default function Community() {
                             {post.title}
                           </h3>
                           <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                            <span className="font-medium text-foreground">
+                            <span className="font-medium text-foreground flex items-center gap-1.5">
                               {post.author_name ?? "Anonymous"}
+                              {isAuthor && (
+                                <Badge variant="secondary" className="bg-primary-color/15 text-primary-color border-primary-color/30 text-[10px] py-0 px-2 font-semibold">
+                                  Author
+                                </Badge>
+                              )}
                             </span>
                             <span>•</span>
                             <Clock size={12} />

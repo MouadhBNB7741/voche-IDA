@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -12,7 +12,8 @@ import {
   HelpCircle,
   Search,
   BookOpen,
-  Calendar
+  Calendar,
+  Trash2
 } from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { aiService } from '../services/aiService';
@@ -50,21 +51,22 @@ export default function Assistant() {
       id: '1',
       content: "Hello! I'm your VOCHE Platform assistant. I'm here to help you navigate clinical trials, community resources, and answer questions about participating in health research. How can I help you today?",
       sender: 'assistant',
-      timestamp: new Date(),
+      timestamp: Date.now(),
     }
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollTo({
         top: scrollContainerRef.current.scrollHeight,
         behavior: 'smooth'
       });
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -84,7 +86,7 @@ export default function Assistant() {
     }
   }, []);
 
-  // chat history
+  // chat history save
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -98,11 +100,10 @@ export default function Assistant() {
     }
   }, [messages]);
 
+  // scroll to bottom
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({
-      behavior: "smooth",
-    });
-  }, [messages, isStreaming]);
+    scrollToBottom();
+  }, [messages, isTyping, scrollToBottom]);
 
   const sendMessage = useCallback(
     async (text?: string) => {
@@ -110,55 +111,64 @@ export default function Assistant() {
         .replace(/[<>]/g, "")
         .trim();
 
-      if (!content || isStreaming) return;
+      if (!content || isTyping) return;
 
-    // Add user message
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content: messageContent,
-      sender: 'user',
-      timestamp: new Date(),
-    };
-
-    const newMessages = [...messages, userMessage];
-    setMessages(newMessages);
-    setInputMessage('');
-    setIsTyping(true);
-
-    try {
-      // Build conversation history for context
-      const chatHistory: ChatMessage[] = newMessages.map(msg => ({
-        role: msg.sender === 'user' ? 'user' : 'model',
-        parts: [{ text: msg.content }]
-      }));
-
-      const responseText = await aiService.generateChatResponse(chatHistory);
-
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: responseText,
-        sender: 'assistant',
-        timestamp: new Date(),
+      // Add user message
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        content: content,
+        sender: 'user',
+        timestamp: Date.now(),
       };
-      setMessages(prev => [...prev, assistantMessage]);
-    } catch (error) {
-      console.error(error);
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: "Sorry, I encountered an error while processing your request. Please make sure the API key is set up correctly in the .env file.",
-        sender: 'assistant',
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsTyping(false);
-    }
-  };
 
-  const handleQuickQuestion = (query: string) => {
-    const question = quickQuestions.find(q => q.query === query);
-    if (question) {
-      handleSendMessage(question.text);
+      const newMessages = [...messages, userMessage];
+      setMessages(newMessages);
+      setInputMessage('');
+      setIsTyping(true);
+
+      try {
+        // Build conversation history for context
+        const chatHistory: ChatMessage[] = newMessages.map(msg => ({
+          role: msg.sender === 'user' ? 'user' : 'model',
+          parts: [{ text: msg.content }]
+        }));
+
+        const responseText = await aiService.generateChatResponse(chatHistory);
+
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          content: responseText,
+          sender: 'assistant',
+          timestamp: Date.now(),
+        };
+        setMessages(prev => [...prev, assistantMessage]);
+      } catch (error) {
+        console.error(error);
+        const errorMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          content: "Sorry, I encountered an error while processing your request. Please make sure the API key is set up correctly in the .env file.",
+          sender: 'assistant',
+          timestamp: Date.now(),
+        };
+        setMessages(prev => [...prev, errorMessage]);
+      } finally {
+        setIsTyping(false);
+      }
+    },
+    [inputMessage, messages, isTyping]
+  );
+
+  const clearChat = () => {
+    setMessages([
+      {
+        id: '1',
+        content: "Hello! I'm your VOCHE Platform assistant. I'm here to help you navigate clinical trials, community resources, and answer questions about participating in health research. How can I help you today?",
+        sender: 'assistant',
+        timestamp: Date.now(),
+      }
+    ]);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(STORAGE_KEY);
     }
   };
 
@@ -221,8 +231,7 @@ export default function Assistant() {
                       <Bot size={18} />
                     )}
                   </div>
-                  <div className={`max-w-[85%] ${message.sender === 'user' ? 'text-right' : 'text-left'
-                    }`}>
+                  <div className={`max-w-[85%] ${message.sender === 'user' ? 'text-right' : 'text-left'}`}>
                     <div className={`p-4 rounded-2xl shadow-md inline-block text-left ${message.sender === 'user'
                       ? 'bg-primary-color !text-white rounded-tr-none border border-primary-color/50'
                       : 'bg-slate-600 dark:bg-secondary-color !text-white border border-slate-600 dark:border-secondary-color/50 rounded-tl-none'
@@ -264,7 +273,7 @@ export default function Assistant() {
                   </div>
                 </div>
               )}
-              <div className="h-2 w-full" />
+              <div ref={messagesEndRef} className="h-2 w-full" />
             </div>
 
             {/* Input */}
@@ -272,51 +281,28 @@ export default function Assistant() {
               <div className="flex gap-3">
                 <Input
                   value={inputMessage}
-                  onChange={(e) =>
-                    setInputMessage(
-                      e.target.value
-                    )
-                  }
+                  onChange={(e) => setInputMessage(e.target.value)}
                   placeholder="Ask about clinical trials, resources, or your rights..."
                   maxLength={4000}
                   aria-label="Ask the VOCHE AI Assistant a question"
                   onKeyDown={(e) => {
-                    if (
-                      e.key === "Enter" &&
-                      !e.shiftKey
-                    ) {
+                    if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
                       sendMessage();
                     }
                   }}
-                  disabled={isStreaming}
+                  disabled={isTyping}
                   className="flex-1 h-12 shadow-sm bg-background border-input"
                 />
 
-                {isStreaming && (
-                  <Button
-                    variant="outline"
-                    onClick={() =>
-                      abortRef.current?.abort()
-                    }
-                    className="h-12"
-                  >
-                    Stop
-                  </Button>
-                )}
-
                 <Button
                   onClick={() => sendMessage()}
-                  disabled={
-                    !inputMessage.trim() ||
-                    isStreaming
-                  }
+                  disabled={!inputMessage.trim() || isTyping}
                   size="icon"
-                  className="h-12 w-12 shadow-md hover:scale-105 transition-transform bg-primary-color cursor-pointer"
+                  className="h-12 w-12 shadow-md hover:scale-105 transition-transform bg-primary-color cursor-pointer text-white"
                 >
                   <Send
                     size={18}
-                    className="text-white"
                   />
                 </Button>
               </div>
@@ -332,13 +318,14 @@ export default function Assistant() {
                 <Button
                   key={i}
                   variant="outline"
-                  className="group h-auto p-4 text-left justify-start bg-background/50 border border-border/40 shadow-sm hover:shadow-md  hover:translate-x-1 transition-all duration-300 cursor-pointer rounded-xl"
-                  onClick={() => handleQuickQuestion(question.query)}
+                  className="group h-auto p-4 text-left justify-start bg-background/50 border border-border/40 shadow-sm hover:shadow-md hover:translate-x-1 transition-all duration-300 cursor-pointer rounded-xl"
+                  onClick={() => sendMessage(q.text)}
+                  disabled={isTyping}
                 >
                   <div className="bg-primary-color/10 p-2 rounded-lg mr-3 transition-colors">
                     <Icon size={16} className="text-primary-color" />
                   </div>
-                  <span className="text-sm font-medium transition-colors">{question.text}</span>
+                  <span className="text-sm font-medium transition-colors">{q.text}</span>
                 </Button>
               );
             })}
@@ -383,11 +370,12 @@ export default function Assistant() {
             <div className="space-y-2.5">
               {suggestions.map((suggestion, index) => (
                 <Button
-                  key={i}
+                  key={index}
                   variant="ghost"
                   size="sm"
                   className="w-full justify-start text-xs h-auto py-3 px-4 whitespace-normal text-left bg-background/50 border border-border/40 shadow-sm hover:shadow-md hover:bg-primary-color/10 dark:hover:bg-primary-color hover:text-primary-color dark:hover:text-white hover:border-primary-color/30 hover:translate-x-1.5 transition-all duration-300 cursor-pointer rounded-xl"
-                  onClick={() => handleSendMessage(suggestion)}
+                  onClick={() => sendMessage(suggestion)}
+                  disabled={isTyping}
                 >
                   <span className="line-clamp-2 font-medium">{suggestion}</span>
                 </Button>
@@ -411,5 +399,3 @@ export default function Assistant() {
     </div>
   );
 }
-
-export default Assistant;

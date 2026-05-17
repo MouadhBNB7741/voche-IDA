@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -8,24 +8,17 @@ import { Textarea } from '../../components/ui/textarea';
 import {
   User,
   Bell,
-  Globe,
-  MapPin,
   Edit,
   Save,
-  Camera,
-  Heart,
   FileText,
   Lock,
   Shield,
   Upload,
   ChevronRight,
-  Trash2,
   Stethoscope,
   Palette
 } from 'lucide-react';
-import { DesignSettings } from '../../components/profile/DesignSettings';
 import { useAuth } from '../../contexts/AuthContext';
-import { useData } from '../../contexts/DataContext';
 import { toast } from 'sonner';
 import {
   Select,
@@ -40,7 +33,6 @@ import { NotificationSettings } from '../../components/profile/NotificationSetti
 import { PrivacySettings } from '../../components/profile/PrivacySettings';
 import { DangerZone } from '../../components/profile/DangerZone';
 import { PageHeader } from '../../components/ui/PageHeader';
-import { compressImage } from '../../utils/imageUtils';
 
 const languages = [
   { code: 'en', name: 'English' },
@@ -59,6 +51,22 @@ export default function HCPDashboard() {
   const [activeTab, setActiveTab] = useState('profile');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [profileImage, setProfileImage] = useState<string | null>(null);
+
+  // Sync profile image from backend
+  useEffect(() => {
+    if (user?.avatar) {
+      if (user.avatar.startsWith('http')) {
+        setProfileImage(user.avatar);
+      } else {
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+        const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+        const cleanAvatarPath = user.avatar.startsWith('/') ? user.avatar : `/${user.avatar}`;
+        setProfileImage(`${cleanBaseUrl}${cleanAvatarPath}`);
+      }
+    } else {
+      setProfileImage(null);
+    }
+  }, [user]);
 
   // Form states
     const [formData, setFormData] = useState({

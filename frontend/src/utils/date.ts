@@ -12,7 +12,7 @@
  * - < 30 days: "X days"
  * - > 30 days: "DD/MM/YYYY HH:MM AM/PM"
  */
-export function formatMessageDate(dateString: string | Date): string {
+export function formatMessageDate(dateString: string | Date | number): string {
   const date = dateString instanceof Date ? dateString : new Date(dateString);
   const now = new Date();
   const diffInSec = Math.floor((now.getTime() - date.getTime()) / 1000);

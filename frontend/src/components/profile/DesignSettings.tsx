@@ -3,7 +3,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { Card } from '../ui/card';
 import { Label } from '../ui/label';
 import { Button } from '../ui/button';
-import { Palette, Type, Check, RefreshCw } from 'lucide-react';
+import { Palette, Type, RefreshCw } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { hexToHSL, HSLToHex } from '../../utils/themeUtils';
 import { toast } from 'sonner';

@@ -20,6 +20,7 @@ export const USERS = {
   PROFILE: `${API_BASE}/users/profile`,
   ME_SAVED_TRIALS: `${API_BASE}/users/me/saved-trials`,
   NOTIFICATIONS: `${API_BASE}/notifications`,
+  NOTIFICATION_PREFERENCES: `${API_BASE}/users/me/preferences/notifications`,
 };
 
 export const CLINICAL = {
