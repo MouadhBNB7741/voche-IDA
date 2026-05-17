@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { toast } from 'sonner';
+import { useAuthContext } from '../../contexts/AuthContext';
 
 import {
   useEventById,
@@ -27,6 +28,7 @@ import {
 export default function EventDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { isAuthenticated, openAuthModal } = useAuthContext();
 
   const { data: event, isLoading, isError } = useEventById(id);
   const registerMutation = useRegisterEvent(id);
@@ -48,12 +50,16 @@ export default function EventDetail() {
     return (
       <div className="container mx-auto p-8 text-center">
         <h2 className="text-2xl font-bold mb-4">Event not found</h2>
-        <Button onClick={() => navigate('/events')}>Return to Events</Button>
+        <Button onClick={() => navigate('/events')} className="cursor-pointer">Return to Events</Button>
       </div>
     );
   }
 
   const handleRegister = () => {
+    if (!isAuthenticated) {
+      openAuthModal("Sign in to your Voche account to register for events.");
+      return;
+    }
     if (isRegistered) {
       cancelMutation.mutate();
     } else {
@@ -69,6 +75,10 @@ export default function EventDetail() {
   };
 
   const handleAddToCalendar = () => {
+    if (!isAuthenticated) {
+      openAuthModal("Sign in to your Voche account to add events to your calendar.");
+      return;
+    }
     toast.success('Added to Calendar', {
       description: 'Event has been added to your calendar.'
     });
@@ -84,7 +94,7 @@ export default function EventDetail() {
       <Button
         variant="ghost"
         onClick={() => navigate('/events')}
-        className="mb-4 pl-0 hover:pl-2 transition-all"
+        className="mb-4 pl-0 hover:pl-2 transition-all cursor-pointer"
       >
         <ArrowLeft size={16} className="mr-2" /> Back to Events
       </Button>
@@ -99,7 +109,7 @@ export default function EventDetail() {
             <Button
               variant="secondary"
               size="lg"
-              className="shadow-lg hover:scale-105 transition-transform font-bold gap-2"
+              className="shadow-lg hover:scale-105 transition-transform font-bold gap-2 cursor-pointer"
               onClick={handleAddToCalendar}
             >
               <CalendarPlus size={20} />
@@ -108,7 +118,7 @@ export default function EventDetail() {
 
             <Button
               size="lg"
-              className={`shadow-lg hover:scale-105 transition-transform font-bold gap-2 ${
+              className={`shadow-lg hover:scale-105 transition-transform font-bold gap-2 cursor-pointer ${
                 isRegistered
                   ? 'bg-primary-color text-white'
                   : 'bg-white text-orange-600 hover:bg-gray-100'
@@ -202,18 +212,18 @@ export default function EventDetail() {
                 </p>
               </div>
             ) : (
-              <Button className="w-full mb-4" onClick={handleRegister}>
+              <Button className="w-full mb-4 cursor-pointer" onClick={handleRegister}>
                 Register Now
               </Button>
             )}
 
             <div className="space-y-3">
-              <Button variant="outline" className="w-full" onClick={handleShare}>
+              <Button variant="outline" className="w-full cursor-pointer" onClick={handleShare}>
                 <Share2 size={16} /> Share
               </Button>
 
               {event.type === 'webinar' && (
-                <Button variant="outline" className="w-full">
+                <Button variant="outline" className="w-full cursor-pointer">
                   <Video size={16} /> Test Video Access
                 </Button>
               )}

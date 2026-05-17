@@ -18,6 +18,7 @@ class ResourceModel(DBModel):
         category: Optional[str] = None,
         language: Optional[str] = None,
         featured: Optional[bool] = None,
+        search: Optional[str] = None,
         sort: str = "newest",
     ) -> Dict[str, Any]:
         params: list = []
@@ -40,6 +41,9 @@ class ResourceModel(DBModel):
         if featured is not None:
             ph = add_param(featured)
             conditions.append(f"featured = {ph}")
+        if search:
+            ph = add_param(f"%{search}%")
+            conditions.append(f"(title ILIKE {ph} OR description ILIKE {ph} OR CAST(tags AS TEXT) ILIKE {ph})")
 
         where_clause = "WHERE " + " AND ".join(conditions)
 

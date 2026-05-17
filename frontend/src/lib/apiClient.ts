@@ -52,8 +52,10 @@ apiClient.interceptors.response.use(
     try {
       // 1. Session Invalidation (HTTP 401)
       if (error.response?.status === 401) {
-        console.warn('Session expired. Purging auth cookie.');
-        cookies.remove('voche_token', { path: '/' });
+        if (cookies.get('voche_token')) {
+          console.warn('Session expired. Purging auth cookie.');
+          cookies.remove('voche_token', { path: '/' });
+        }
       }
 
       // 2. Error Normalization

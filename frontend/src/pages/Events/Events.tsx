@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import { apiClient } from '../../lib/apiClient';
 import { EVENTS } from '../../lib/api';
 import type { Event } from '../../types/db';
+import { useAuthContext } from '../../contexts/AuthContext';
 
 const fetchEvents = async (): Promise<Event[]> => {
   const res = await apiClient.get(EVENTS.LIST);
@@ -37,6 +38,7 @@ const cancelRegistration = async (id: string): Promise<void> => {
 export default function Events() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { isAuthenticated, openAuthModal } = useAuthContext();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [eventType, setEventType] = useState('all');
@@ -54,7 +56,14 @@ export default function Events() {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['event', id] });
     },
-    onError: () => toast.error('Registration failed. Please try again.'),
+    onError: (err: any) => {
+      const status = err?.status || err?.response?.status;
+      if (status === 401 || status === 403) {
+        openAuthModal("Sign in to your Voche account to register for events.");
+      } else {
+        toast.error('Registration failed. Please try again.');
+      }
+    },
   });
 
   const cancelMutation = useMutation({
@@ -64,11 +73,22 @@ export default function Events() {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['event', id] });
     },
-    onError: () => toast.error('Cancellation failed. Please try again.'),
+    onError: (err: any) => {
+      const status = err?.status || err?.response?.status;
+      if (status === 401 || status === 403) {
+        openAuthModal("Sign in to your Voche account to cancel event registration.");
+      } else {
+        toast.error('Cancellation failed. Please try again.');
+      }
+    },
   });
 
   const handleRegister = (e: React.MouseEvent, event: Event) => {
     e.stopPropagation();
+    if (!isAuthenticated) {
+      openAuthModal("Sign in to your Voche account to register for events.");
+      return;
+    }
     if (event.is_registered) {
       cancelMutation.mutate(event.event_id);
     } else {
@@ -116,7 +136,7 @@ export default function Events() {
         <Card className="p-12 text-center max-w-md">
           <Calendar className="mx-auto mb-4 text-muted-foreground/30" size={48} />
           <h3 className="text-xl font-bold mb-2">Failed to load events</h3>
-          <Button onClick={() => window.location.reload()}>Retry</Button>
+          <Button className="cursor-pointer" onClick={() => window.location.reload()}>Retry</Button>
         </Card>
       </div>
     );
@@ -130,12 +150,23 @@ export default function Events() {
         badgeText={`${filteredEvents.length} Upcoming Events`}
         variant="green"
         action={
-          <SuggestEventModal>
-            <Button variant="hero" className="gap-2 font-semibold transition-transform hover:scale-105">
+          isAuthenticated ? (
+            <SuggestEventModal>
+              <Button variant="hero" className="gap-2 font-semibold transition-transform hover:scale-105 cursor-pointer">
+                <Plus size={20} className="stroke-[3px]" />
+                Suggest Event
+              </Button>
+            </SuggestEventModal>
+          ) : (
+            <Button
+              variant="hero"
+              className="gap-2 font-semibold transition-transform hover:scale-105 cursor-pointer"
+              onClick={() => openAuthModal("Sign in to your Voche account to suggest events.")}
+            >
               <Plus size={20} className="stroke-[3px]" />
               Suggest Event
             </Button>
-          </SuggestEventModal>
+          )
         }
       />
 
@@ -211,7 +242,7 @@ export default function Events() {
                 </div>
                 <div className="flex gap-2 pt-2">
                   <Button
-                    className={`flex-1 shadow-sm transition-all ${event.is_registered ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
+                    className={`flex-1 shadow-sm transition-all cursor-pointer ${event.is_registered ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
                     onClick={(e) => handleRegister(e, event)}
                     disabled={registerMutation.isPending || cancelMutation.isPending}
                   >
@@ -219,7 +250,7 @@ export default function Events() {
                       <><CheckCircle2 size={16} className="mr-2" /> Registered</>
                     ) : 'Register Now'}
                   </Button>
-                  <Button variant="outline" size="icon" onClick={(e) => handleShare(e, event.title)}>
+                  <Button variant="outline" size="icon" className="cursor-pointer" onClick={(e) => handleShare(e, event.title)}>
                     <Share2 size={18} />
                   </Button>
                 </div>
@@ -281,7 +312,7 @@ export default function Events() {
               <div className="flex flex-col justify-center gap-2 min-w-[140px]">
                 <Button
                   size="sm"
-                  className={`w-full shadow-sm ${event.is_registered ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
+                  className={`w-full shadow-sm cursor-pointer ${event.is_registered ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
                   variant={event.is_registered ? 'default' : 'outline'}
                   onClick={(e) => handleRegister(e, event)}
                   disabled={registerMutation.isPending || cancelMutation.isPending}
@@ -293,7 +324,7 @@ export default function Events() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="w-full text-muted-foreground"
+                  className="w-full text-muted-foreground cursor-pointer"
                   onClick={(e) => { e.stopPropagation(); navigate(`/events/${event.event_id}`); }}
                 >
                   Details <ArrowRight size={14} className="ml-1" />

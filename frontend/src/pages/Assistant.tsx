@@ -184,7 +184,7 @@ export default function Assistant() {
               variant="ghost"
               size="sm"
               onClick={clearChat}
-              className="text-white/90 hover:bg-white/15 hover:text-white"
+              className="text-white/90 hover:bg-white/15 hover:text-white cursor-pointer"
             >
               <Trash2
                 size={16}
@@ -222,7 +222,7 @@ export default function Assistant() {
                     className={`w-10 h-10 rounded-full flex items-center justify-center shadow-sm shrink-0 ${
                       message.sender === "user"
                         ? "bg-primary text-primary-foreground"
-                        : "bg-emerald-600 text-black"
+                        : "bg-secondary-color dark:bg-secondary-color text-white"
                     }`}
                   >
                     {message.sender === "user" ? (
@@ -261,7 +261,7 @@ export default function Assistant() {
 
               {isTyping && (
                 <div className="flex gap-4">
-                  <div className="w-10 h-10 bg-secondary-color text-secondary-foreground rounded-full flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 bg-secondary-color text-secondary-white rounded-full flex items-center justify-center shrink-0">
                     <Bot size={18} />
                   </div>
                   <div className="bg-card text-card-foreground border border-border shadow-md p-4 rounded-2xl rounded-tl-none">

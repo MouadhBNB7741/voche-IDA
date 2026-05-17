@@ -36,14 +36,19 @@ export const communityService = {
   },
 
   // Posts
-  async getFeed(): Promise<ForumPost[]> {
-    const response = await apiClient.get(COMMUNITY.FEED);
-    return response.data?.data ?? response.data;
+  async getFeed(params?: {
+    page?: number;
+    limit?: number;
+    category?: string;
+    sort?: string;
+  }): Promise<{ data: ForumPost[]; meta: any }> {
+    const response = await apiClient.get(COMMUNITY.FEED, { params });
+    return response.data;
   },
 
-  async getPosts(communityId: string): Promise<ForumPost[]> {
-    const response = await apiClient.get(COMMUNITY.POSTS(communityId));
-    return response.data?.data ?? response.data;
+  async getPosts(communityId: string, params?: { page?: number; limit?: number; sort?: string }): Promise<{ data: ForumPost[]; meta: any }> {
+    const response = await apiClient.get(COMMUNITY.POSTS(communityId), { params });
+    return response.data;
   },
 
   async getPostById(communityId: string, postId: string): Promise<ForumPost> {

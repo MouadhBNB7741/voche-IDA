@@ -34,6 +34,7 @@ import {
 } from '../../components/ui/select';
 import { Label } from '../../components/ui/label';
 import { PageHeader } from '../../components/ui/PageHeader';
+import { useAuthContext } from '../../contexts/AuthContext';
 import {
   usePostById,
   useReplies,
@@ -53,6 +54,7 @@ const reportReasons = [
 export default function PostDetail() {
   const { communityId, postId } = useParams<{ communityId: string; postId: string }>();
   const navigate = useNavigate();
+  const { isAuthenticated, user, openAuthModal } = useAuthContext();
 
   const { data: post, isLoading, error } = usePostById(communityId, postId);
   const { data: replies = [], isLoading: isLoadingReplies } = useReplies(communityId, postId);
@@ -71,12 +73,20 @@ export default function PostDetail() {
   const [reportReason, setReportReason] = useState('');
 
   const handleLike = () => {
+    if (!isAuthenticated) {
+      openAuthModal("Sign in to your Voche account to react to community posts.");
+      return;
+    }
     if (!post || isLiked) return;
     likePost.mutate(post.post_id);
     setIsLiked(true);
   };
 
   const handleReplyLike = (replyId: string) => {
+    if (!isAuthenticated) {
+      openAuthModal("Sign in to your Voche account to react to replies.");
+      return;
+    }
     if (likedReplies.includes(replyId)) return;
     likeReply.mutate(replyId);
     setLikedReplies(prev => [...prev, replyId]);
@@ -84,18 +94,27 @@ export default function PostDetail() {
   };
 
   const handleSubmitReply = async () => {
+    if (!isAuthenticated) {
+      openAuthModal("Sign in to your Voche account to reply to discussions.");
+      return;
+    }
     if (!replyText.trim()) return;
     await createReply.mutateAsync({ content: replyText });
     setReplyText('');
   };
 
   const openReportModal = (type: 'post' | 'reply', targetId: string) => {
+    if (!isAuthenticated) {
+      openAuthModal("Sign in to your Voche account to report inappropriate content.");
+      return;
+    }
     setReportTarget({ type, id: targetId });
     setReportReason('');
     setShowReportModal(true);
   };
 
   const handleSubmitReport = async () => {
+    if (!isAuthenticated) return;
     if (!reportTarget || !reportReason) return;
     await reportContent.mutateAsync({
       target_type: reportTarget.type === 'reply' ? 'comment' : 'post',
@@ -177,6 +196,15 @@ export default function PostDetail() {
             <div>
               <h1 className="text-2xl font-bold mb-2 tracking-tight">{post.title}</h1>
               <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                <span className="font-semibold text-foreground flex items-center gap-1.5">
+                  {post.author_name ?? 'Anonymous'}
+                  {post.user_id === user?.id && (
+                    <Badge variant="secondary" className="bg-primary-color/15 text-primary-color border-primary-color/30 text-[10px] py-0 px-2 font-semibold">
+                      Author
+                    </Badge>
+                  )}
+                </span>
+                <span>•</span>
                 <Clock size={12} />
                 <span>{new Date(post.created_at).toLocaleDateString()}</span>
                 {post.tags.map((tag) => (

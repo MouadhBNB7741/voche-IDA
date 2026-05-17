@@ -124,6 +124,7 @@ class ClinicalModel(DBModel):
                 t.disease_area,
                 {location_agg},
                 t.enrollment AS enrollment_count,
+                t.max_enrollment,
                 {is_saved_expr} AS is_saved,
                 {rank_col}
             FROM clinical_trials t

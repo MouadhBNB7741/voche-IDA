@@ -28,6 +28,7 @@ async def list_resources(
     category: Optional[str] = Query(None, description="Filter by category"),
     language: Optional[str] = Query(None, description="Filter by language"),
     featured: Optional[bool] = Query(None, description="Filter by featured status"),
+    search: Optional[str] = Query(None, description="Search resources by title, topic, or description"),
     sort: ResourceSortOption = Query(
         ResourceSortOption.newest, description="Sort resources"
     ),
@@ -42,6 +43,7 @@ async def list_resources(
         category=category,
         language=language,
         featured=featured,
+        search=search,
         sort=sort.value,
     )
     return result

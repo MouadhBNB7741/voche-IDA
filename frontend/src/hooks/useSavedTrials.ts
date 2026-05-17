@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useData } from "../contexts/DataContext";
 import { useAuth } from "./useAuth";
-import apiClient from "../services/axiosInterceptor";
+import { apiClient } from "../lib/apiClient";
 import { USERS } from "../lib/api";
 
 export function useSavedTrials() {

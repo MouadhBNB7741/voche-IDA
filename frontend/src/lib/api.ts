@@ -41,7 +41,7 @@ export const SURVEYS = {
 };
 
 export const COMMUNITY = {
-  LIST: `${API_BASE}/community`,
+  LIST: `${API_BASE}/community/`,
   FEED: `${API_BASE}/community/feed`,
   GET: (id: string) => `${API_BASE}/community/${id}`,
   POSTS: (communityId: string) => `${API_BASE}/community/${communityId}/posts`,
@@ -67,14 +67,14 @@ export const ORGANIZATIONS = {
 };
 
 export const EVENTS = {
-  LIST: `${API_BASE}/events`,
+  LIST: `${API_BASE}/events/`,
   DETAILS: (id: string) => `${API_BASE}/events/${id}`,
   REGISTER: (id: string) => `${API_BASE}/events/${id}/register`,
   MY_EVENTS: `${API_BASE}/users/me/events`,
 };
 
 export const RESOURCES = {
-  LIST: `${API_BASE}/resources`,
+  LIST: `${API_BASE}/resources/`,
   DETAILS: (id: string) => `${API_BASE}/resources/${id}`,
   RATE: (id: string) => `${API_BASE}/resources/${id}/rating`,
   PROGRESS: (id: string) => `${API_BASE}/resources/${id}/progress`,

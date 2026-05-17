@@ -42,6 +42,7 @@ class TrialSummary(BaseModel):
     status: Optional[str]
     location: Optional[str]             
     enrollment: Optional[int] = Field(None, alias="enrollment_count")
+    max_enrollment: Optional[int] = None
     is_saved: bool = False
     rank: Optional[float] = None
 

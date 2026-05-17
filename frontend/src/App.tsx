@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import './App.css'
 
 import Layout from "./components/Layout";
@@ -20,6 +20,8 @@ import Login from './pages/Auth/Login';
 import Signup from './pages/Auth/Signup';
 import ForgotPassword from "./pages/Auth/ForgotPassword";
 import ResetPassword from "./pages/Auth/ResetPassword";
+import NotFound from "./pages/Error/NotFound";
+import Forbidden from "./pages/Error/Forbidden";
 
 export default function App() {
   return (
@@ -47,10 +49,12 @@ export default function App() {
         <Route path="/patientdashboard" element={<PatientDashboard />} />
         <Route path="/hcpdashboard" element={<HCPDashboard />} />
         <Route path="/notifications" element={<Notifications />} />
+        <Route path="/403" element={<Forbidden />} />
+        <Route path="/404" element={<NotFound />} />
       </Route>
 
-      {/* Redirects */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      {/* Wildcard Error Page */}
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }

@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { notificationService, notificationKeyMap } from '../services/notificationService';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -27,7 +28,14 @@ import { USERS } from '../lib/api';
 export default function Notifications() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      navigate('/login');
+    }
+  }, [authLoading, isAuthenticated, navigate]);
 
   const { data: notifData, isLoading: loadingNotifs } = useQuery({
     queryKey: ['notifications'],
@@ -35,6 +43,7 @@ export default function Notifications() {
       const res = await apiClient.get(`${USERS.NOTIFICATIONS}?limit=20`);
       return res.data;
     },
+    enabled: isAuthenticated,
   });
 
   const notifications = notifData?.data ?? [];

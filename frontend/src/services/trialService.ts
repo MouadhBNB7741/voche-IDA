@@ -7,15 +7,33 @@ const CONNECTED_TRIALS_KEY = 'voce_connected_trials';
 
 export const trialService = {
 
-  async getTrials(filters: { search?: string; disease?: string; phase?: string } = {}): Promise<ClinicalTrial[]> {
-    const params: Record<string, string> = {};
-    if (filters.search) params.search = filters.search;
-    if (filters.disease && filters.disease !== 'all') params.disease_area = filters.disease;
-    if (filters.phase && filters.phase !== 'all') params.phase = filters.phase;
+  async getTrials(filters: { 
+    search?: string; 
+    disease?: string; 
+    phase?: string;
+    status?: string;
+    location?: string;
+    sponsor?: string;
+    page?: number;
+    limit?: number;
+    sort_by?: string;
+  } = {}): Promise<ClinicalTrial[]> {
+    const urlParams = new URLSearchParams();
+    
+    if (filters.search) urlParams.append('keyword', filters.search);
+    if (filters.disease && filters.disease !== 'all') urlParams.append('disease_areas', filters.disease);
+    if (filters.phase && filters.phase !== 'all') urlParams.append('phases', filters.phase);
+    if (filters.status && filters.status !== 'all') urlParams.append('statuses', filters.status);
+    if (filters.location) urlParams.append('location', filters.location);
+    if (filters.sponsor) urlParams.append('sponsor', filters.sponsor);
+    
+    if (filters.page) urlParams.append('page', String(filters.page));
+    if (filters.limit) urlParams.append('limit', String(filters.limit));
+    if (filters.sort_by) urlParams.append('sort_by', filters.sort_by);
 
     const response = await apiClient.get<PaginatedResponse<ClinicalTrial>>(
       CLINICAL.TRIALS,
-      { params }
+      { params: urlParams }
     );
     return response.data?.items ?? [];
   },

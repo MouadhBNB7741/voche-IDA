@@ -56,7 +56,54 @@ updatePreferences: async (data: Partial<NotificationPreferences>): Promise<Notif
     throw err;
   }
 },
-  
+
+  /**
+   * Get paginated notifications for the authenticated user.
+   */
+  getNotifications: async (params?: { page?: number; limit?: number; read?: boolean; type?: string }): Promise<any> => {
+    try {
+      const response = await apiClient.get(USERS.NOTIFICATIONS, { params });
+      return response.data?.data ?? response.data;
+    } catch (err) {
+      throw err;
+    }
+  },
+
+  /**
+   * Mark a single notification as read.
+   */
+  markAsRead: async (id: string): Promise<any> => {
+    try {
+      const response = await apiClient.patch(`${USERS.NOTIFICATIONS}/${id}/read`);
+      return response.data?.data ?? response.data;
+    } catch (err) {
+      throw err;
+    }
+  },
+
+  /**
+   * Mark all notifications as read.
+   */
+  markAllAsRead: async (): Promise<any> => {
+    try {
+      const response = await apiClient.patch(`${USERS.NOTIFICATIONS}/mark-all-read`);
+      return response.data?.data ?? response.data;
+    } catch (err) {
+      throw err;
+    }
+  },
+
+  /**
+   * Delete a notification.
+   */
+  deleteNotification: async (id: string): Promise<any> => {
+    try {
+      const response = await apiClient.delete(`${USERS.NOTIFICATIONS}/${id}`);
+      return response.data?.data ?? response.data;
+    } catch (err) {
+      throw err;
+    }
+  },
 };
 
 export default notificationService;

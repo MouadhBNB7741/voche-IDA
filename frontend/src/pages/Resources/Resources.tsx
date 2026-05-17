@@ -59,8 +59,11 @@ export default function ResourceLibrary() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState("all");
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [sortBy, setSortBy] = useState("popular");
+  const [sortBy, setSortBy] = useState("most_popular");
   const [currentPage, setCurrentPage] = useState(1);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState("All");
+  const [selectedFeatured, setSelectedFeatured] = useState<boolean | null>(null);
 
   // Task 1: useQuery(['resources'], getAll)
   const { data, isLoading, isError } = useQuery({
@@ -69,15 +72,21 @@ export default function ResourceLibrary() {
       searchQuery,
       selectedType,
       selectedCategory,
+      sortBy,
       currentPage,
+      selectedLanguage,
+      selectedFeatured,
     ],
     queryFn: () =>
       resourceService.getAll({
         search: searchQuery,
         type: selectedType,
         category: selectedCategory,
+        sort: sortBy,
         page: currentPage,
         limit: 9,
+        language: selectedLanguage,
+        featured: selectedFeatured !== null ? selectedFeatured : undefined,
       }),
     staleTime: 5 * 60 * 1000,
   });
@@ -165,21 +174,28 @@ export default function ResourceLibrary() {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {resourceTypes.map((type) => {
           const Icon = type.icon;
+          const isActive = selectedType === type.id;
           return (
             <Card
               key={type.id}
-              className={`p-4 cursor-pointer transition-all duration-200 ${
-                selectedType === type.id
-                  ? "bg-accent-color text-accent-foreground border-accent shadow-md scale-105 ring-2 ring-accent ring-offset-2 ring-offset-background"
-                  : "hover:shadow-md hover:bg-muted/50"
-              }`}
+              className={`p-4 cursor-pointer transition-all duration-300 border border-transparent group/tab
+                ${
+                  isActive
+                    ? "bg-primary-color text-white shadow-md scale-105 border-primary-color/20"
+                    : "bg-card hover:bg-primary-color hover:text-white hover:shadow-md hover:scale-105 hover:border-primary-color/10"
+                }`}
               onClick={() => {
                 setSelectedType(type.id);
                 setCurrentPage(1);
               }}
             >
               <div
-                className={`w-10 h-10 ${type.color} rounded-lg flex items-center justify-center mb-3 text-white shadow-sm`}
+                className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 shadow-sm transition-all duration-300
+                  ${
+                    isActive
+                      ? "bg-white text-primary-color scale-110"
+                      : "bg-primary-color/10 text-primary-color group-hover/tab:bg-white group-hover/tab:text-primary-color group-hover/tab:scale-110"
+                  }`}
               >
                 <Icon size={20} />
               </div>
@@ -217,12 +233,12 @@ export default function ResourceLibrary() {
                   setCurrentPage(1);
                 }}
               >
-                <SelectTrigger className="h-10">
+                <SelectTrigger className="h-10 cursor-pointer">
                   <SelectValue placeholder="All Categories" />
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map((category) => (
-                    <SelectItem key={category} value={category}>
+                    <SelectItem key={category} value={category} className="cursor-pointer">
                       {category}
                     </SelectItem>
                   ))}
@@ -235,25 +251,79 @@ export default function ResourceLibrary() {
                 Sort By
               </label>
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="h-10">
+                <SelectTrigger className="h-10 cursor-pointer">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="popular">Most Popular</SelectItem>
-                  <SelectItem value="rating">Highest Rated</SelectItem>
-                  <SelectItem value="recent">Most Recent</SelectItem>
-                  <SelectItem value="downloads">Most Downloaded</SelectItem>
+                  <SelectItem value="most_popular" className="cursor-pointer">Most Popular</SelectItem>
+                  <SelectItem value="highest_rated" className="cursor-pointer">Highest Rated</SelectItem>
+                  <SelectItem value="newest" className="cursor-pointer">Most Recent</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="flex items-end">
-              <Button variant="outline" className="gap-2 h-10 border-dashed">
+              <Button
+                variant={showAdvanced ? "default" : "outline"}
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="gap-2 h-10 border-dashed cursor-pointer"
+              >
                 <Filter size={16} />
                 Advanced Filters
               </Button>
             </div>
           </div>
+
+          {/* Collapsible Advanced Filters */}
+          {showAdvanced && (
+            <div className="pt-4 border-t border-dashed grid grid-cols-1 md:grid-cols-2 gap-4 animate-in slide-in-from-top-2 duration-200">
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
+                  Language
+                </label>
+                <Select
+                  value={selectedLanguage}
+                  onValueChange={(v) => {
+                    setSelectedLanguage(v);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger className="h-10 cursor-pointer">
+                    <SelectValue placeholder="Select Language" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {["All", "English", "French", "Spanish", "Arabic"].map((lang) => (
+                      <SelectItem key={lang} value={lang} className="cursor-pointer">
+                        {lang}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
+                  Featured Status
+                </label>
+                <Select
+                  value={selectedFeatured === null ? "all" : String(selectedFeatured)}
+                  onValueChange={(v) => {
+                    setSelectedFeatured(v === "all" ? null : v === "true");
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger className="h-10 cursor-pointer">
+                    <SelectValue placeholder="Featured Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all" className="cursor-pointer">All Items</SelectItem>
+                    <SelectItem value="true" className="cursor-pointer">Featured Only</SelectItem>
+                    <SelectItem value="false" className="cursor-pointer">Non-Featured Only</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
         </div>
       </Card>
 
@@ -305,7 +375,7 @@ export default function ResourceLibrary() {
                     </div>
                     <Button
                       size="sm"
-                      className="w-full shadow-md group-hover:scale-[1.02] transition-transform"
+                      className="w-full shadow-md group-hover:scale-[1.02] transition-transform cursor-pointer"
                       style={{
                         backgroundColor: "hsl(var(--lime))",
                         color: "white",
@@ -387,7 +457,7 @@ export default function ResourceLibrary() {
                   {resource.type === "video" ? (
                     <Button
                       size="sm"
-                      className="flex-1 gap-2 shadow-sm"
+                      className="flex-1 gap-2 shadow-sm cursor-pointer"
                       style={{
                         backgroundColor: "hsl(var(--primary))",
                         color: "white",
@@ -403,7 +473,7 @@ export default function ResourceLibrary() {
                   ) : resource.type === "course" ? (
                     <Button
                       size="sm"
-                      className="flex-1 gap-2 shadow-sm"
+                      className="flex-1 gap-2 shadow-sm cursor-pointer"
                       style={{
                         backgroundColor: "hsl(var(--primary))",
                         color: "white",
@@ -419,7 +489,7 @@ export default function ResourceLibrary() {
                   ) : (
                     <Button
                       size="sm"
-                      className="flex-1 gap-2 shadow-sm"
+                      className="flex-1 gap-2 shadow-sm cursor-pointer"
                       style={{
                         backgroundColor: "hsl(var(--primary))",
                         color: "white",
@@ -436,7 +506,7 @@ export default function ResourceLibrary() {
                   <Button
                     size="sm"
                     variant="secondary"
-                    className="px-3"
+                    className="px-3 cursor-pointer"
                     style={{
                       backgroundColor: "hsl(var(--teal))",
                       color: "white",

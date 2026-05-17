@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.api.dependencies.connections import get_connection
-from app.api.middleware.auth_middleware import auth_middleware
+from app.api.middleware.auth_middleware import auth_middleware, auth_middleware_optional
 from app.models.community_model import CommunityModel
 from app.schemas.community import (
     CommunityListResponse,
@@ -162,12 +162,13 @@ async def global_feed(
     category: Optional[str] = Query(None, description="Community name or ID"),
     sort: PostSortOption = Query(PostSortOption.recent, description="Sort posts"),
     conn=Depends(get_connection),
-    current_user: dict = Depends(auth_middleware),
+    current_user: Optional[dict] = Depends(auth_middleware_optional),
 ):
-    """Global post feed across all communities. Auth required."""
+    """Global post feed across all communities. Public endpoint with optional auth."""
     model = CommunityModel(conn)
+    user_id = current_user["id"] if current_user else None
     result = await model.list_forum_posts(
-        user_id=current_user["id"],
+        user_id=user_id,
         page=page,
         limit=limit,
         category=category,
@@ -215,12 +216,13 @@ async def list_community_posts(
     limit: int = Query(20, ge=1, le=100),
     sort: PostSortOption = Query(PostSortOption.recent, description="Sort posts"),
     conn=Depends(get_connection),
-    current_user: dict = Depends(auth_middleware),
+    current_user: Optional[dict] = Depends(auth_middleware_optional),
 ):
-    """List posts for a specific community. Auth required."""
+    """List posts for a specific community. Public endpoint with optional auth."""
     model = CommunityModel(conn)
+    user_id = current_user["id"] if current_user else None
     result = await model.list_forum_posts(
-        user_id=current_user["id"],
+        user_id=user_id,
         page=page,
         limit=limit,
         category=str(community_id),
@@ -270,9 +272,9 @@ async def get_post(
     community_id: UUID,
     post_id: UUID,
     conn=Depends(get_connection),
-    current_user: dict = Depends(auth_middleware),
+    current_user: Optional[dict] = Depends(auth_middleware_optional),
 ):
-    """Get post details with replies. Auth required."""
+    """Get post details with replies. Public endpoint with optional auth."""
     model = CommunityModel(conn)
 
     post = await model.get_post_details(str(post_id))

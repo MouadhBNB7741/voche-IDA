@@ -25,19 +25,25 @@ export function useCommunityById(id: string | undefined) {
 }
 
 // Fetch global feed 
-export function useCommunityFeed() {
+export function useCommunityFeed(params?: {
+  page?: number;
+  limit?: number;
+  category?: string;
+  sort?: string;
+}, options?: { enabled?: boolean }) {
   return useQuery({
-    queryKey: ['community', 'feed'],
-    queryFn: communityService.getFeed,
+    queryKey: ['community', 'feed', params],
+    queryFn: () => communityService.getFeed(params),
     retry: false,
+    enabled: options?.enabled,
   });
 }
 
 // Fetch posts for a specific community
-export function useCommunityPosts(communityId: string | undefined) {
+export function useCommunityPosts(communityId: string | undefined, params?: { page?: number; limit?: number; sort?: string }) {
   return useQuery({
-    queryKey: ['community', communityId, 'posts'],
-    queryFn: () => communityService.getPosts(communityId!),
+    queryKey: ['community', communityId, 'posts', params],
+    queryFn: () => communityService.getPosts(communityId!, params),
     enabled: !!communityId,
     retry: false,
   });
@@ -62,8 +68,7 @@ export function useCreatePost(communityId: string) {
       communityService.createPost(communityId, payload),
 
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['community', communityId, 'posts'] });
-      queryClient.invalidateQueries({ queryKey: ['community', 'feed'] });
+      queryClient.invalidateQueries({ queryKey: ['community'] });
       toast.success('Discussion Created', {
         description: 'Your post has been published to the community.',
       });
@@ -85,33 +90,12 @@ export function useLikePost(communityId: string) {
     mutationFn: (postId: string) =>
       communityService.likePost(communityId, postId),
 
-    onMutate: async (postId) => {
-      await queryClient.cancelQueries({ queryKey: ['community', 'feed'] });
-      await queryClient.cancelQueries({ queryKey: ['community', communityId, 'posts'] });
-
-      const previousFeed = queryClient.getQueryData(['community', 'feed']);
-
-      queryClient.setQueryData<any[]>(['community', 'feed'], (old = []) =>
-        old.map(post =>
-          post.post_id === postId
-            ? { ...post, likes_count: post.likes_count + 1 }
-            : post
-        )
-      );
-
-      return { previousFeed };
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['community'] });
     },
 
-    onError: (_err, _postId, context) => {
-      if (context?.previousFeed) {
-        queryClient.setQueryData(['community', 'feed'], context.previousFeed);
-      }
+    onError: () => {
       toast.error('Could not like post. Please try again.');
-    },
-
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['community', 'feed'] });
-      queryClient.invalidateQueries({ queryKey: ['community', communityId, 'posts'] });
     },
   });
 }

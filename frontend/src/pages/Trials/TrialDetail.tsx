@@ -32,10 +32,12 @@ import {
 import { useSaveTrial } from "../../hooks/useSaveTrial";
 import { toast } from "sonner";
 import { PageHeader } from "../../components/ui/PageHeader";
+import { useAuthContext } from "../../contexts/AuthContext";
 
 export default function TrialDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { isAuthenticated, openAuthModal } = useAuthContext();
 
   const { data: trial, isLoading, error } = useTrialById(id);
   const { data: allTrials = [] } = useTrials();
@@ -45,6 +47,7 @@ export default function TrialDetail() {
 
   const { data: surveys = [] } = useSurveys();
   const { data: completedSurveys = [] } = useCompletedSurveys();
+  const completedSurveysList = Array.isArray(completedSurveys) ? completedSurveys : [];
 
   const trialSurvey =
     surveys.find((s) => s.trial_id === id) ?? surveys[0] ?? null;
@@ -65,6 +68,10 @@ export default function TrialDetail() {
   }, [id]);
 
   const handleConnect = () => {
+    if (!isAuthenticated) {
+      openAuthModal("Sign in to your Voche account to connect with clinical trials.");
+      return;
+    }
     if (id) {
       if (isConnected) {
         toast.info("Request Already Pending", {
@@ -121,7 +128,7 @@ export default function TrialDetail() {
     setIsEligible(null);
   };
 
-  const alreadyCompleted = completedSurveys.some(
+  const alreadyCompleted = completedSurveysList.some(
     (c) => c.survey_id === trialSurvey?.survey_id,
   );
 
@@ -151,7 +158,7 @@ export default function TrialDetail() {
         <Button
           variant="ghost"
           onClick={() => navigate("/trials")}
-          className="gap-2 pl-0 hover:bg-transparent hover:text-primary-color transition-colors mb-6"
+          className="gap-2 pl-0 hover:bg-transparent hover:text-primary-color transition-colors mb-6 cursor-pointer"
         >
           <ArrowLeft size={16} />
           Back to Trials
@@ -162,7 +169,7 @@ export default function TrialDetail() {
           <p className="text-muted-foreground mb-6">
             The trial you're looking for doesn't exist or may have been removed.
           </p>
-          <Button onClick={() => navigate("/trials")}>Browse All Trials</Button>
+          <Button className="cursor-pointer" onClick={() => navigate("/trials")}>Browse All Trials</Button>
         </Card>
       </div>
     );
@@ -182,7 +189,7 @@ export default function TrialDetail() {
         <Button
           variant="ghost"
           onClick={() => navigate("/trials")}
-          className="gap-2 pl-0 hover:bg-transparent hover:text-primary-color transition-colors"
+          className="gap-2 pl-0 hover:bg-transparent hover:text-primary-color transition-colors cursor-pointer"
         >
           <ArrowLeft size={16} />
           Back to Trials
@@ -214,12 +221,18 @@ export default function TrialDetail() {
             </Button>
             <Button
               variant="outline"
-              className={`h-12 px-4 rounded-xl border transition-colors ${
+              className={`h-12 px-4 rounded-xl border transition-colors cursor-pointer ${
                 isSaved
                   ? "bg-white/20 border-white/40 text-white hover:bg-white/30"
                   : "bg-transparent border-white/30 text-white hover:bg-white/10"
               }`}
-              onClick={() => toggleSave(id!)}
+              onClick={() => {
+                if (!isAuthenticated) {
+                  openAuthModal("Sign in to your Voche account to save clinical trials.");
+                  return;
+                }
+                toggleSave(id!);
+              }}
             >
               <Heart
                 size={20}
@@ -357,9 +370,15 @@ export default function TrialDetail() {
                 <p className="text-xs text-muted-foreground mb-8">{questions.length} questions</p>
                 <Button
                   style={{ backgroundColor: "hsl(var(--primary))", color: "white" }}
-                  onClick={() => setShowQuiz(true)}
+                  onClick={() => {
+                    if (!isAuthenticated) {
+                      openAuthModal("Sign in to your Voche account to take eligibility quizzes.");
+                      return;
+                    }
+                    setShowQuiz(true);
+                  }}
                   size="lg"
-                  className="shadow-md rounded-xl px-8"
+                  className="shadow-md rounded-xl px-8 cursor-pointer"
                 >
                   Start Eligibility Check
                 </Button>
@@ -394,9 +413,9 @@ export default function TrialDetail() {
                   <div className="space-y-3">
                     {questions[currentQuestion].type === "yes_no" && (
                       <div className="grid grid-cols-2 gap-4">
-                        <Button variant="outline" className="h-16 text-lg font-medium hover:bg-primary-color hover:text-primary-foreground hover:border-primary transition-all rounded-xl"
+                        <Button variant="outline" className="h-16 text-lg font-medium hover:bg-primary-color hover:text-primary-foreground hover:border-primary transition-all rounded-xl cursor-pointer"
                           onClick={() => handleAnswer(questions[currentQuestion].question_id, "yes")}>Yes</Button>
-                        <Button variant="outline" className="h-16 text-lg font-medium hover:bg-primary-color hover:text-primary-foreground hover:border-primary transition-all rounded-xl"
+                        <Button variant="outline" className="h-16 text-lg font-medium hover:bg-primary-color hover:text-primary-foreground hover:border-primary transition-all rounded-xl cursor-pointer"
                           onClick={() => handleAnswer(questions[currentQuestion].question_id, "no")}>No</Button>
                       </div>
                     )}
@@ -404,7 +423,7 @@ export default function TrialDetail() {
                       <div className="space-y-3">
                         {questions[currentQuestion].options?.map((option, idx) => (
                           <Button key={option} variant="outline"
-                            className="w-full justify-start h-14 text-base px-6 hover:bg-primary-color hover:text-primary-foreground hover:border-primary transition-all rounded-xl"
+                            className="w-full justify-start h-14 text-base px-6 hover:bg-primary-color hover:text-primary-foreground hover:border-primary transition-all rounded-xl cursor-pointer"
                             onClick={() => handleAnswer(questions[currentQuestion].question_id, idx)}>
                             {option}
                           </Button>
@@ -415,7 +434,7 @@ export default function TrialDetail() {
                       <div className="flex gap-3 justify-center flex-wrap">
                         {[1, 2, 3, 4, 5].map((n) => (
                           <Button key={n} variant="outline"
-                            className="w-14 h-14 text-lg font-bold hover:bg-primary-color hover:text-primary-foreground rounded-xl"
+                            className="w-14 h-14 text-lg font-bold hover:bg-primary-color hover:text-primary-foreground rounded-xl cursor-pointer"
                             onClick={() => handleAnswer(questions[currentQuestion].question_id, n)}>
                             {n}
                           </Button>
@@ -435,7 +454,7 @@ export default function TrialDetail() {
                             }
                           }}
                         />
-                        <Button className="w-full h-12 rounded-xl"
+                        <Button className="w-full h-12 rounded-xl cursor-pointer"
                           onClick={(e) => {
                             const ta = e.currentTarget.previousElementSibling as HTMLTextAreaElement;
                             handleAnswer(questions[currentQuestion].question_id, ta.value);
@@ -461,10 +480,10 @@ export default function TrialDetail() {
                       Based on your answers, you appear to be a good candidate for this trial.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                      <Button onClick={handleSubmitSurvey} size="lg" className="shadow-lg h-12 px-8 rounded-xl" disabled={submitSurvey.isPending}>
+                      <Button onClick={handleSubmitSurvey} size="lg" className="shadow-lg h-12 px-8 rounded-xl cursor-pointer" disabled={submitSurvey.isPending}>
                         {submitSurvey.isPending ? "Submitting..." : "Submit & Connect"}
                       </Button>
-                      <Button variant="outline" onClick={resetQuiz} className="h-12 rounded-xl">Retake Quiz</Button>
+                      <Button variant="outline" onClick={resetQuiz} className="h-12 rounded-xl cursor-pointer">Retake Quiz</Button>
                     </div>
                   </>
                 ) : (
@@ -477,11 +496,11 @@ export default function TrialDetail() {
                       Based on your answers, you might not meet all criteria. We still recommend submitting and consulting with a healthcare provider.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                      <Button onClick={handleSubmitSurvey} size="lg" variant="outline" className="h-12 px-8 rounded-xl" disabled={submitSurvey.isPending}>
+                      <Button onClick={handleSubmitSurvey} size="lg" variant="outline" className="h-12 px-8 rounded-xl cursor-pointer" disabled={submitSurvey.isPending}>
                         {submitSurvey.isPending ? "Submitting..." : "Submit Anyway"}
                       </Button>
-                      <Button variant="outline" onClick={resetQuiz} className="h-12 rounded-xl">Retake Quiz</Button>
-                      <Button variant="default" asChild className="h-12 rounded-xl">
+                      <Button variant="outline" onClick={resetQuiz} className="h-12 rounded-xl cursor-pointer">Retake Quiz</Button>
+                      <Button variant="default" asChild className="h-12 rounded-xl cursor-pointer">
                         <Link to="/trials">Browse Other Trials</Link>
                       </Button>
                     </div>
@@ -492,14 +511,14 @@ export default function TrialDetail() {
           </Card>
 
           {/* Completed Surveys */}
-          {completedSurveys.length > 0 && (
+          {completedSurveysList.length > 0 && (
             <Card className="p-6 md:p-8 border-border/60 shadow-sm">
               <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
                 <ClipboardList size={20} className="text-primary-color" />
                 Completed Surveys
               </h2>
               <div className="space-y-3">
-                {completedSurveys.map((completed) => (
+                {completedSurveysList.map((completed) => (
                   <div key={completed.completion_id}
                     className="flex items-center justify-between p-4 bg-muted/20 rounded-xl border hover:border-primary/20 transition-colors">
                     <div>
@@ -555,7 +574,17 @@ export default function TrialDetail() {
                 <div className="font-medium">{trial.contact || "Contact via trial coordinator"}</div>
               </div>
             </div>
-            <Button className="w-full font-bold h-11 rounded-xl shadow-sm" onClick={handleConnect} disabled={isConnected}>
+            <Button 
+              className="w-full font-bold h-11 rounded-xl shadow-sm cursor-pointer" 
+              onClick={() => {
+                if (!isAuthenticated) {
+                  openAuthModal("Sign in to your Voche account to contact the trial team.");
+                  return;
+                }
+                handleConnect();
+              }} 
+              disabled={isConnected}
+            >
               {isConnected ? "Request Sent" : "Contact Trial Team"}
             </Button>
           </Card>

@@ -41,6 +41,10 @@ const PHASE_OPTIONS = [
   "all", "Phase 1", "Phase 2", "Phase 3", "Phase 4", "Post-Market",
 ];
 
+const STATUS_OPTIONS = [
+  "all", "Recruiting", "Active", "Completed", "Suspended", "Terminated"
+];
+
 export default function Trials() {
   const navigate = useNavigate();
   const { state } = useData();
@@ -50,6 +54,10 @@ export default function Trials() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDisease, setSelectedDisease] = useState("all");
   const [selectedPhase, setSelectedPhase] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState("all");
+  const [locationQuery, setLocationQuery] = useState("");
+  const [sponsorQuery, setSponsorQuery] = useState("");
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
@@ -61,6 +69,9 @@ export default function Trials() {
     search: searchQuery,
     disease: selectedDisease,
     phase: selectedPhase,
+    status: selectedStatus,
+    location: locationQuery,
+    sponsor: sponsorQuery,
   });
 
   const totalPages = Math.ceil(trials.length / itemsPerPage);
@@ -147,11 +158,64 @@ export default function Trials() {
               </SelectContent>
             </Select>
 
-            <Button variant="outline" className="h-11 flex gap-2 border-0">
+            <Button 
+              variant="outline" 
+              className={`h-11 flex gap-2 border-0 cursor-pointer transition-all ${showMoreFilters ? 'bg-primary/10 text-primary font-bold' : ''}`}
+              onClick={() => setShowMoreFilters(!showMoreFilters)}
+            >
               <Filter size={16} />
-              More Filters
+              {showMoreFilters ? "Less Filters" : "More Filters"}
             </Button>
           </div>
+
+          {showMoreFilters && (
+            <div className="grid md:grid-cols-3 gap-4 pt-2 animate-in fade-in duration-300 slide-in-from-top-2">
+              <Select
+                value={selectedStatus}
+                onValueChange={(v) => {
+                  setSelectedStatus(v);
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="h-11 bg-muted border-0">
+                  <SelectValue placeholder="Trial Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUS_OPTIONS.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {status === "all" ? "All Statuses" : status}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <div className="relative">
+                <MapPin className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Location (e.g. USA, France)"
+                  value={locationQuery}
+                  onChange={(e) => {
+                    setLocationQuery(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="pl-9 h-11 bg-muted border-0"
+                />
+              </div>
+
+              <div className="relative">
+                <Building className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Sponsor (e.g. BioMed, WHO)"
+                  value={sponsorQuery}
+                  onChange={(e) => {
+                    setSponsorQuery(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="pl-9 h-11 bg-muted border-0"
+                />
+              </div>
+            </div>
+          )}
         </div>
       </Card>
 
@@ -205,7 +269,7 @@ export default function Trials() {
           </div>
           <h3 className="text-xl font-semibold mb-2">Failed to load trials</h3>
           <p className="text-muted-foreground text-sm">Something went wrong. Please try again.</p>
-          <Button variant="outline" className="mt-6 border-0" onClick={() => window.location.reload()}>
+          <Button variant="outline" className="mt-6 border-0 cursor-pointer" onClick={() => window.location.reload()}>
             Retry
           </Button>
         </Card>
@@ -235,7 +299,7 @@ export default function Trials() {
                       variant="ghost"
                       size="icon"
                       onClick={(e) => { e.stopPropagation(); toggleSave(trial.trial_id); }} 
-                      className="rounded-full hover:bg-muted"
+                      className="rounded-full hover:bg-muted cursor-pointer"
                     >
                       <Heart
                         size={20}
@@ -317,7 +381,7 @@ export default function Trials() {
 
                 <div className="lg:w-56 space-y-3 lg:border-l lg:pl-6 lg:border-border/50">
                   <Button
-                    className="w-full gap-2 shadow-md"
+                    className="w-full gap-2 shadow-md cursor-pointer"
                     style={{ backgroundColor: "hsl(var(--primary))", color: "white" }}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -329,7 +393,7 @@ export default function Trials() {
                   </Button>
                   <Button
                     variant="outline"
-                    className="w-full gap-2 border-primary/20 text-primary hover:bg-primary/60"
+                    className="w-full gap-2 border-primary/20 text-primary hover:bg-primary/60 cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation();
                       navigate(`/trials/${trial.trial_id}`);
@@ -338,12 +402,22 @@ export default function Trials() {
                     <FileText size={16} />
                     Eligibility Quiz
                   </Button>
-                  <div className="text-center pt-2">
-                    <div className="text-[10px] uppercase font-bold text-muted-foreground">
-                      Enrollment
+                  <div className="pt-2">
+                    <div className="flex justify-between text-xs mb-1 font-medium">
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground">Enrollment</span>
+                      <span className="text-xs font-bold text-primary">
+                        {trial.enrollment} / {trial.max_enrollment || "?"}
+                      </span>
                     </div>
-                    <div className="text-xs font-medium text-primary mt-1">
-                      {trial.enrollment} enrolled 
+                    <div className="h-2 bg-muted rounded-full overflow-hidden w-full">
+                      <div
+                        className="h-full bg-primary rounded-full transition-all duration-1000 ease-out"
+                        style={{
+                          width: trial.max_enrollment
+                            ? `${Math.min((trial.enrollment / trial.max_enrollment) * 100, 100)}%`
+                            : "0%",
+                        }}
+                      />
                     </div>
                   </div>
                 </div>
@@ -358,7 +432,7 @@ export default function Trials() {
         <div className="flex justify-center items-center gap-4 py-8">
           <Button
             variant="outline"
-            className="border-0"
+            className="border-0 cursor-pointer"
             disabled={currentPage === 1}
             onClick={() => handlePageChange(currentPage - 1)}
           >
@@ -369,7 +443,7 @@ export default function Trials() {
           </span>
           <Button
             variant="outline"
-            className="border-0"
+            className="border-0 cursor-pointer"
             disabled={currentPage === totalPages}
             onClick={() => handlePageChange(currentPage + 1)}
           >
@@ -388,11 +462,14 @@ export default function Trials() {
           <p className="text-muted-foreground text-sm">Try adjusting your search or filters.</p>
           <Button
             variant="outline"
-            className="mt-6 border-0"
+            className="mt-6 border-0 cursor-pointer"
             onClick={() => {
               setSearchQuery("");
               setSelectedDisease("all");
               setSelectedPhase("all");
+              setSelectedStatus("all");
+              setLocationQuery("");
+              setSponsorQuery("");
             }}
           >
             Clear Filters

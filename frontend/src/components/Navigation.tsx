@@ -23,6 +23,8 @@ import { useTheme } from "../contexts/ThemeContext";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "sonner";
 import { useData } from "../contexts/DataContext";
+import { useQuery } from "@tanstack/react-query";
+import { notificationService } from "../services/notificationService";
 
 import {
   DropdownMenu,
@@ -76,7 +78,14 @@ export default function Navigation() {
     return `${cleanBaseUrl}${cleanAvatarPath}`;
   };
 
-  const unreadCount = state.notifications.filter((n) => !n.read).length;
+  const { data: notifData } = useQuery({
+    queryKey: ['notifications'],
+    queryFn: () => notificationService.getNotifications({ limit: 20 }),
+    enabled: isAuthenticated,
+    refetchInterval: 10000,
+  });
+
+  const unreadCount = notifData?.unread_count ?? notifData?.data?.filter((n: any) => !n.read).length ?? state.notifications.filter((n) => !n.read).length;
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     `flex items-center gap-2.5 px-6 py-2.5 rounded-full text-[11px] font-black uppercase tracking-[0.1em] transition-all duration-500 cursor-pointer
@@ -140,26 +149,28 @@ export default function Navigation() {
             }
           </Button>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className={`relative rounded-full w-12 h-12 transition-all duration-700 border-0 cursor-pointer active:scale-90
-              ${unreadCount > 0 ? "bg-primary-color text-white shadow-primary-color/40 hover:bg-primary-color/90 shadow-2xl" : "bg-background/40 hover:bg-background shadow-sm"}`}
-            onClick={() => navigate('/notifications')}
-          >
-            {unreadCount > 0 
-              ? <BellDot size={22} className="animate-[swing_0.8s_ease-out_infinite]" /> 
-              : <BellDot size={20} className="text-foreground/70" />
-            }
-            {unreadCount > 1 && (
-              <span className="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center">
-                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-color opacity-75"></span>
-                 <div className="relative inline-flex rounded-full h-4 w-4 bg-white text-primary-color text-[9px] font-black items-center justify-center shadow-lg">
-                    {unreadCount}
-                 </div>
-              </span>
-            )}
-          </Button>
+          {isAuthenticated && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`relative rounded-full w-12 h-12 transition-all duration-700 border-0 cursor-pointer active:scale-90
+                ${unreadCount > 0 ? "bg-primary-color text-white shadow-primary-color/40 hover:bg-primary-color/90 shadow-2xl" : "bg-background/40 hover:bg-background shadow-sm"}`}
+              onClick={() => navigate('/notifications')}
+            >
+              {unreadCount > 0 
+                ? <BellDot size={22} className="animate-[swing_0.8s_ease-out_infinite]" /> 
+                : <BellDot size={20} className="text-foreground/70" />
+              }
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center">
+                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-color opacity-75"></span>
+                   <div className="relative inline-flex rounded-full h-4 w-4 bg-white text-primary-color text-[9px] font-black items-center justify-center shadow-lg">
+                      {unreadCount}
+                   </div>
+                </span>
+              )}
+            </Button>
+          )}
         </div>
 
         {/* User Profile / Login */}

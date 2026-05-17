@@ -15,7 +15,6 @@ import {
   Globe,
   Eye,
   Lock,
-  LogIn,
   FileText,
   Video,
   BookOpen,
@@ -24,7 +23,7 @@ import {
 } from "lucide-react";
 import { resourceService } from "../../services/resourceService";
 import type { Resource } from "../../types/db";
-import { useAuth } from "../../contexts/AuthContext";
+import { useAuthContext } from "../../contexts/AuthContext";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -37,7 +36,7 @@ import { PageHeader } from "../../components/ui/PageHeader";
 export default function ResourceDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, openAuthModal } = useAuthContext();
   const [isVideoOpen, setIsVideoOpen] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [videoLoading, setVideoLoading] = useState(false);
@@ -143,18 +142,19 @@ export default function ResourceDetail() {
     if (!resource) return null;
     if (!canAccess) {
       return (
-        <Button asChild className="w-full gap-2 shadow-md">
-          <Link to="/login">
-            <LogIn size={16} />
-            Login to Access
-          </Link>
+        <Button 
+          className="w-full gap-2 shadow-md bg-warning hover:bg-warning/90 text-warning-foreground font-semibold cursor-pointer"
+          onClick={() => openAuthModal("Sign in to your Voche account to access this resource.")}
+        >
+          <Lock size={16} />
+          Unlock Resource
         </Button>
       );
     }
     switch (resource.type) {
       case "video":
         return (
-          <Button className="w-full gap-2 shadow-md" onClick={handleVideoPlay}>
+          <Button className="w-full gap-2 shadow-md cursor-pointer" onClick={handleVideoPlay}>
             <Play size={16} />
             Watch Video
           </Button>
@@ -162,7 +162,7 @@ export default function ResourceDetail() {
       case "course":
         return (
           <Button
-            className="w-full gap-2 shadow-md"
+            className="w-full gap-2 shadow-md cursor-pointer"
             onClick={() => toast.success("Course Started")}
           >
             <Award size={16} />
@@ -172,7 +172,7 @@ export default function ResourceDetail() {
       default:
         return (
           <Button
-            className="w-full gap-2 shadow-md"
+            className="w-full gap-2 shadow-md cursor-pointer"
             onClick={simulateDownload}
             disabled={isDownloading}
           >
@@ -214,7 +214,7 @@ export default function ResourceDetail() {
           <p className="text-muted-foreground mb-6">
             This resource doesn't exist or has been removed.
           </p>
-          <Button onClick={() => navigate("/resources")}>
+          <Button onClick={() => navigate("/resources")} className="cursor-pointer">
             Back to Resources
           </Button>
         </Card>
@@ -229,7 +229,7 @@ export default function ResourceDetail() {
       <Button
         variant="ghost"
         onClick={() => navigate("/resources")}
-        className="gap-2 pl-0 hover:bg-transparent hover:text-primary"
+        className="gap-2 pl-0 hover:bg-transparent hover:text-primary-color cursor-pointer"
       >
         <ArrowLeft size={16} />
         Back to Resources
@@ -326,7 +326,7 @@ export default function ResourceDetail() {
                   <Badge
                     key={tag}
                     variant="secondary"
-                    className="hover:bg-secondary/20 transition-colors cursor-pointer px-3 py-1"
+                    className="bg-secondary-color text-white hover:bg-secondary/90 transition-colors cursor-pointer px-3 py-1 border-none shadow-sm"
                   >
                     #{tag}
                   </Badge>
@@ -351,8 +351,14 @@ export default function ResourceDetail() {
               {getPrimaryAction()}
               <Button
                 variant="outline"
-                className="w-full gap-2 border-dashed border-border"
-                onClick={() => toast.info("Opening Preview...")}
+                className="w-full gap-2 border-dashed border-border cursor-pointer"
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    openAuthModal("Sign in to your Voche account to preview this resource.");
+                    return;
+                  }
+                  toast.info("Opening Preview...");
+                }}
               >
                 <Eye size={16} />
                 Preview Resource
@@ -425,7 +431,13 @@ export default function ResourceDetail() {
                     }`}
                     onMouseEnter={() => setHoveredStar(star)}
                     onMouseLeave={() => setHoveredStar(0)}
-                    onClick={() => setSelectedRating(star)}
+                    onClick={() => {
+                      if (!isAuthenticated) {
+                        openAuthModal("Sign in to your Voche account to rate resources.");
+                        return;
+                      }
+                      setSelectedRating(star);
+                    }}
                   />
                 ))}
                 {selectedRating > 0 && (
@@ -492,8 +504,14 @@ export default function ResourceDetail() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="w-full"
-                  onClick={() => progressMutation.mutate()}
+                  className="w-full cursor-pointer"
+                  onClick={() => {
+                    if (!isAuthenticated) {
+                      openAuthModal("Sign in to your Voche account to save progress.");
+                      return;
+                    }
+                    progressMutation.mutate();
+                  }}
                   disabled={progressMutation.isPending}
                 >
                   {progressMutation.isPending ? "Saving..." : "Save Progress"}

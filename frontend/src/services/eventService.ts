@@ -9,13 +9,8 @@ export const eventService = {
   },
 
   getById: async (id: string): Promise<Event> => {
-  const response = await apiClient.get<ApiResponse<Event>>(EVENTS.DETAILS(id));
-
-  if (!response.data?.data) {
-    throw new Error('Invalid event response');
-  }
-
-  return response.data.data;
+    const response = await apiClient.get<any>(EVENTS.DETAILS(id));
+    return response.data?.data ?? response.data;
   },
 
   register: async (id: string): Promise<void> => {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
@@ -28,18 +28,18 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
 } from "../../components/ui/dialog";
 import { Textarea } from "../../components/ui/textarea";
 import { Label } from "../../components/ui/label";
 import { toast } from "sonner";
 import { PageHeader } from "../../components/ui/PageHeader";
-import { useAuth } from "../../contexts/AuthContext";
+import { useAuthContext } from "../../contexts/AuthContext";
 import type { PostType } from "../../types/db";
 import {
   useCommunities,
   useCommunityFeed,
+  useCommunityPosts,
   useCreatePost,
   useLikePost,
 } from "../../hooks/useCommunity";
@@ -53,26 +53,63 @@ const postTypeOptions: { id: PostType; name: string }[] = [
 
 export default function Community() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAuthenticated, openAuthModal } = useAuthContext();
 
   const { data: communities = [], isLoading: isLoadingCommunities } =
     useCommunities();
-  const {
-    data: feedPosts = [],
-    isLoading: isLoadingFeed,
-    error: feedError,
-  } = useCommunityFeed();
+
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [sortBy, setSortBy] = useState("recent");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+
+  // Debounce search query changes by 500ms
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+      setCurrentPage(1);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  const isFeed = selectedCategory === "all";
+
+  // Fetch feed with page, limit and sort parameters
+  const feedQuery = useCommunityFeed({
+    page: currentPage,
+    limit: itemsPerPage,
+    sort: sortBy,
+  }, { enabled: isFeed });
+
+  // Fetch specific community posts when not in global feed
+  const postsQuery = useCommunityPosts(
+    isFeed ? undefined : selectedCategory,
+    {
+      page: currentPage,
+      limit: itemsPerPage,
+      sort: sortBy,
+    }
+  );
+
+  const queryToUse = isFeed ? feedQuery : postsQuery;
+  const feedData = queryToUse.data;
+  const isLoadingFeed = queryToUse.isLoading;
+  const feedError = queryToUse.error;
+
+  const feedPosts = feedData?.data ?? [];
+  const totalPosts = feedData?.meta?.total ?? feedPosts.length;
+  const totalPages = feedData?.meta?.pages ?? Math.ceil(totalPosts / itemsPerPage);
 
   const [selectedCommunityId, setSelectedCommunityId] = useState<string>("");
   const activeCommunityId =
-    selectedCommunityId || communities[0]?.community_id || "";
+    selectedCommunityId || (selectedCategory !== "all" ? selectedCategory : (communities[0]?.community_id || ""));
 
   const createPost = useCreatePost(activeCommunityId);
   const likePost = useLikePost(activeCommunityId);
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
-  const [sortBy, setSortBy] = useState("recent");
   const [likedPosts, setLikedPosts] = useState<string[]>([]);
   const [isNewPostOpen, setIsNewPostOpen] = useState(false);
 
@@ -80,35 +117,6 @@ export default function Community() {
   const [newPostTitle, setNewPostTitle] = useState("");
   const [newPostContent, setNewPostContent] = useState("");
   const [newPostType, setNewPostType] = useState<PostType | "">("");
-
-  // Pagination
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
-
-  // Filter posts
-  const filteredPosts = feedPosts.filter((post) => {
-    const matchesSearch =
-      post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      post.content.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory =
-      selectedCategory === "all" ||
-      post.community_id === selectedCategory ||
-      post.post_type.toLowerCase() === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
-
-  // Sort posts
-  const sortedPosts = [...filteredPosts].sort((a, b) => {
-    if (sortBy === "popular") return b.likes_count - a.likes_count;
-    if (sortBy === "replies") return b.replies_count - a.replies_count;
-    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-  });
-
-  const totalPages = Math.ceil(sortedPosts.length / itemsPerPage);
-  const paginatedPosts = sortedPosts.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage,
-  );
 
   const handlePageChange = (newPage: number) => {
     if (newPage > 0 && newPage <= totalPages) {
@@ -119,6 +127,10 @@ export default function Community() {
 
   const handleToggleLike = (postId: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!isAuthenticated) {
+      openAuthModal("Sign in to your Voche account to react to community posts.");
+      return;
+    }
     const isLiked = likedPosts.includes(postId);
     if (!isLiked) {
       likePost.mutate(postId);
@@ -149,15 +161,24 @@ export default function Community() {
     setNewPostTitle("");
     setNewPostContent("");
     setNewPostType("");
+    setSelectedCommunityId("");
     setCurrentPage(1);
   };
+
+  // Client-side search filtering on the paginated/filtered dataset
+  const filteredPosts = feedPosts.filter((post) => {
+    const matchesSearch =
+      post.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+      post.content.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
+    return matchesSearch;
+  });
 
   // Build category tabs from communities + 'all'
   const categoryTabs = [
     {
       id: "all",
       name: "All Discussions",
-      count: feedPosts.length,
+      count: communities.reduce((acc, curr) => acc + curr.post_count, 0),
       dot: "bg-primary-color",
     },
     ...communities.map((c) => ({
@@ -176,16 +197,30 @@ export default function Community() {
         badgeText="Safe & Supportive Community"
         variant="green"
         action={
-          <Dialog open={isNewPostOpen} onOpenChange={setIsNewPostOpen}>
-            <DialogTrigger asChild>
-              <Button
-                variant="hero"
-                className="gap-2 font-semibold transition-transform hover:scale-105"
-              >
-                <Plus size={20} />
-                Start Discussion
-              </Button>
-            </DialogTrigger>
+          <Dialog 
+            open={isNewPostOpen} 
+            onOpenChange={(open) => {
+              if (open && !isAuthenticated) {
+                openAuthModal("Sign in to your Voche account to start a discussion.");
+                return;
+              }
+              setIsNewPostOpen(open);
+            }}
+          >
+            <Button
+              variant="hero"
+              className="gap-2 font-semibold transition-transform hover:scale-105 cursor-pointer"
+              onClick={() => {
+                if (!isAuthenticated) {
+                  openAuthModal("Sign in to your Voche account to start a discussion.");
+                } else {
+                  setIsNewPostOpen(true);
+                }
+              }}
+            >
+              <Plus size={20} />
+              Start Discussion
+            </Button>
             <DialogContent className="sm:max-w-[525px]">
               <DialogHeader>
                 <DialogTitle>Start a New Discussion</DialogTitle>
@@ -281,11 +316,11 @@ export default function Community() {
           : categoryTabs.map((category) => (
               <div
                 key={category.id}
-                className={`p-4 rounded-xl cursor-pointer transition-all duration-200 flex flex-col items-center text-center gap-2
+                className={`p-4 rounded-xl cursor-pointer transition-all duration-300 flex flex-col items-center text-center gap-2 border border-transparent
                   ${
                     selectedCategory === category.id
-                      ? "bg-primary text-primary-foreground shadow-md scale-105"
-                      : "bg-card hover:bg-muted/50 hover:shadow-sm"
+                      ? "bg-gradient-to-br from-primary-color to-success-color text-white shadow-lg scale-105 border-primary-color/20"
+                      : "bg-card hover:bg-muted/60 hover:shadow-md hover:scale-105 hover:border-primary-color/10"
                   }`}
                 onClick={() => {
                   setSelectedCategory(category.id);
@@ -426,7 +461,7 @@ export default function Community() {
         <>
           {/* Posts List */}
           <div className="space-y-4">
-            {paginatedPosts.map((post) => {
+            {filteredPosts.map((post) => {
               const isAuthor = post.user_id === user?.id;
               const isLiked = likedPosts.includes(post.post_id);
 
@@ -453,7 +488,7 @@ export default function Community() {
                     <div className="flex-1 space-y-3">
                       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2">
                         <div className="space-y-1">
-                          <h3 className="text-lg font-bold group-hover:text-primary transition-colors">
+                          <h3 className="text-lg font-bold text-primary-color group-hover:text-primary-color/80 transition-colors">
                             {post.title}
                           </h3>
                           <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
@@ -529,7 +564,7 @@ export default function Community() {
           </div>
 
           {/* Pagination */}
-          {sortedPosts.length > itemsPerPage && (
+          {totalPages > 1 && (
             <div className="flex justify-center items-center gap-4 py-8">
               <Button
                 variant="outline"
@@ -552,7 +587,7 @@ export default function Community() {
           )}
 
           {/* Empty State */}
-          {sortedPosts.length === 0 && (
+          {filteredPosts.length === 0 && (
             <Card className="p-12 text-center border-dashed bg-muted/30">
               <MessageSquare
                 size={48}
@@ -563,8 +598,14 @@ export default function Community() {
                 Try adjusting your search or be the first to start a new topic!
               </p>
               <Button
-                className="gap-2 shadow-md"
-                onClick={() => setIsNewPostOpen(true)}
+                className="gap-2 shadow-md cursor-pointer"
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    openAuthModal("Sign in to your Voche account to start a discussion.");
+                  } else {
+                    setIsNewPostOpen(true);
+                  }
+                }}
               >
                 <Plus size={16} />
                 Start New Discussion

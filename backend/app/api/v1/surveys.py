@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.api.dependencies.connections import get_connection
-from app.api.middleware.auth_middleware import auth_middleware
+from app.api.middleware.auth_middleware import auth_middleware, auth_middleware_optional
 from app.models.survey_model import SurveyModel
 from app.schemas.surveys import (
     SurveyListResponse,
@@ -77,7 +77,7 @@ async def get_completed_survey_details(
 async def get_survey_questions(
     survey_id: UUID,
     conn=Depends(get_connection),
-    current_user: dict = Depends(auth_middleware),
+    current_user: Optional[dict] = Depends(auth_middleware_optional),
 ):
     """
     Get full survey details including questions.

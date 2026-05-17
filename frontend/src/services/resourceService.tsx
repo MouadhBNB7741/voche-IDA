@@ -8,6 +8,9 @@ export interface ResourceFilters {
   category?: string;
   page?: number;
   limit?: number;
+  sort?: string;
+  language?: string;
+  featured?: boolean;
 }
 
 export interface ResourcesResponse {
@@ -28,8 +31,13 @@ export const resourceService = {
       params.append("type", filters.type);
     if (filters.category && filters.category !== "All")
       params.append("category", filters.category);
+    if (filters.sort) params.append("sort", filters.sort);
     if (filters.page) params.append("page", String(filters.page));
     if (filters.limit) params.append("limit", String(filters.limit));
+    if (filters.language && filters.language !== "All")
+      params.append("language", filters.language);
+    if (filters.featured !== undefined && filters.featured !== null)
+      params.append("featured", String(filters.featured));
 
     const response = await apiClient.get<ResourcesResponse>(
       `${RESOURCES.LIST}?${params.toString()}`,
