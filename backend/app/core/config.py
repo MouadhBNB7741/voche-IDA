@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     email_from: str = ""
     frontend_url: str = "http://localhost:5173"
+    frontend_var: str = "http://localhost:5173"
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000", "http://localhost:8000"]
 
     model_config = SettingsConfigDict(

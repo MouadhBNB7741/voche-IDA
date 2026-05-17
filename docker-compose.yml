@@ -51,6 +51,7 @@ services:
       - DATABASE_URL=postgres://voce_user:voce_password@db:5432/voce_db
       - REDIS_URL=redis://redis:6379
       - PYTHONPATH=/app
+      - FRONTEND_VAR=${FRONTEND_VAR:-http://localhost:5173}
     depends_on:
       db:
         condition: service_healthy
