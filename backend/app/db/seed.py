@@ -800,4 +800,22 @@ async def seed_db(conn):
             
         logger.info("✅ Admin Notifications seeded.")
 
+    # ------------------------------------------------------------------
+    # 11. SEED AI CHAT SAMPLE
+    # ------------------------------------------------------------------
+    if user_ids.get("patient"):
+        conv_id = await conn.fetchval("""
+            INSERT INTO chat_conversations (user_id, title, context_type)
+            VALUES ($1, 'What is informed consent?', 'general')
+            RETURNING id
+        """, user_ids["patient"])
+        await conn.executemany("""
+            INSERT INTO chat_messages (conversation_id, sender_role, content)
+            VALUES ($1, $2, $3)
+        """, [
+            (conv_id, "user", "What is informed consent in a clinical trial?"),
+            (conv_id, "assistant", "Informed consent means you are told the purpose, risks and benefits of a trial before you choose to join, and you can leave at any time. This is general information, not medical advice."),
+        ])
+        logger.info("✅ AI chat sample seeded.")
+
     logger.info("🌱 Database seeding complete.")

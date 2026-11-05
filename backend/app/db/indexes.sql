@@ -395,6 +395,13 @@ COMMENT ON INDEX idx_platform_feedback_category IS 'Filter feedback by category 
 
 
 -- ============================================================================
+-- 9. AI ASSISTANT INDEXES
+-- ============================================================================
+CREATE INDEX IF NOT EXISTS idx_chat_conversations_user_updated ON chat_conversations(user_id, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_conv_created ON chat_messages(conversation_id, created_at ASC);
+
+
+-- ============================================================================
 -- INDEXES CREATION COMPLETE
 -- ============================================================================
 
