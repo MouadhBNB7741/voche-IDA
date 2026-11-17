@@ -140,14 +140,15 @@ async def seed_events() -> list[str]:
 
 @pytest.mark.asyncio
 async def test_list_events_success(client: AsyncClient, setup_test_db):
-    """Test listing events returns all seeded events."""
-    await seed_events()
+    """Test listing events returns the seeded events, without the cancelled one."""
+    ids = await seed_events()
 
     res = await client.get("/api/v1/events/")
     assert res.status_code == 200
     data = res.json()
-    assert len(data["data"]) >= 5
-    assert data["meta"]["total"] >= 5
+    assert len(data["data"]) == 4
+    assert data["meta"]["total"] == 4
+    assert ids[4] not in [e["event_id"] for e in data["data"]]
 
 
 @pytest.mark.asyncio
@@ -214,7 +215,7 @@ async def test_list_events_pagination(client: AsyncClient, setup_test_db):
     assert len(data["data"]) == 2
     assert data["meta"]["page"] == 1
     assert data["meta"]["limit"] == 2
-    assert data["meta"]["total"] >= 5
+    assert data["meta"]["total"] == 4
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -348,7 +349,7 @@ async def test_register_requires_auth(client: AsyncClient, setup_test_db):
     ids = await seed_events()
 
     res = await client.post(f"/api/v1/events/{ids[0]}/register")
-    assert res.status_code == 403
+    assert res.status_code == 401
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -476,7 +477,7 @@ async def test_my_events_pagination(client: AsyncClient, setup_test_db, auth_hea
 async def test_my_events_requires_auth(client: AsyncClient, setup_test_db):
     """Test my events without auth fails."""
     res = await client.get("/api/v1/users/me/events")
-    assert res.status_code == 403
+    assert res.status_code == 401
 
 
 # ──────────────────────────────────────────────────────────────────────────────

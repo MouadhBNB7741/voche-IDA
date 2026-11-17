@@ -49,7 +49,7 @@ async def seed_notification(client: AsyncClient, conn, user_id: str, **overrides
     model = NotificationModel(conn)
     defaults = {
         "user_id": user_id,
-        "notif_type": "system",
+        "notif_type": "system_announcement",
         "title": "Test Notification",
         "message": "This is a test notification.",
         "link": "/test",
@@ -112,7 +112,7 @@ class TestGetNotifications:
             for i in range(3):
                 await model.create(
                     user_id=user_id,
-                    notif_type="system",
+                    notif_type="system_announcement",
                     title=f"Notification {i}",
                     message=f"Message {i}",
                 )
@@ -135,8 +135,8 @@ class TestGetNotifications:
         async with pool.acquire() as conn:
             from app.models.notification_model import NotificationModel
             model = NotificationModel(conn)
-            n1 = await model.create(user_id=user_id, notif_type="system", title="Read", message="msg")
-            await model.create(user_id=user_id, notif_type="system", title="Unread", message="msg")
+            n1 = await model.create(user_id=user_id, notif_type="system_announcement", title="Read", message="msg")
+            await model.create(user_id=user_id, notif_type="system_announcement", title="Unread", message="msg")
             await model.mark_read(str(n1["notification_id"]), user_id)
 
         # Filter unread only
@@ -155,17 +155,17 @@ class TestGetNotifications:
         async with pool.acquire() as conn:
             from app.models.notification_model import NotificationModel
             model = NotificationModel(conn)
-            await model.create(user_id=user_id, notif_type="trial", title="Trial", message="m")
-            await model.create(user_id=user_id, notif_type="system", title="System", message="m")
+            await model.create(user_id=user_id, notif_type="trial_match", title="Trial", message="m")
+            await model.create(user_id=user_id, notif_type="system_announcement", title="System", message="m")
 
         resp = await client.get(
-            f"{BASE}/notifications?type=trial",
+            f"{BASE}/notifications?type=trial_match",
             headers=auth_header(token),
         )
         assert resp.status_code == 200
         data = resp.json()["data"]
         assert len(data) == 1
-        assert data[0]["type"] == "trial"
+        assert data[0]["type"] == "trial_match"
 
     async def test_pagination(self, client: AsyncClient):
         token, user_id = await register_user(client)
@@ -176,7 +176,7 @@ class TestGetNotifications:
             from app.models.notification_model import NotificationModel
             model = NotificationModel(conn)
             for i in range(5):
-                await model.create(user_id=user_id, notif_type="system", title=f"N{i}", message="m")
+                await model.create(user_id=user_id, notif_type="system_announcement", title=f"N{i}", message="m")
 
         resp = await client.get(
             f"{BASE}/notifications?page=1&limit=2",
@@ -201,7 +201,7 @@ class TestMarkRead:
         async with pool.acquire() as conn:
             from app.models.notification_model import NotificationModel
             model = NotificationModel(conn)
-            n = await model.create(user_id=user_id, notif_type="system", title="T", message="M")
+            n = await model.create(user_id=user_id, notif_type="system_announcement", title="T", message="M")
 
         notif_id = str(n["notification_id"])
         resp = await client.patch(
@@ -229,7 +229,7 @@ class TestMarkRead:
         async with pool.acquire() as conn:
             from app.models.notification_model import NotificationModel
             model = NotificationModel(conn)
-            n = await model.create(user_id=user_b, notif_type="system", title="B", message="M")
+            n = await model.create(user_id=user_b, notif_type="system_announcement", title="B", message="M")
 
         resp = await client.patch(
             f"{BASE}/notifications/{n['notification_id']}/read",
@@ -251,7 +251,7 @@ class TestMarkAllRead:
             from app.models.notification_model import NotificationModel
             model = NotificationModel(conn)
             for i in range(3):
-                await model.create(user_id=user_id, notif_type="system", title=f"N{i}", message="m")
+                await model.create(user_id=user_id, notif_type="system_announcement", title=f"N{i}", message="m")
 
         resp = await client.patch(
             f"{BASE}/notifications/mark-all-read",
@@ -289,7 +289,7 @@ class TestDeleteNotification:
         async with pool.acquire() as conn:
             from app.models.notification_model import NotificationModel
             model = NotificationModel(conn)
-            n = await model.create(user_id=user_id, notif_type="system", title="T", message="M")
+            n = await model.create(user_id=user_id, notif_type="system_announcement", title="T", message="M")
 
         resp = await client.delete(
             f"{BASE}/notifications/{n['notification_id']}",
@@ -316,7 +316,7 @@ class TestDeleteNotification:
         async with pool.acquire() as conn:
             from app.models.notification_model import NotificationModel
             model = NotificationModel(conn)
-            n = await model.create(user_id=user_b, notif_type="system", title="B", message="M")
+            n = await model.create(user_id=user_b, notif_type="system_announcement", title="B", message="M")
 
         resp = await client.delete(
             f"{BASE}/notifications/{n['notification_id']}",
