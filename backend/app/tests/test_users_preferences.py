@@ -31,21 +31,21 @@ async def test_update_notification_preferences(client: AsyncClient, auth_headers
     # 2. Update Prefs
     payload = {
         "emailAlerts": False,
-        "frequency": "daily_digest"
+        "frequency": "daily"
     }
     
     # Need auth headers function
     headers = {"Authorization": f"Bearer {token}"}
     
-    res = await client.patch("/api/v1/users/me/notifications", json=payload, headers=headers)
+    res = await client.patch("/api/v1/users/me/preferences/notifications", json=payload, headers=headers)
     assert res.status_code == 200, res.text
     data = res.json()["data"]["notification_preferences"]
     
     assert data["emailAlerts"] is False
-    assert data["frequency"] == "daily_digest"
+    assert data["frequency"] == "daily"
     # defaults check
     assert data.get("pushNotifications") is True
     
     # 3. Invalid Frequency
-    res_bad = await client.patch("/api/v1/users/me/notifications", json={"frequency": "invalid_enum"}, headers=headers)
+    res_bad = await client.patch("/api/v1/users/me/preferences/notifications", json={"frequency": "invalid_enum"}, headers=headers)
     assert res_bad.status_code == 422

@@ -2,7 +2,7 @@
 Notification Schemas — Pydantic models for request/response validation.
 """
 from pydantic import BaseModel, Field
-from typing import Optional, List, Any, Dict
+from typing import Optional, List, Any, Dict, Literal
 from datetime import datetime
 from enum import Enum
 from uuid import UUID
@@ -93,7 +93,7 @@ class NotificationPreferences(BaseModel):
     """
     emailAlerts: bool = True
     pushNotifications: bool = True
-    frequency: str = "instant"  # daily_digest, weekly, instant
+    frequency: Literal["instant", "daily", "weekly"] = "instant"
     notificationTypes: Dict[NotificationType, bool] = Field(
         default_factory=lambda: {
             NotificationType.TRIAL_MATCH: True,
