@@ -1,9 +1,14 @@
 import asyncio
 import logging
+import os
 from typing import Callable, Coroutine, List
 from app.db.postgres import PostgresDB
+from app.models.user_model import UserModel
 
 logger = logging.getLogger(__name__)
+
+# Same folder that main.py serves at /static (relative to the backend folder)
+UPLOADS_DIR = "uploads"
 
 class CronJob:
     def __init__(self, name: str, func: Callable[[], Coroutine], interval_seconds: int):
@@ -47,21 +52,56 @@ class CronManager:
 
 # --- Cron Tasks ---
 
+def _remove_uploaded_file(url: str | None):
+    """Delete a file saved under uploads/ and served at /static/..."""
+    if not url or not url.startswith("/static/"):
+        return
+    path = os.path.join(UPLOADS_DIR, url[len("/static/"):])
+    if os.path.realpath(path).startswith(os.path.realpath(UPLOADS_DIR) + os.sep) and os.path.isfile(path):
+        try:
+            os.remove(path)
+        except OSError as e:
+            logger.warning(f"Could not delete uploaded file {path}: {e}")
+
+
 async def purge_deleted_accounts():
     """
-    Purge user accounts scheduled for deletion that have passed their 1-week grace period.
+    Anonymize user accounts scheduled for deletion that have passed their 1-week grace period.
+    Each account is handled on its own, so one failure cannot block the others.
     """
     pool = PostgresDB.get_pool()
     if not pool:
         return
     async with pool.acquire() as conn:
-        query = "DELETE FROM users WHERE deletion_scheduled_at <= NOW()"
-        deleted_count = await conn.execute(query)
-        if deleted_count and deleted_count != "DELETE 0":
-            logger.info(f"Cron [purge_deleted_accounts]: Successfully purged scheduled accounts: {deleted_count}")
+        user_model = UserModel(conn)
+        anonymized = 0
+        for user_id in await user_model.get_users_due_for_deletion():
+            try:
+                avatar = await user_model.anonymize_user(user_id)
+                _remove_uploaded_file(avatar)
+                anonymized += 1
+            except Exception as e:
+                logger.error(f"Cron [purge_deleted_accounts]: Could not anonymize user {user_id}: {e}", exc_info=True)
+        if anonymized:
+            logger.info(f"Cron [purge_deleted_accounts]: Anonymized {anonymized} scheduled account(s)")
+
+
+async def lift_expired_suspensions():
+    """
+    Make accounts active again once their suspension end date has passed.
+    (Login and every authenticated request also do this for the user concerned.)
+    """
+    pool = PostgresDB.get_pool()
+    if not pool:
+        return
+    async with pool.acquire() as conn:
+        result = await UserModel(conn).lift_all_expired_suspensions()
+        if result and result != "UPDATE 0":
+            logger.info(f"Cron [lift_expired_suspensions]: Suspensions lifted: {result}")
 
 # Singleton Cron Manager instance
 cron_manager = CronManager()
 
 # Register cron tasks here
 cron_manager.add_job("purge_deleted_accounts", purge_deleted_accounts, interval_seconds=3600)
+cron_manager.add_job("lift_expired_suspensions", lift_expired_suspensions, interval_seconds=3600)

@@ -17,7 +17,7 @@ from app.models.profile_model import ProfileModel
 from app.core.security import hash_password, verify_password, create_jwt
 from app.api.dependencies.connections import get_connection, get_transaction
 from app.services.email import EmailService
-from app.api.middleware.auth_middleware import auth_middleware
+from app.api.middleware.auth_middleware import auth_middleware, account_suspended_error
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -75,9 +75,14 @@ async def login(data: LoginRequest, conn=Depends(get_connection)):
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
-    if not verify_password(data.password, user["password_hash"]):
+    # Google sign-in accounts have no password
+    if not user["password_hash"] or not verify_password(data.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
-        
+
+    user = await user_model.lift_expired_suspension(user)
+    if user["status"] == 'suspended':
+        raise account_suspended_error(user)
+
     if not user["is_active"] or user["status"] != 'active':
         raise HTTPException(status_code=403, detail="Account is inactive or suspended")
 

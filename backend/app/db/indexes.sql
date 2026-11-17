@@ -53,6 +53,11 @@ COMMENT ON INDEX idx_password_reset_tokens_token IS 'Fast token lookup for passw
 COMMENT ON INDEX idx_password_reset_tokens_expires_at IS 'Used for cleanup jobs to remove old tokens';
 
 
+-- user_oauth_accounts table
+-- Purpose: List the social sign-in accounts of a user
+CREATE INDEX idx_user_oauth_accounts_user ON user_oauth_accounts(user_id);
+
+
 -- user_profiles table
 -- Purpose: One-to-one lookups, organization membership queries
 CREATE INDEX idx_user_profiles_user_id ON user_profiles(user_id);

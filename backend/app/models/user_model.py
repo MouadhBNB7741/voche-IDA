@@ -11,12 +11,97 @@ class UserModel(DBModel):
     async def get_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         """Fetch user by email."""
         query = """
-            SELECT id, email, password_hash, user_type, is_active, status, deletion_scheduled_at
+            SELECT id, email, password_hash, user_type, is_active, status, deletion_scheduled_at,
+                   suspended_until, suspended_reason
             FROM users
             WHERE email = $1
         """
         user = await self.conn.fetchrow(query, email)
         return self._record_to_dict(user) if user else None
+
+    # ── Account states ───────────────────────────────────────────────────────
+
+    async def lift_expired_suspension(self, user: Dict[str, Any]) -> Dict[str, Any]:
+        """If this user's suspension has ended, make the account active again.
+        Returns the user with its up-to-date status. A ban (no end date) never ends."""
+        if user.get("status") != "suspended" or not user.get("suspended_until"):
+            return user
+        row = await self.conn.fetchrow("""
+            UPDATE users
+            SET status = 'active', suspended_until = NULL, suspended_reason = NULL, updated_at = NOW()
+            WHERE id = $1 AND status = 'suspended' AND suspended_until <= NOW()
+            RETURNING status, suspended_until, suspended_reason
+        """, user["id"])
+        return {**user, **dict(row)} if row else user
+
+    async def lift_all_expired_suspensions(self) -> str:
+        """Make every account whose suspension has ended active again."""
+        return await self.conn.execute("""
+            UPDATE users
+            SET status = 'active', suspended_until = NULL, suspended_reason = NULL, updated_at = NOW()
+            WHERE status = 'suspended' AND suspended_until <= NOW()
+        """)
+
+    async def cancel_deletion(self, user_id: str) -> bool:
+        """Cancel a scheduled account deletion. Returns False if none was scheduled."""
+        cancelled = await self.conn.fetchval("""
+            UPDATE users SET deletion_scheduled_at = NULL, updated_at = NOW()
+            WHERE id = $1 AND deletion_scheduled_at IS NOT NULL
+            RETURNING id
+        """, user_id)
+        return cancelled is not None
+
+    async def get_users_due_for_deletion(self) -> list:
+        """Users whose 7-day deletion grace period has passed and who are not anonymized yet."""
+        rows = await self.conn.fetch("""
+            SELECT id FROM users
+            WHERE deletion_scheduled_at <= NOW() AND status <> 'deleted'
+        """)
+        return [row["id"] for row in rows]
+
+    # Rows that only describe the person, removed when the account is anonymized.
+    # Posts, comments, likes, ratings, reports, survey answers and event registrations
+    # are kept and now belong to "Deleted User".
+    _PERSONAL_DATA_TABLES = (
+        "user_profiles", "doctor_verifications", "password_reset_tokens", "notifications",
+        "trial_saves", "trial_alerts", "organization_members", "working_group_members",
+        "user_oauth_accounts",
+    )
+
+    async def anonymize_user(self, user_id: str) -> Optional[str]:
+        """Remove a user's personal data but keep the account row, so their posts and
+        comments stay and show "Deleted User". The user can no longer log in.
+        Returns the old avatar URL, so the caller can delete the file."""
+        async with self.conn.transaction():
+            avatar = await self.conn.fetchval(
+                "SELECT avatar FROM users WHERE id = $1 FOR UPDATE", user_id
+            )
+            await self.conn.execute("""
+                UPDATE users SET
+                    email = 'deleted-' || id || '@deleted.invalid',
+                    password_hash = NULL,
+                    display_name = 'Deleted User',
+                    first_name = NULL,
+                    last_name = NULL,
+                    country = NULL,
+                    avatar = NULL,
+                    verification = '{"status": "not_submitted"}'::jsonb,
+                    status = 'deleted',
+                    is_active = FALSE,
+                    is_verified = FALSE,
+                    suspended_until = NULL,
+                    suspended_reason = NULL,
+                    last_login = NULL,
+                    updated_at = NOW()
+                WHERE id = $1
+            """, user_id)
+            for table in self._PERSONAL_DATA_TABLES:
+                await self.conn.execute(f"DELETE FROM {table} WHERE user_id = $1", user_id)
+            for table in ("user_activity_log", "platform_feedback"):
+                await self.conn.execute(
+                    f"UPDATE {table} SET ip_address = NULL, user_agent = NULL WHERE user_id = $1", user_id
+                )
+        return avatar
 
     async def get_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
         """Fetch user by ID."""

@@ -393,3 +393,19 @@ async def schedule_delete_my_account(
         "success": True,
         "message": "Your account has been scheduled for deletion in 7 days. Log in anytime before then to cancel."
     }
+
+
+@router.post("/me/cancel-deletion", status_code=200)
+async def cancel_my_account_deletion(
+    current_user: dict = Depends(auth_middleware),
+    conn=Depends(get_connection)
+):
+    """
+    Cancel a scheduled account deletion (logging in also cancels it).
+    """
+    cancelled = await UserModel(conn).cancel_deletion(current_user['id'])
+    return {
+        "success": True,
+        "message": "Your account deletion has been cancelled." if cancelled
+                   else "Your account is not scheduled for deletion."
+    }

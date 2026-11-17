@@ -34,20 +34,21 @@ SET timezone = 'UTC';
 -- users: Core identity and access control
 -- -----------------------------------------------------------------------------
 -- Purpose: Main user authentication and profile data
--- Roles: patient, hcp (healthcare professional), org_member, admin
+-- Roles: patient, caregiver, hcp (healthcare professional), org_member, admin
 -- Notes: Email is primary login credential, password_hash uses Argon2/Bcrypt
+--        (NULL for Google sign-in users without a password)
 -- -----------------------------------------------------------------------------
 
 CREATE TABLE users (
     -- Primary Key
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    
+
     -- Authentication
     email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    
+    password_hash VARCHAR(255),
+
     -- User Identity
-    user_type VARCHAR(50) NOT NULL,              -- patient, hcp, org_member, admin
+    user_type VARCHAR(50),                       -- patient, caregiver, hcp, org_member, admin (NULL until chosen during onboarding)
     display_name VARCHAR(100) NOT NULL,
     first_name VARCHAR(100),
     last_name VARCHAR(100),
@@ -57,7 +58,9 @@ CREATE TABLE users (
     language_preference VARCHAR(10) DEFAULT 'en',
     
     -- Account Status
-    status VARCHAR(50) DEFAULT 'active',          -- active, suspended, pending, deleted
+    status VARCHAR(50) DEFAULT 'active',          -- active, onboarding, suspended, pending, deleted
+    suspended_until TIMESTAMPTZ,                  -- NULL with status 'suspended' means banned
+    suspended_reason TEXT,
     is_verified BOOLEAN DEFAULT FALSE,
     is_active BOOLEAN DEFAULT TRUE,
     profile_completed BOOLEAN DEFAULT FALSE,
@@ -75,14 +78,15 @@ CREATE TABLE users (
     last_login TIMESTAMPTZ,
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     deletion_scheduled_at TIMESTAMPTZ,
-    
+    onboarding_completed_at TIMESTAMPTZ,
+
     -- Constraints
-    CONSTRAINT check_user_type CHECK (user_type IN ('patient', 'hcp', 'org_member', 'admin')),
-    CONSTRAINT check_user_status CHECK (status IN ('active', 'suspended', 'pending', 'deleted'))
+    CONSTRAINT check_user_type CHECK (user_type IN ('patient', 'caregiver', 'hcp', 'org_member', 'admin')),
+    CONSTRAINT check_user_status CHECK (status IN ('active', 'onboarding', 'suspended', 'pending', 'deleted'))
 );
 
 COMMENT ON TABLE users IS 'Core user authentication and identity management';
-COMMENT ON COLUMN users.user_type IS 'User role: patient, hcp, org_member, or admin';
+COMMENT ON COLUMN users.user_type IS 'User role: patient, caregiver, hcp, org_member, or admin';
 COMMENT ON COLUMN users.consent_given IS 'GDPR/HIPAA consent acknowledgment flag';
 
 
@@ -111,6 +115,27 @@ CREATE TABLE password_reset_tokens (
 
 COMMENT ON TABLE password_reset_tokens IS 'Password reset tokens with expiration tracking';
 COMMENT ON COLUMN password_reset_tokens.expires_at IS 'Token typically expires 1 hour after creation';
+
+
+-- -----------------------------------------------------------------------------
+-- user_oauth_accounts: Social sign-in accounts linked to a user
+-- -----------------------------------------------------------------------------
+-- Purpose: Link a Google account to a user (no provider tokens are stored)
+-- -----------------------------------------------------------------------------
+
+CREATE TABLE user_oauth_accounts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    provider VARCHAR(50) NOT NULL,
+    provider_user_id VARCHAR(255) NOT NULL,
+    provider_email VARCHAR(255),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+
+    CONSTRAINT uq_oauth_provider_user UNIQUE (provider, provider_user_id),
+    CONSTRAINT check_oauth_provider CHECK (provider IN ('google'))
+);
+
+COMMENT ON TABLE user_oauth_accounts IS 'Social sign-in accounts (Google) linked to users';
 
 
 -- ============================================================================
@@ -431,7 +456,7 @@ CREATE TABLE forum_posts (
     post_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     
     -- References
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE SET NULL, -- Preserve content if user deleted
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL, -- Preserve content if user deleted
     community_id UUID NOT NULL REFERENCES communities(community_id) ON DELETE CASCADE,
     
     -- Post Content
@@ -481,7 +506,7 @@ CREATE TABLE comments (
     
     -- References
     post_id UUID NOT NULL REFERENCES forum_posts(post_id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE SET NULL,
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
     parent_comment_id UUID REFERENCES comments(comment_id) ON DELETE CASCADE, -- For nested replies
     
     -- Content
@@ -520,7 +545,7 @@ CREATE TABLE content_reports (
     report_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     
     -- Reporter
-    reporter_id UUID NOT NULL REFERENCES users(id) ON DELETE SET NULL,
+    reporter_id UUID REFERENCES users(id) ON DELETE SET NULL,
     
     -- Target
     target_type VARCHAR(50) NOT NULL,             -- post, comment, user
@@ -830,7 +855,10 @@ CREATE TABLE doctor_verifications (
     reviewed_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     rejection_reason TEXT,
-    
+    document_url TEXT,                    -- Uploaded licence (private file)
+    issuing_region VARCHAR(100),
+    expiration_date DATE,
+
     CONSTRAINT check_verification_status CHECK (status IN ('pending', 'approved', 'rejected'))
 );
 
@@ -1102,7 +1130,8 @@ CREATE TABLE notifications (
         'trial_match', 'trial_alert', 
         'community_reply', 'community_like', 
         'event_reminder', 'event_update', 'org_request_update', 
-        'resource_update', 'survey_available', 'system_announcement'
+        'resource_update', 'survey_available', 'system_announcement',
+        'verification_update', 'moderation_action'
     ))
 );
 

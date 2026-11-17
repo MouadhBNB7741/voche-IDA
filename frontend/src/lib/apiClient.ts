@@ -50,20 +50,25 @@ apiClient.interceptors.response.use(
   },
   (error: AxiosError) => {
     try {
-      // 1. Session Invalidation (HTTP 401)
-      if (error.response?.status === 401) {
+      const data = error.response?.data as any;
+      // Some errors send details as an object, e.g. { code: 'account_suspended', message, suspended_until }
+      const detail = data?.detail && typeof data.detail === 'object' && !Array.isArray(data.detail) ? data.detail : null;
+
+      // 1. Session Invalidation (HTTP 401, or 403 for a suspended account)
+      if (error.response?.status === 401 || detail?.code === 'account_suspended') {
         if (cookies.get('voche_token')) {
-          console.warn('Session expired. Purging auth cookie.');
+          console.warn('Session ended. Purging auth cookie.');
           cookies.remove('voche_token', { path: '/' });
         }
       }
 
       // 2. Error Normalization
       // Guard against non-standard error structures
-      const data = error.response?.data as any;
       const normalizedError = {
         status: error.response?.status || 500,
-        message: data?.detail || data?.message || error.message || 'An unexpected error occurred',
+        message: detail?.message || data?.detail || data?.message || error.message || 'An unexpected error occurred',
+        code: detail?.code,
+        details: detail,
         originalError: error,
       };
       

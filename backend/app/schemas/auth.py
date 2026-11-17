@@ -8,7 +8,7 @@ class RegisterRequest(BaseModel):
     password: str = Field(..., min_length=8)
     first_name: str
     last_name: str
-    user_type: str = Field(..., pattern="^(patient|hcp|org_member|admin)$")
+    user_type: str = Field(..., pattern="^(patient|caregiver|hcp|org_member|admin)$")
 
 class LoginRequest(BaseModel):
     email: EmailStr
