@@ -296,11 +296,36 @@ async def test_user_who_posted_can_be_removed_from_the_database(client: AsyncCli
     assert await db_value("SELECT user_id FROM comments WHERE comment_id = $1", comment_id) is None
 
 
-# ── New role and password-less accounts ──────────────────────────────────────
+# ── Roles and password-less accounts ─────────────────────────────────────────
 
 async def test_register_caregiver(client: AsyncClient):
     _, user_id, _ = await create_user(client, user_type="caregiver")
     assert await db_value("SELECT user_type FROM users WHERE id = $1", user_id) == "caregiver"
+
+
+async def test_signup_cannot_create_an_admin(client: AsyncClient):
+    email = f"wannabe_{secrets.token_hex(4)}@example.com"
+    res = await client.post(f"{BASE}/auth/register", json={
+        "email": email, "password": PASSWORD,
+        "first_name": "Not", "last_name": "Admin", "user_type": "admin",
+    })
+
+    assert res.status_code == 422
+    assert await db_value("SELECT COUNT(*) FROM users WHERE email = $1", email) == 0
+
+
+async def test_make_admin_script_promotes_an_existing_account(client: AsyncClient, auth_headers):
+    from app.scripts.make_admin import make_admin
+
+    email, user_id, _ = await create_user(client)
+    async with PostgresDB.get_pool().acquire() as conn:
+        assert await make_admin(conn, email) is True
+        assert await make_admin(conn, "nobody@example.com") is False
+
+    assert await db_value("SELECT user_type FROM users WHERE id = $1", user_id) == "admin"
+    token = (await login(client, email)).json()["access_token"]
+    res = await client.get(f"{BASE}/community/admin/reports", headers=auth_headers(token))
+    assert res.status_code == 200, res.text
 
 
 async def test_account_without_password_cannot_log_in_with_one(client: AsyncClient):

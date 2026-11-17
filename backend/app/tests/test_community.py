@@ -32,8 +32,12 @@ async def create_admin_user(client: AsyncClient, email: str = "admin_test@exampl
         "password": pwd,
         "first_name": "Admin",
         "last_name": "User",
-        "user_type": "admin",
+        "user_type": "patient",
     })
+    # Signup cannot create admins: promote directly in the database
+    pool = PostgresDB.get_pool()
+    async with pool.acquire() as conn:
+        await conn.execute("UPDATE users SET user_type = 'admin' WHERE email = $1", email)
     login_res = await client.post("/api/v1/auth/login", json={
         "email": email,
         "password": pwd,

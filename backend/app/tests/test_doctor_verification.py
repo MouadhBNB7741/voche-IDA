@@ -37,7 +37,7 @@ async def test_doctor_verification_flow(client: AsyncClient, unique_email, auth_
     admin_email = "admin_" + unique_email
     await client.post("/api/v1/auth/register", json={
         "email": admin_email, "password": "password123", 
-        "first_name": "Admin", "last_name": "User", "user_type": "admin"
+        "first_name": "Admin", "last_name": "User", "user_type": "patient"
     })
     
     # Promote to admin directly via DB

@@ -8,7 +8,7 @@ class RegisterRequest(BaseModel):
     password: str = Field(..., min_length=8)
     first_name: str
     last_name: str
-    user_type: str = Field(..., pattern="^(patient|caregiver|hcp|org_member|admin)$")
+    user_type: str = Field(..., pattern="^(patient|caregiver|hcp|org_member)$")  # admins are never created by signup: see app/scripts/make_admin.py
 
 class LoginRequest(BaseModel):
     email: EmailStr
