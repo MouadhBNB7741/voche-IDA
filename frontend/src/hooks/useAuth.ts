@@ -60,6 +60,20 @@ export function useAuth() {
     },
   });
 
+  const googleMutation = useMutation({
+    mutationFn: (credential: string) => authService.loginWithGoogle(credential),
+    onSuccess: async (data) => {
+      if (data.message) {
+        toast.info(data.message, { duration: 6000 });
+      } else if (!data.is_new_user) {
+        toast.success('Welcome back!');
+      }
+      await queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
+      // A new Google user has no role yet: the onboarding wizard asks for it
+      navigate(data.user_type ? dashboardPathFor(data.user_type) : '/onboarding');
+    },
+  });
+
   const registerMutation = useMutation({
     mutationFn: (data: RegisterRequest) => authService.register(data),
     onSuccess: async () => {
@@ -93,9 +107,10 @@ export function useAuth() {
     user: user || null,
     isAuthenticated: !!user,
     isProfileComplete,
-    isLoading: isInitialLoading || loginMutation.isPending || registerMutation.isPending,
+    isLoading: isInitialLoading || loginMutation.isPending || registerMutation.isPending || googleMutation.isPending,
     isFetchingUser,
     login: loginMutation.mutateAsync,
+    loginWithGoogle: googleMutation.mutateAsync,
     register: registerMutation.mutateAsync,
     logout,
     loginStatus: loginMutation.status,
@@ -103,7 +118,7 @@ export function useAuth() {
     authStatus,
     loginError: loginMutation.error,
     registerError: registerMutation.error,
-    isProcessing: loginMutation.isPending || registerMutation.isPending
+    isProcessing: loginMutation.isPending || registerMutation.isPending || googleMutation.isPending
   };
 
   

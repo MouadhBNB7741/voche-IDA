@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from '../../components/ui/select';
 import type { UserType } from '../../types/db';
+import { GoogleSignInButton, isGoogleSignInEnabled } from '../../components/auth/GoogleSignInButton';
 import idaLogo from '../../assets/ida.webp';
 
 import { useErrorHandler } from '../../hooks/useErrorHandler';
@@ -27,7 +28,7 @@ export default function Register() {
   const [userType, setUserType] = useState<UserType>('patient');
   const [showPassword, setShowPassword] = useState(false);
   const [consent, setConsent] = useState(false);
-  const { register, isLoading } = useAuth();
+  const { register, loginWithGoogle, isLoading } = useAuth();
   const { handleError } = useErrorHandler();
 
   const isFormValid =
@@ -69,6 +70,15 @@ export default function Register() {
     } catch (error: any) {
       console.error('Registration error:', error);
       handleError(error, 'Registration failed. Please try again.');
+    }
+  };
+
+  // The role is chosen in the onboarding wizard right after
+  const handleGoogle = async (credential: string) => {
+    try {
+      await loginWithGoogle(credential);
+    } catch (error) {
+      console.error('Google sign-up error:', error);
     }
   };
 
@@ -256,6 +266,18 @@ export default function Register() {
               )}
             </Button>
           </form>
+
+          {isGoogleSignInEnabled && (
+            <>
+              <div className="flex items-center gap-3 text-xs uppercase text-muted-foreground">
+                <span className="h-px flex-1 bg-[hsl(var(--border))]" />
+                Or sign up with
+                <span className="h-px flex-1 bg-[hsl(var(--border))]" />
+              </div>
+
+              <GoogleSignInButton text="signup_with" onCredential={handleGoogle} disabled={isLoading} />
+            </>
+          )}
 
           <div className="text-center text-sm pt-4">
             <span className="text-muted-foreground">Already have an account? </span>

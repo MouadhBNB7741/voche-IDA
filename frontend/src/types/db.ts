@@ -508,8 +508,9 @@ export interface LoginRequest {
 export interface LoginResponse {
   access_token: string;
   token_type: 'bearer';
-  user_type: UserType;
+  user_type: UserType | null; // null for a new Google user until onboarding
   message?: string;
+  is_new_user?: boolean;
 }
 
 export interface PaginatedResponse<T> {

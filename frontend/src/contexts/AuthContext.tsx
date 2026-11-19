@@ -12,6 +12,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (data: any) => Promise<any>;
+  loginWithGoogle: (credential: string) => Promise<any>;
   register: (data: any) => Promise<any>;
   logout: () => void;
   authStatus: 'error' | 'pending' | 'success' | 'idle'; 
@@ -43,12 +44,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated: auth.isAuthenticated,
     isLoading: auth.isLoading,
     login: auth.login,
+    loginWithGoogle: auth.loginWithGoogle,
     register: auth.register,
     logout: auth.logout,
     authStatus: (auth.authStatus as any),
     openAuthModal,
     closeAuthModal,
-  }), [auth.user, auth.isAuthenticated, auth.isLoading, auth.login, auth.register, auth.logout, auth.authStatus, openAuthModal, closeAuthModal]);
+  }), [auth.user, auth.isAuthenticated, auth.isLoading, auth.login, auth.loginWithGoogle, auth.register, auth.logout, auth.authStatus, openAuthModal, closeAuthModal]);
 
   return (
     <AuthContext.Provider value={value}>

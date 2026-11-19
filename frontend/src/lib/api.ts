@@ -7,6 +7,8 @@ export const API_BASE = '/api/v1';
 
 export const AUTH = {
   LOGIN: `${API_BASE}/auth/login`,
+  GOOGLE: `${API_BASE}/auth/google`,
+  LOGOUT: `${API_BASE}/auth/logout`,
   REGISTER: `${API_BASE}/auth/register`,
   ME: `${API_BASE}/auth/me`,
   FORGOT_PASSWORD: `${API_BASE}/auth/request-reset`,        

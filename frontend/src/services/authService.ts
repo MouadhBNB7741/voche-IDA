@@ -74,6 +74,17 @@ export const authService = {
   },
 
   /**
+   * Sign in with the ID token from the "Sign in with Google" button.
+   */
+  loginWithGoogle: async (credential: string): Promise<LoginResponse> => {
+    const response = await apiClient.post<LoginResponse>(AUTH.GOOGLE, { credential });
+    if (response.data.access_token) {
+      platformSession.setToken(response.data.access_token);
+    }
+    return response.data;
+  },
+
+  /**
    * Fetch full user profile details based on current session token.
    */
   getMe: async (): Promise<User> => {
@@ -86,10 +97,19 @@ export const authService = {
   },
 
   /**
-   * Clear all session storage and cookies.
+   * Clear the cookie straight away, and revoke the token on the server in the background.
    */
   logout: async (): Promise<void> => {
+    const token = cookies.get("voche_token");
     platformSession.clearToken();
+    if (token) {
+      apiClient
+        .post(AUTH.LOGOUT, null, { headers: { Authorization: `Bearer ${token}` } })
+        .catch((err) => {
+          // Signed out on this device anyway; the token still expires on its own
+          console.warn("[AUTH] Could not revoke the token on the server", err);
+        });
+    }
   },
 
   /**
