@@ -179,6 +179,7 @@ export default function Register() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="patient">Patient / Participant</SelectItem>
+                    <SelectItem value="caregiver">Caregiver</SelectItem>
                     <SelectItem value="hcp">Healthcare Professional</SelectItem>
                     <SelectItem value="org_member">Organization Member</SelectItem>
                   </SelectContent>

@@ -21,6 +21,14 @@ export const USERS = {
   ME_SAVED_TRIALS: `${API_BASE}/users/me/saved-trials`,
   NOTIFICATIONS: `${API_BASE}/notifications`,
   NOTIFICATION_PREFERENCES: `${API_BASE}/users/me/preferences/notifications`,
+  ME_CANCEL_DELETION: `${API_BASE}/users/me/cancel-deletion`,
+  ONBOARDING_COMPLETE: `${API_BASE}/users/onboarding/complete`,
+};
+
+export const DOCTORS = {
+  VERIFICATION: `${API_BASE}/doctors/verification`,
+  VERIFICATION_UPLOAD: `${API_BASE}/doctors/verification/upload`,
+  DOCUMENT: (id: string) => `${API_BASE}/doctors/verification/${id}/document`,
 };
 
 export const CLINICAL = {

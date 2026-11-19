@@ -24,6 +24,7 @@ export function DangerZone() {
     const [isDeleting, setIsDeleting] = useState(false);
     const [confirmText, setConfirmText] = useState('');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [isCancelling, setIsCancelling] = useState(false);
 
     const handleDelete = async () => {
         if (confirmText !== 'DELETE') {
@@ -51,6 +52,21 @@ export function DangerZone() {
         }
     };
 
+    const handleCancelDeletion = async () => {
+        try {
+            setIsCancelling(true);
+            const response = await userService.cancelDeletion();
+            await queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
+            toast.success("Account deletion cancelled", { description: response.message });
+        } catch (error: any) {
+            toast.error("Could not cancel the deletion", {
+                description: error?.message || "Please try again later."
+            });
+        } finally {
+            setIsCancelling(false);
+        }
+    };
+
     const isScheduled = !!user?.deletion_scheduled_at;
 
     return (
@@ -69,7 +85,7 @@ export function DangerZone() {
                             {isScheduled ? (
                                 <span className="flex items-center gap-1.5 text-orange-500 font-semibold animate-pulse">
                                     <Calendar size={16} />
-                                    Account deletion has been scheduled. Re-logging cancels it.
+                                    Your account will be deleted on {new Date(user!.deletion_scheduled_at!).toLocaleDateString()}. You can cancel this until then.
                                 </span>
                             ) : (
                                 "Your account will be scheduled for permanent deletion in 1 week. You can log back in at any time to annul this schedule safely."
@@ -80,10 +96,12 @@ export function DangerZone() {
                     {isScheduled ? (
                         <Button 
                             variant="outline" 
-                            className="font-semibold border-amber-600/50 text-amber-600 bg-amber-600/10 hover:bg-amber-600/20"
-                            disabled
+                            className="font-semibold border-amber-600/50 text-amber-600 bg-amber-600/10 hover:bg-amber-600/20 cursor-pointer"
+                            onClick={handleCancelDeletion}
+                            disabled={isCancelling}
                         >
-                            Deletion Scheduled
+                            {isCancelling && <Loader2 size={16} className="animate-spin mr-2" />}
+                            Cancel Deletion
                         </Button>
                     ) : (
                         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

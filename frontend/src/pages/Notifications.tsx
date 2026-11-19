@@ -1,20 +1,10 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { notificationService, notificationKeyMap } from '../services/notificationService';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
-import { Label } from '../components/ui/label';
-import { Switch } from '../components/ui/switch';
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from '../components/ui/select';
 import {
   Bell, Check, Trash2, MessageSquare,
   FlaskConical, Calendar, Info, Clock,
@@ -53,43 +43,6 @@ export default function Notifications() {
     if (filter === 'unread') return !n.read;
     return true;
   });
-
-  const { data: prefs } = useQuery({
-    queryKey: ['notification-preferences'],
-    queryFn: notificationService.getPreferences,
-  });
-
-  const prefsMutation = useMutation({
-    mutationFn: notificationService.updatePreferences,
-    onSuccess: (updated) => {
-      queryClient.setQueryData(['notification-preferences'], updated);
-      toast.success('Preferences saved');
-    },
-    onError: () => {
-      toast.error('Failed to save preferences');
-      queryClient.invalidateQueries({ queryKey: ['notification-preferences'] });
-    },
-  });
-
-  const handleToggle = (key: string, value: boolean) => {
-    if (!prefs || !prefs.notificationTypes) return;
-    if (key === 'emailAlerts' || key === 'pushNotifications') {
-      prefsMutation.mutate({ ...prefs, [key]: value });
-    } else {
-      const caseTypes = Object.fromEntries(
-        Object.entries(prefs.notificationTypes).map(([k, v]) => [
-          notificationKeyMap[k] || k,
-          k === key ? value : v,
-        ]),
-      );
-      prefsMutation.mutate({ ...prefs, notificationTypes: caseTypes });
-    }
-  };
-
-  const handleFrequencyChange = (frequency: 'instant' | 'daily' | 'weekly') => {
-    if (!prefs) return;
-    prefsMutation.mutate({ ...prefs, frequency });
-  };
 
   const handleMarkAsRead = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();

@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -12,10 +13,14 @@ import {
   FileText,
   Lock,
   Shield,
-  Upload,
   ChevronRight,
   Palette,
-  Stethoscope
+  Stethoscope,
+  Camera,
+  Loader2,
+  X,
+  Bell,
+  Star
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'sonner';
@@ -31,24 +36,26 @@ import { InterestSelector } from '../../components/profile/InterestSelector';
 import { DesignSettings } from '../../components/profile/DesignSettings';
 import { PrivacySettings } from '../../components/profile/PrivacySettings';
 import { DangerZone } from '../../components/profile/DangerZone';
+import { NotificationSettings } from '../../components/profile/NotificationSettings';
+import { LicenceVerification } from '../../components/profile/LicenceVerification';
 import { PageHeader } from '../../components/ui/PageHeader';
-
-const languages = [
-  { code: 'en', name: 'English' },
-  { code: 'pt', name: 'Português' },
-  { code: 'es', name: 'Español' },
-  { code: 'fr', name: 'Français' },
-  { code: 'ar', name: 'العربية' },
-];
+import { useAvatarUpload } from '../../hooks/useAvatarUpload';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
+import { languages, toLanguageCode } from '../../utils/languages';
+import userService from '../../services/userService';
+import { apiClient } from '../../lib/apiClient';
+import { SYSTEM } from '../../lib/api';
 
 export default function HCPDashboard() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user, isAuthenticated } = useAuth();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { handleError } = useErrorHandler();
+  const { isAvatarLoading, handleAvatarUpload, handleAvatarDelete } = useAvatarUpload();
 
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [profileImage, setProfileImage] = useState<string | null>(null);
 
   // Sync profile image from backend
@@ -68,50 +75,78 @@ export default function HCPDashboard() {
   }, [user]);
 
   // Form states
-    const [formData, setFormData] = useState({
-      name: user?.display_name || 'Guest User',
-      email: user?.email || 'guest@example.com',
-      role: user?.user_type || 'patient',
-      organization: '',
-      location: 'Not specified',
-      language: 'English',
-      bio: 'Passionate about advancing health equity and improving access to clinical trials in underserved communities.',
-      interests: ['HIV Prevention', 'Clinical Trials'] as string[]
-    });
-
-
-  // Doctor feedback 
-  const [feedbackData, setFeedbackData] = useState({
-    category: '',
-    message: '',
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    location: '',
+    language: 'en',
+    bio: '',
+    interests: [] as string[],
   });
 
-  const isFeedbackValid = !!feedbackData.category && !!feedbackData.message.trim();
-
-  const handleSave = () => {
-    setIsEditing(false);
-    toast.success('Profile Updated', {
-      description: 'Your changes have been saved successfully.'
-    });
-  };
-
-  const handleDocFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setUploadedFile(file);
-      toast.success('File Uploaded', {
-        description: `${file.name} has been uploaded successfully. Pending verification.`
+  // Sync form data when user data loads, without overwriting changes being typed
+  useEffect(() => {
+    if (user && !isEditing) {
+      setFormData({
+        name: user.display_name || '',
+        email: user.email || '',
+        location: user.location || '',
+        language: toLanguageCode(user.language_preference),
+        bio: user.bio || '',
+        interests: (user.interests as string[]) || [],
       });
     }
+  }, [user, isEditing]);
+
+  // Doctor feedback
+  const [feedbackData, setFeedbackData] = useState({
+    category: '',
+    rating: 0,
+    message: '',
+  });
+  const [isSendingFeedback, setIsSendingFeedback] = useState(false);
+
+  const isFeedbackValid =
+    !!feedbackData.category && feedbackData.rating > 0 && feedbackData.message.trim().length >= 10;
+
+  const handleSave = async () => {
+    try {
+      setIsSaving(true);
+      await userService.updateProfile({
+        display_name: formData.name.trim(),
+        location: formData.location.trim(),
+        language_preference: formData.language,
+        bio: formData.bio,
+        interests: formData.interests,
+      });
+      await queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
+      setIsEditing(false);
+      toast.success('Profile Updated', {
+        description: 'Your changes have been saved successfully.'
+      });
+    } catch (error) {
+      handleError(error, 'Could not save your changes. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleFeedbackSubmit = () => {
-    if (!feedbackData.category || !feedbackData.message) {
-      toast.error('Error', { description: 'Please fill in all fields.' });
-      return;
+  const handleFeedbackSubmit = async () => {
+    if (!isFeedbackValid) return;
+    try {
+      setIsSendingFeedback(true);
+      await apiClient.post(SYSTEM.FEEDBACK, {
+        category: feedbackData.category,
+        rating: feedbackData.rating,
+        message: feedbackData.message.trim(),
+      });
+      toast.success('Feedback Submitted', { description: 'Thank you for your feedback!' });
+      setFeedbackData({ category: '', rating: 0, message: '' });
+    } catch (error) {
+      handleError(error, 'Could not send your feedback. Please try again.');
+    } finally {
+      setIsSendingFeedback(false);
     }
-    toast.success('Feedback Submitted', { description: 'Thank you for your feedback!' });
-    setFeedbackData({ category: '', message: '' });
   };
 
   const isDoctor = user?.user_type === 'hcp';
@@ -120,6 +155,7 @@ export default function HCPDashboard() {
     { id: 'profile', label: 'Profile Settings', icon: User },
     { id: 'design', label: 'Design & Appearance', icon: Palette },
     ...(isDoctor ? [{ id: 'doctor', label: 'Doctor Tools', icon: Stethoscope }] : []),
+    { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'privacy', label: 'Privacy & Security', icon: Shield },
     { id: 'danger', label: 'Danger Zone', icon: Lock, variant: 'destructive' }
   ];
@@ -160,6 +196,32 @@ export default function HCPDashboard() {
               ) : (
                 <User size={48} className="text-white/80" />
               )}
+            </div>
+
+            {profileImage && (
+              <button
+                type="button"
+                onClick={handleAvatarDelete}
+                className="absolute -top-1 -right-1 p-1.5 bg-white text-red-600 rounded-full cursor-pointer transition-all shadow-xl border-2 border-white z-20 hover:scale-110 flex items-center justify-center"
+                title="Delete Photo"
+                aria-label="Delete photo"
+              >
+                <X size={18} className="stroke-[3]" />
+              </button>
+            )}
+
+            <div className="absolute bottom-0 right-0">
+              <label className="p-2.5 bg-primary-color hover:bg-primary-color/90 text-white rounded-full cursor-pointer transition-all shadow-xl border-2 border-background flex items-center justify-center z-20 hover:scale-110 relative" title="Upload Photo">
+                {isAvatarLoading ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
+                <input
+                  type="file"
+                  className="sr-only"
+                  accept="image/png,image/jpeg,image/webp"
+                  aria-label="Upload photo"
+                  onChange={handleAvatarUpload}
+                  disabled={isAvatarLoading}
+                />
+              </label>
             </div>
           </div>
         }
@@ -209,7 +271,7 @@ export default function HCPDashboard() {
                   size="sm"
                   onClick={() => isEditing ? handleSave() : setIsEditing(true)}
                   className="gap-2"
-                  disabled={isEditing && (!formData.name.trim() || !formData.email.trim())}
+                  disabled={isSaving || (isEditing && !formData.name.trim())}
                 >
                   {isEditing ? <Save size={16} /> : <Edit size={16} />}
                   {isEditing ? 'Save Changes' : 'Edit Profile'}
@@ -234,8 +296,8 @@ export default function HCPDashboard() {
                       id="email"
                       type="email"
                       value={formData.email}
-                      onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                      disabled={!isEditing}
+                      readOnly
+                      disabled
                       className="bg-muted/30"
                     />
                   </div>
@@ -261,7 +323,7 @@ export default function HCPDashboard() {
                       </SelectTrigger>
                       <SelectContent>
                         {languages.map(lang => (
-                          <SelectItem key={lang.code} value={lang.name}>
+                          <SelectItem key={lang.code} value={lang.code}>
                             {lang.name}
                           </SelectItem>
                         ))}
@@ -307,39 +369,9 @@ export default function HCPDashboard() {
                   License Verification
                 </h3>
                 <p className="text-muted-foreground mb-6 text-sm">
-                  Upload your medical license for verification. Verified HCPs get access to exclusive patient recruitment tools.
+                  Submit your medical license for verification. Verified HCPs get access to exclusive patient recruitment tools.
                 </p>
-
-                <div
-                  className="border-2 border-dashed border-border rounded-xl p-10 text-center cursor-pointer hover:border-primary-color hover:bg-primary-color/5 transition-all duration-300 group"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleDocFileUpload}
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    className="hidden"
-                  />
-                  <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-primary/10 transition-colors">
-                    <Upload className="text-muted-foreground group-hover:text-primary-color transition-colors" size={28} />
-                  </div>
-
-                  {uploadedFile ? (
-                    <div className="animate-in zoom-in duration-300">
-                      <p className="font-bold text-success flex items-center justify-center gap-2">
-                        <FileText size={16} />
-                        {uploadedFile.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">Uploaded - Pending verification</p>
-                    </div>
-                  ) : (
-                    <div>
-                      <p className="font-bold text-lg mb-1">Drag & drop or click to upload</p>
-                      <p className="text-xs text-muted-foreground">PDF or Image (max 10MB)</p>
-                    </div>
-                  )}
-                </div>
+                <LicenceVerification />
               </Card>
 
               <Card className="p-6 border-border/60 shadow-sm">
@@ -363,16 +395,40 @@ export default function HCPDashboard() {
                     </Select>
                   </div>
                   <div className="space-y-2">
+                    <Label id="feedback-rating">Rating</Label>
+                    <div className="flex gap-1" role="radiogroup" aria-labelledby="feedback-rating">
+                      {[1, 2, 3, 4, 5].map((value) => (
+                        <button
+                          key={value}
+                          type="button"
+                          role="radio"
+                          aria-checked={feedbackData.rating === value}
+                          aria-label={`${value} out of 5`}
+                          onClick={() => setFeedbackData(prev => ({ ...prev, rating: value }))}
+                          className="p-1 cursor-pointer rounded-md hover:bg-muted transition-colors"
+                        >
+                          <Star
+                            size={22}
+                            className={value <= feedbackData.rating ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground'}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
                     <Label>Message</Label>
                     <Textarea
                       value={feedbackData.message}
                       onChange={(e) => setFeedbackData(prev => ({ ...prev, message: e.target.value }))}
                       rows={5}
-                      placeholder="Share your detailed feedback..."
+                      placeholder="Share your detailed feedback (at least 10 characters)..."
+                      maxLength={5000}
                       className="bg-muted/30 resize-none"
                     />
                   </div>
-                  <Button onClick={handleFeedbackSubmit} className="w-full sm:w-auto" disabled={!isFeedbackValid}>Submit Feedback</Button>
+                  <Button onClick={handleFeedbackSubmit} className="w-full sm:w-auto" disabled={!isFeedbackValid || isSendingFeedback}>
+                    {isSendingFeedback ? 'Sending...' : 'Submit Feedback'}
+                  </Button>
                 </div>
               </Card>
             </div>
@@ -380,6 +436,10 @@ export default function HCPDashboard() {
           {/* Design Tab */}
           {activeTab === 'design' && (
             <DesignSettings />
+          )}
+
+          {activeTab === 'notifications' && (
+            <NotificationSettings />
           )}
 
           {activeTab === 'privacy' && (

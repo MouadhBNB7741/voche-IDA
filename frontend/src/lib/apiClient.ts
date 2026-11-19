@@ -66,7 +66,7 @@ apiClient.interceptors.response.use(
       // Guard against non-standard error structures
       const normalizedError = {
         status: error.response?.status || 500,
-        message: detail?.message || data?.detail || data?.message || error.message || 'An unexpected error occurred',
+        message: detail?.message || detail?.error?.message || data?.detail || data?.message || error.message || 'An unexpected error occurred',
         code: detail?.code,
         details: detail,
         originalError: error,

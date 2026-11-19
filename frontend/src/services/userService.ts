@@ -2,6 +2,12 @@ import { apiClient } from "../lib/apiClient";
 import { USERS } from "../lib/api";
 import type { User } from "../types/db";
 
+export interface OnboardingDetails {
+  user_type?: User['user_type'];
+  interests?: string[];
+  location?: string;
+}
+
 export const userService = {
 
     /**
@@ -59,6 +65,22 @@ export const userService = {
     } catch (err) {
       throw err;
     }
+  },
+
+  /**
+   * Cancel a scheduled account deletion
+   */
+  cancelDeletion: async (): Promise<{ success: boolean; message: string }> => {
+    const response = await apiClient.post<{ success: boolean; message: string }>(USERS.ME_CANCEL_DELETION);
+    return response.data;
+  },
+
+  /**
+   * Finish the onboarding wizard
+   */
+  completeOnboarding: async (details: OnboardingDetails): Promise<User> => {
+    const response = await apiClient.post<User>(USERS.ONBOARDING_COMPLETE, details);
+    return response.data;
   },
 } 
 

@@ -12,7 +12,7 @@
 // ============================================================================
 
 // User & Auth
-export type UserType = 'patient' | 'hcp' | 'org_member' | 'admin';
+export type UserType = 'patient' | 'caregiver' | 'hcp' | 'org_member' | 'admin';
 export type UserStatus = 'active' | 'suspended' | 'pending' | 'deleted';
 export type ProfileVisibility = 'public' | 'community_only' | 'private';
 
@@ -98,6 +98,8 @@ export interface User {
   updated_at: string;
   last_login?: string;
   deletion_scheduled_at?: string | null;
+  onboarding_completed_at?: string | null;
+  status?: string;
 }
 
 export interface UserProfile {

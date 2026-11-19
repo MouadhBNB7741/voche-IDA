@@ -4,6 +4,7 @@ import Cookies from 'universal-cookie';
 import { toast } from 'sonner';
 import { authService } from '../services/authService';
 import type { User, LoginRequest, RegisterRequest } from '../types/db';
+import { dashboardPathFor } from '../utils/dashboard';
 
 const cookies = new Cookies();
 
@@ -55,7 +56,7 @@ export function useAuth() {
       }
       // Invalidate and refetch immediately
       await queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
-      navigate('/patientdashboard');
+      navigate(dashboardPathFor(data.user_type));
     },
   });
 
@@ -64,7 +65,7 @@ export function useAuth() {
     onSuccess: async () => {
       // Invalidate and refetch immediately
       await queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
-      navigate('/patientdashboard');
+      navigate('/onboarding');
     },
   });
 

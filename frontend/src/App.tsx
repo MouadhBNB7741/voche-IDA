@@ -20,6 +20,8 @@ import Login from './pages/Auth/Login';
 import Signup from './pages/Auth/Signup';
 import ForgotPassword from "./pages/Auth/ForgotPassword";
 import ResetPassword from "./pages/Auth/ResetPassword";
+import Onboarding from "./pages/Auth/Onboarding";
+import ProfileRedirect from "./pages/ProfileRedirect";
 import NotFound from "./pages/Error/NotFound";
 import Forbidden from "./pages/Error/Forbidden";
 
@@ -32,6 +34,8 @@ export default function App() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/profile" element={<ProfileRedirect />} />
       </Route>
 
       {/* Protected / App Routes */}
