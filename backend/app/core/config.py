@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     frontend_var: str = "http://localhost:5173"
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000", "http://localhost:8000"]
 
+    # AI Assistant (empty key = offline answers that list matching trials/resources)
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-3-flash-preview"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         extra="ignore",
