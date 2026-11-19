@@ -42,6 +42,17 @@ class UserModel(DBModel):
             WHERE status = 'suspended' AND suspended_until <= NOW()
         """)
 
+    async def complete_onboarding(self, user_id: str, user_type: Optional[str]) -> None:
+        """Save the chosen role (if the user had none) and mark onboarding as finished."""
+        await self.conn.execute("""
+            UPDATE users SET
+                user_type = COALESCE(user_type, $2),
+                status = CASE WHEN status = 'onboarding' THEN 'active' ELSE status END,
+                onboarding_completed_at = COALESCE(onboarding_completed_at, NOW()),
+                updated_at = NOW()
+            WHERE id = $1
+        """, user_id, user_type)
+
     async def cancel_deletion(self, user_id: str) -> bool:
         """Cancel a scheduled account deletion. Returns False if none was scheduled."""
         cancelled = await self.conn.fetchval("""
@@ -68,13 +79,17 @@ class UserModel(DBModel):
         "user_oauth_accounts",
     )
 
-    async def anonymize_user(self, user_id: str) -> Optional[str]:
+    async def anonymize_user(self, user_id: str) -> Dict[str, Any]:
         """Remove a user's personal data but keep the account row, so their posts and
         comments stay and show "Deleted User". The user can no longer log in.
-        Returns the old avatar URL, so the caller can delete the file."""
+        Returns the old avatar URL and licence files, so the caller can delete the files."""
         async with self.conn.transaction():
             avatar = await self.conn.fetchval(
                 "SELECT avatar FROM users WHERE id = $1 FOR UPDATE", user_id
+            )
+            documents = await self.conn.fetch(
+                "SELECT document_url FROM doctor_verifications WHERE user_id = $1 AND document_url IS NOT NULL",
+                user_id,
             )
             await self.conn.execute("""
                 UPDATE users SET
@@ -101,7 +116,7 @@ class UserModel(DBModel):
                 await self.conn.execute(
                     f"UPDATE {table} SET ip_address = NULL, user_agent = NULL WHERE user_id = $1", user_id
                 )
-        return avatar
+        return {"avatar": avatar, "documents": [row["document_url"] for row in documents]}
 
     async def get_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
         """Fetch user by ID."""
@@ -214,72 +229,3 @@ class UserModel(DBModel):
             new_prefs = json.loads(new_prefs)
         
         return {"notification_preferences": new_prefs} if new_prefs else {}
-
-    async def submit_verification(self, user_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Submit verification documents.
-        Notifications are handled by the service layer.
-        """
-        import json
-        
-        # Check current status
-        query_check = "SELECT verification FROM users WHERE id = $1"
-        current_raw = await self.conn.fetchval(query_check, user_id)
-        
-        current_ver = {}
-        if current_raw:
-             current_ver = json.loads(current_raw) if isinstance(current_raw, str) else dict(current_raw)
-             
-        if current_ver.get("status") == "pending_verification":
-             raise ValueError("Verification already pending")
-             
-        update_query = "UPDATE users SET verification = $1 WHERE id = $2 RETURNING verification"
-        new_ver_raw = await self.conn.fetchval(update_query, json.dumps(payload), user_id)
-        
-        if new_ver_raw and isinstance(new_ver_raw, str):
-            new_ver_raw = json.loads(new_ver_raw)
-        
-        return {"verification": new_ver_raw} if new_ver_raw else {}
-
-    async def delete_verification(self, user_id: str) -> Optional[Dict[str, Any]]:
-        """Delete verification data."""
-        import json
-        
-        # Get current to return it
-        query_get = "SELECT verification FROM users WHERE id = $1"
-        current_raw = await self.conn.fetchval(query_get, user_id)
-        
-        current_ver = {}
-        if current_raw:
-             current_ver = json.loads(current_raw) if isinstance(current_raw, str) else dict(current_raw)
-        
-        # Reset to not_submitted
-        reset_payload = {"status": "not_submitted"}
-        query_update = "UPDATE users SET verification = $1 WHERE id = $2"
-        await self.conn.execute(query_update, json.dumps(reset_payload), user_id)
-        
-        return current_ver
-
-    async def update_verification(self, user_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
-        """Update verification data."""
-        import json
-        
-        # Get current
-        query_get = "SELECT verification FROM users WHERE id = $1"
-        current_raw = await self.conn.fetchval(query_get, user_id)
-        
-        current_ver = {}
-        if current_raw:
-             current_ver = json.loads(current_raw) if isinstance(current_raw, str) else dict(current_raw)
-             
-        # Merge updates
-        current_ver.update(updates)
-        
-        # Save
-        query_update = "UPDATE users SET verification = $1 WHERE id = $2 RETURNING verification"
-        new_ver_raw = await self.conn.fetchval(query_update, json.dumps(current_ver), user_id)
-        
-        if new_ver_raw and isinstance(new_ver_raw, str):
-            new_ver_raw = json.loads(new_ver_raw)
-            
-        return {"verification": new_ver_raw} if new_ver_raw else {}

@@ -1,22 +1,26 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional, List, Any, Dict
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, status
 from pydantic import BaseModel, EmailStr
 import os
 import shutil
 
-from app.api.middleware.auth_middleware import auth_middleware
-from app.api.dependencies.connections import get_connection
+from app.api.middleware.auth_middleware import auth_middleware, auth_middleware_onboarding
+from app.api.dependencies.connections import get_connection, get_transaction
+from app.models.doctor_model import DoctorModel
 from app.models.profile_model import ProfileModel
 from app.models.user_model import UserModel
-from app.schemas.user import UserDetailsResponse, UserProfileUpdate
+from app.schemas.user import OnboardingComplete, UserDetailsResponse, UserProfileUpdate
+from app.services.verification_service import (
+    check_expiration_date, delete_licence, store_licence, submit_licence,
+)
 from app.schemas.notification import NotificationPreferences
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
 @router.get("/me", response_model=UserDetailsResponse)
 async def get_my_profile(
-    current_user: dict = Depends(auth_middleware),
+    current_user: dict = Depends(auth_middleware_onboarding),
     conn=Depends(get_connection)
 ):
     """
@@ -187,68 +191,52 @@ async def update_notifications(
         "data": updated_data
     }
 
+def _verification_summary(row: dict) -> dict:
+    return {
+        "verificationId": str(row["verification_id"]),
+        "status": row["status"],
+        "licenseNumber": row["license_number"],
+        "issuingRegion": row.get("issuing_region"),
+        "expirationDate": row["expiration_date"].isoformat() if row.get("expiration_date") else None,
+        "hasDocument": bool(row.get("document_url")),
+    }
+
+
 @router.post("/me/verification")
 async def submit_verification(
-    licenseNumber: str = Form(...),
-    issuingRegion: str = Form(...),
-    expirationDate: str = Form(...),
+    licenseNumber: str = Form(..., min_length=1, max_length=100),
+    issuingRegion: str = Form(..., max_length=100),
+    expirationDate: date = Form(...),
+    institution: Optional[str] = Form(None, max_length=255),
+    country: Optional[str] = Form(None, max_length=100),
+    specialization: Optional[str] = Form(None, max_length=100),
     file: UploadFile = File(...),
     current_user: dict = Depends(auth_middleware),
     conn=Depends(get_connection)
 ):
     """
-    Submit verification documents (HCP only).
+    Submit verification documents (HCP only). Saved in doctor_verifications,
+    so the request reaches the admin queue. Same as POST /doctors/verification/upload.
     """
-    # Role Check
     if current_user.get('user_type') != 'hcp':
         raise HTTPException(status_code=403, detail="Only HCP users can submit verification.")
-        
-    # File Validation
-    if file.content_type not in ["application/pdf", "image/jpeg", "image/jpg", "image/webp", "image/png"]:
-        raise HTTPException(status_code=400, detail="Invalid file type. Allowed: PDF, JPEG, JPG, WEBP, PNG.")
-    
-    # File Size Validation
-    if file.size > 5 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="File size exceeds the maximum limit of 5MB.")
-        
-    user_model = UserModel(conn)
-    
-    # Save File
-    upload_dir = "uploads/verification"
-    os.makedirs(upload_dir, exist_ok=True)
-    timestamp = int(datetime.now().timestamp())
-    filename = f"{current_user['id']}_{timestamp}_{file.filename}"
-    file_path = os.path.join(upload_dir, filename)
-    
-    try:
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail="File upload failed")
-        
-    document_url = f"/uploads/verification/{filename}"
-    
-    payload = {
-        "licenseNumber": licenseNumber,
-        "issuingRegion": issuingRegion,
-        "expirationDate": expirationDate,
-        "documentUrl": document_url,
-        "status": "pending_verification",
-        "submittedAt": datetime.now().isoformat()
-    }
-    
-    try:
-        result = await user_model.submit_verification(current_user['id'], payload)
-    except ValueError as e:
-        # Clean up file if validation failed
-        if os.path.exists(file_path):
-            os.remove(file_path)
-        raise HTTPException(status_code=400, detail=str(e))
-        
+
+    profile = await ProfileModel(conn).get_profile_by_user_id(current_user['id'])
+    specialization = specialization or await conn.fetchval(
+        "SELECT specialization FROM user_profiles WHERE user_id = $1", current_user['id']
+    )
+    row = await submit_licence(conn, current_user['id'], {
+        "license_number": licenseNumber,
+        "institution": institution or "Not provided",
+        "country": country or (profile.country if profile else None) or "Not provided",
+        "specialization": specialization or "Not provided",
+        "issuing_region": issuingRegion,
+        "expiration_date": expirationDate,
+    }, file)
     return {
         "success": True,
         "message": "Verification submitted successfully",
-        "data": result.get("verification")
+        "data": _verification_summary(row)
     }
 
 @router.delete("/me/verification")
@@ -257,28 +245,16 @@ async def delete_verification(
     conn=Depends(get_connection)
 ):
     """
-    Delete verification data (Withdraw submission).
+    Withdraw a pending verification request and delete its document.
     """
-    if current_user.get('user_type') != 'hcp' or current_user.get('user_type') != 'admin':
+    if current_user.get('user_type') not in ('hcp', 'admin'):
         raise HTTPException(status_code=403, detail="Only HCP users can access verification.")
 
-    user_model = UserModel(conn)
-    
-    # Delete from DB
-    old_data = await user_model.delete_verification(current_user['id'])
-    
-    # Delete file if exists
-    if old_data and "documentUrl" in old_data:
-        doc_url = old_data["documentUrl"]
-        if doc_url.startswith("/"):
-            doc_url = doc_url[1:]
-            
-        if os.path.exists(doc_url):
-            try:
-                os.remove(doc_url)
-            except Exception:
-                pass 
-                
+    row = await DoctorModel(conn).withdraw_pending_verification(current_user['id'])
+    if not row:
+        raise HTTPException(status_code=404, detail="No pending verification to withdraw")
+
+    await delete_licence(row.get("document_url"))
     return {
         "success": True,
         "message": "Verification data deleted successfully"
@@ -286,93 +262,77 @@ async def delete_verification(
 
 @router.patch("/me/verification")
 async def update_verification(
-    licenseNumber: Optional[str] = Form(None),
-    issuingRegion: Optional[str] = Form(None),
-    expirationDate: Optional[str] = Form(None),
+    licenseNumber: Optional[str] = Form(None, min_length=1, max_length=100),
+    issuingRegion: Optional[str] = Form(None, max_length=100),
+    expirationDate: Optional[date] = Form(None),
     file: Optional[UploadFile] = File(None),
     current_user: dict = Depends(auth_middleware),
     conn=Depends(get_connection)
 ):
     """
-    Update verification data.
+    Update a pending verification request, optionally replacing its document.
     """
-    if current_user.get('user_type') != 'hcp' :
+    if current_user.get('user_type') != 'hcp':
         raise HTTPException(status_code=403, detail="Only HCP users can access verification.")
 
-    if current_user.get('status') != 'pending_verification':
-        raise HTTPException(status_code=403, detail="You can only update verification data if your status is pending_verification.")
-        
-    user_model = UserModel(conn)
-    
-    import json
-    # Fetch current data to handle old file deletion later
-    user_data = await user_model.get_by_id(current_user['id'])
-    old_verification = user_data.get('verification', {})
-    if isinstance(old_verification, str):
-        old_verification = json.loads(old_verification)
-        
-    updates = {}
-    if licenseNumber is not None:
-        updates["licenseNumber"] = licenseNumber
-    if issuingRegion is not None:
-        updates["issuingRegion"] = issuingRegion
-    if expirationDate is not None:
-        updates["expirationDate"] = expirationDate
-    
-    # Handle File Update
-    new_file_path = None
-    if file:
-        if file.content_type not in ["application/pdf", "image/jpeg", "image/jpg", "image/webp", "image/png"]:
-            raise HTTPException(status_code=400, detail="Invalid file type. Allowed: PDF, JPEG, JPG, WEBP, PNG.")
-        if file.size > 5 * 1024 * 1024:
-            raise HTTPException(status_code=400, detail="File size exceeds the maximum limit of 5MB.")
-            
-        upload_dir = "uploads/verification"
-        os.makedirs(upload_dir, exist_ok=True)
-        timestamp = int(datetime.now().timestamp())
-        filename = f"{current_user['id']}_{timestamp}_{file.filename}"
-        new_file_path = os.path.join(upload_dir, filename)
-        
-        try:
-            with open(new_file_path, "wb") as buffer:
-                shutil.copyfileobj(file.file, buffer)
-        except Exception:
-            raise HTTPException(status_code=500, detail="File upload failed")
-            
-        updates["documentUrl"] = f"/uploads/verification/{filename}"
-    
-    if not updates and not file:
-         raise HTTPException(status_code=400, detail="No field to update")
+    model = DoctorModel(conn)
+    current = await model.get_verification_by_user(current_user['id'])
+    if not current or current["status"] != "pending":
+        raise HTTPException(status_code=403, detail="You can only update a pending verification.")
 
-    # Update timestamp and status
-    updates["updatedAt"] = datetime.now().isoformat()
-    updates["status"] = "pending_verification" # Re-trigger verification on update
+    check_expiration_date(expirationDate)
+    updates = {
+        name: value for name, value in {
+            "license_number": licenseNumber,
+            "issuing_region": issuingRegion,
+            "expiration_date": expirationDate,
+        }.items() if value is not None
+    }
+    if file:
+        updates["document_url"] = await store_licence(current_user['id'], file)
+    if not updates:
+        raise HTTPException(status_code=400, detail="No field to update")
 
     try:
-        result = await user_model.update_verification(current_user['id'], updates)
-    except Exception as e:
-        # Cleanup new file if DB update fails
-        if new_file_path and os.path.exists(new_file_path):
-            os.remove(new_file_path)
+        row = await model.update_pending_verification(current_user['id'], updates)
+    except Exception:
+        await delete_licence(updates.get("document_url"))
         raise HTTPException(status_code=500, detail="Update failed")
 
-    # Cleanup old file if we verified a new one was uploaded and saved
-    if file and old_verification and "documentUrl" in old_verification:
-        old_url = old_verification["documentUrl"]
-        if old_url != updates.get("documentUrl"):
-             if old_url.startswith("/"):
-                 old_url = old_url[1:]
-             if os.path.exists(old_url):
-                 try:
-                     os.remove(old_url)
-                 except:
-                     pass
+    if file:
+        await delete_licence(current.get("document_url"))
 
     return {
         "success": True,
         "message": "Verification updated successfully",
-        "data": result.get("verification")
+        "data": _verification_summary(row)
     }
+
+
+@router.post("/onboarding/complete", response_model=UserDetailsResponse)
+async def complete_onboarding(
+    data: OnboardingComplete,
+    current_user: dict = Depends(auth_middleware_onboarding),
+    conn=Depends(get_transaction)
+):
+    """
+    Finish the onboarding wizard. The role is required only if the account has none yet;
+    interests and location can be skipped and completed later from the dashboard.
+    """
+    current_role = current_user.get('user_type')
+    if not current_role and not data.user_type:
+        raise HTTPException(status_code=400, detail="Please choose your role to continue.")
+    if current_role and data.user_type and data.user_type != current_role:
+        raise HTTPException(status_code=400, detail="Your role has already been set.")
+
+    profile_model = ProfileModel(conn)
+    profile_updates = data.model_dump(include={"interests", "location"}, exclude_none=True)
+    if profile_updates:
+        await profile_model.update_profile(current_user['id'], profile_updates)
+    await UserModel(conn).complete_onboarding(current_user['id'], data.user_type)
+
+    return await profile_model.get_profile_by_user_id(current_user['id'])
+
 
 @router.delete("/me", status_code=200)
 async def schedule_delete_my_account(

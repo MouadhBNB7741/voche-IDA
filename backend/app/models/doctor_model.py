@@ -8,9 +8,10 @@ class DoctorModel(DBModel):
             query = """
                 INSERT INTO doctor_verifications (
                     user_id, license_number, institution, country, specialization,
+                    document_url, issuing_region, expiration_date,
                     status, created_at
                 )
-                VALUES ($1, $2, $3, $4, $5, 'pending', NOW())
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', NOW())
                 RETURNING *
             """
             row = await self.conn.fetchrow(
@@ -20,6 +21,9 @@ class DoctorModel(DBModel):
                 data['institution'],
                 data['country'],
                 data['specialization'],
+                data.get('document_url'),
+                data.get('issuing_region'),
+                data.get('expiration_date'),
             )
             
             # Update user jsonb status
@@ -42,6 +46,51 @@ class DoctorModel(DBModel):
         query = "SELECT * FROM doctor_verifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1"
         row = await self.conn.fetchrow(query, user_id)
         return dict(row) if row else None
+
+    async def update_pending_verification(self, user_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Change the details of the user's pending request. Returns None if there is none."""
+        allowed = ("license_number", "institution", "country", "specialization",
+                   "document_url", "issuing_region", "expiration_date")
+        fields = {k: v for k, v in updates.items() if k in allowed}
+        if not fields:
+            return None
+        set_clause = ", ".join(f"{name} = ${i + 2}" for i, name in enumerate(fields))
+        row = await self.conn.fetchrow(
+            f"""
+            UPDATE doctor_verifications SET {set_clause}
+            WHERE verification_id = (
+                SELECT verification_id FROM doctor_verifications
+                WHERE user_id = $1 AND status = 'pending'
+                ORDER BY created_at DESC LIMIT 1
+            )
+            RETURNING *
+            """,
+            user_id, *fields.values(),
+        )
+        return dict(row) if row else None
+
+    async def withdraw_pending_verification(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Delete the user's pending request. Returns the deleted row, or None if there is none."""
+        async with self.conn.transaction():
+            row = await self.conn.fetchrow(
+                """
+                DELETE FROM doctor_verifications
+                WHERE user_id = $1 AND status = 'pending'
+                RETURNING *
+                """,
+                user_id,
+            )
+            if not row:
+                return None
+            await self.conn.execute(
+                """
+                UPDATE users
+                SET verification = jsonb_set(COALESCE(verification, '{}'::jsonb), '{status}', '"not_submitted"')
+                WHERE id = $1
+                """,
+                user_id,
+            )
+            return dict(row)
 
     async def get_pending_verifications(self) -> List[Dict[str, Any]]:
         query = """

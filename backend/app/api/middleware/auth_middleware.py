@@ -85,6 +85,26 @@ async def auth_middleware(
     request.state.user = user
     return user
 
+async def auth_middleware_onboarding(
+    request: Request,
+    token: HTTPAuthorizationCredentials = Security(security_strict),
+    conn=Depends(get_connection)
+):
+    """
+    Like auth_middleware, but also accepts users who have not finished onboarding yet.
+    Only for the routes the onboarding wizard needs.
+    """
+    user = await _get_token_user(token, conn)
+
+    if user and user["status"] == 'suspended':
+        raise account_suspended_error(user)
+
+    if not user or not user["is_active"] or user["status"] not in ('active', 'onboarding'):
+        raise HTTPException(status_code=401, detail="Invalid token or inactive user")
+
+    request.state.user = user
+    return user
+
 async def auth_middleware_optional(
     request: Request,
     token: Optional[HTTPAuthorizationCredentials] = Security(security_optional),

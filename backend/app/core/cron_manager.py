@@ -4,6 +4,7 @@ import os
 from typing import Callable, Coroutine, List
 from app.db.postgres import PostgresDB
 from app.models.user_model import UserModel
+from app.services.verification_service import delete_licence
 
 logger = logging.getLogger(__name__)
 
@@ -77,8 +78,10 @@ async def purge_deleted_accounts():
         anonymized = 0
         for user_id in await user_model.get_users_due_for_deletion():
             try:
-                avatar = await user_model.anonymize_user(user_id)
-                _remove_uploaded_file(avatar)
+                removed = await user_model.anonymize_user(user_id)
+                _remove_uploaded_file(removed["avatar"])
+                for document in removed["documents"]:
+                    await delete_licence(document)
                 anonymized += 1
             except Exception as e:
                 logger.error(f"Cron [purge_deleted_accounts]: Could not anonymize user {user_id}: {e}", exc_info=True)

@@ -68,6 +68,16 @@ async def seed_db(conn):
             "bio": "Patient advocate."
         },
         {
+            "email": "caregiver@example.com",
+            "role": "caregiver",
+            "display_name": "SamCare",
+            "first_name": "Sam",
+            "last_name": "Care",
+            "is_verified": False,
+            "verification": {"status": "unverified"},
+            "bio": "Caring for a family member."
+        },
+        {
             "email": "org_admin@pharma.com",
             "role": "org_member",
             "display_name": "PharmaRep",

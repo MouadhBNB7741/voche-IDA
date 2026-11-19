@@ -1,10 +1,14 @@
-from fastapi import APIRouter, HTTPException, Depends, status
+from datetime import date
+from uuid import UUID
+from fastapi import APIRouter, HTTPException, Depends, File, Form, Response, UploadFile, status
 from typing import List, Optional
 from app.api.dependencies.connections import get_connection
 
 from app.models.doctor_model import DoctorModel
 from app.schemas.doctor import VerificationRequest, VerificationResponse, VerificationReview
-from app.api.middleware.auth_middleware import auth_middleware
+from app.api.middleware.auth_middleware import auth_middleware, auth_middleware_onboarding
+from app.services.storage_service import get_private_storage
+from app.services.verification_service import content_type_for, submit_licence
 
 router = APIRouter(prefix="/doctors", tags=["Doctor Verification"])
 
@@ -32,9 +36,54 @@ async def submit_verification(
     result = await model.create_verification(current_user["id"], request.model_dump())
     return result
 
+@router.post("/verification/upload", response_model=VerificationResponse, status_code=status.HTTP_201_CREATED)
+async def submit_verification_with_document(
+    license_number: str = Form(..., min_length=1, max_length=100),
+    institution: str = Form(..., min_length=1, max_length=255),
+    country: str = Form(..., min_length=2, max_length=100),
+    specialization: str = Form(..., min_length=2, max_length=100),
+    issuing_region: Optional[str] = Form(None, max_length=100),
+    expiration_date: Optional[date] = Form(None),
+    file: UploadFile = File(...),
+    current_user: dict = Depends(auth_middleware_onboarding),
+    conn=Depends(get_connection)
+):
+    """Submit a licence for review, with its document (PDF, JPG, PNG or WEBP, 5 MB max)."""
+    return await submit_licence(conn, current_user["id"], {
+        "license_number": license_number,
+        "institution": institution,
+        "country": country,
+        "specialization": specialization,
+        "issuing_region": issuing_region,
+        "expiration_date": expiration_date,
+    }, file)
+
+@router.get("/verification/{verification_id}/document")
+async def get_verification_document(
+    verification_id: UUID,
+    current_user: dict = Depends(auth_middleware),
+    conn=Depends(get_connection)
+):
+    """Open a licence document. Only admins and the doctor who uploaded it can see it."""
+    verification = await DoctorModel(conn).get_verification(str(verification_id))
+    if not verification or not verification.get("document_url"):
+        raise HTTPException(status_code=404, detail="Document not found")
+    if not is_admin(current_user) and verification["user_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="You do not have access to this document")
+
+    key = verification["document_url"]
+    data = await get_private_storage().read(key)
+    if data is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return Response(content=data, media_type=content_type_for(key), headers={
+        "Content-Disposition": f'inline; filename="licence.{key.rsplit(".", 1)[-1]}"',
+        "Cache-Control": "private, no-store",
+        "X-Content-Type-Options": "nosniff",
+    })
+
 @router.get("/verification", response_model=VerificationResponse)
 async def get_my_verification(
-    current_user: dict = Depends(auth_middleware),
+    current_user: dict = Depends(auth_middleware_onboarding),
     conn=Depends(get_connection)
 ):
     model = DoctorModel(conn)

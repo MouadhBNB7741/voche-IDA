@@ -21,6 +21,7 @@ class ProfileModel(DBModel):
                 u.country, u.language_preference, u.avatar, u.is_verified, 
                 u.profile_completed, u.created_at, u.is_active,
                 u.verification, u.notification_preferences, u.deletion_scheduled_at,
+                u.status, u.onboarding_completed_at,
                 up.bio, up.interests, up.location, up.profile_visibility,
                 up.notification_enabled, up.email_alerts, up.push_notifications
             FROM users u

@@ -1,6 +1,6 @@
 from datetime import datetime
-from typing import Optional, List, Dict, Union, Any, Literal
-from pydantic import BaseModel, EmailStr, ConfigDict
+from typing import Annotated, Optional, List, Dict, Union, Any, Literal
+from pydantic import BaseModel, EmailStr, ConfigDict, Field, StringConstraints
 
 # Notification preferences are now centralized in app/schemas/notification.py
 
@@ -25,13 +25,21 @@ class UserProfileUpdate(BaseModel):
     email_alerts: Optional[bool] = None
     push_notifications: Optional[bool] = None
 
+class OnboardingComplete(BaseModel):
+    """Only the role is required, and only when the account has none yet. The rest can be skipped."""
+    user_type: Optional[Literal["patient", "caregiver", "hcp", "org_member"]] = None
+    interests: Optional[List[Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]]] = Field(None, max_length=50)
+    location: Optional[str] = Field(None, max_length=255)
+
+
 class UserDetailsResponse(BaseModel):
     """
     Public safe user details response model.
     """
     id: str
     email: EmailStr
-    user_type: str
+    user_type: Optional[str] = None  # None until chosen during onboarding
+    status: str = "active"
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     display_name: Optional[str] = None
@@ -52,5 +60,6 @@ class UserDetailsResponse(BaseModel):
     notification_preferences: Optional[Dict[str, Any]] = None
     verification: Optional[Dict[str, Any]] = None
     deletion_scheduled_at: Optional[datetime] = None
+    onboarding_completed_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)

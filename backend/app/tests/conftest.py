@@ -1,6 +1,7 @@
 import pytest
 import asyncio
 import os
+import tempfile
 from pathlib import Path
 from urllib.parse import urlparse, urlunparse
 from dotenv import load_dotenv
@@ -17,6 +18,11 @@ load_dotenv(ENV_PATH, override=True)
 _redis_url = urlparse(os.environ.get("REDIS_URL", ""))
 if _redis_url.scheme and _redis_url.path in ("", "/", "/0"):
     os.environ["REDIS_URL"] = urlunparse(_redis_url._replace(path="/1"))
+
+# Licences uploaded by tests go to a temporary folder, removed when the run ends.
+_private_uploads = tempfile.TemporaryDirectory(prefix="voche-test-uploads-")
+os.environ["PRIVATE_UPLOADS_DIR"] = _private_uploads.name
+os.environ["STORAGE_BACKEND"] = "local"
 
 from app.main import app
 from app.db.postgres import PostgresDB

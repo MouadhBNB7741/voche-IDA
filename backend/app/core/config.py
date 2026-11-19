@@ -18,6 +18,15 @@ class Settings(BaseSettings):
     frontend_var: str = "http://localhost:5173"
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000", "http://localhost:8000"]
 
+    # Private file storage: "local" (development) or "s3" (Amazon S3, Cloudflare R2, Supabase Storage)
+    storage_backend: str = "local"
+    private_uploads_dir: str = "private_uploads"
+    s3_bucket: str = ""
+    s3_endpoint_url: str = ""
+    s3_region: str = ""
+    s3_access_key_id: str = ""
+    s3_secret_access_key: str = ""
+
     model_config = SettingsConfigDict(
         env_file=".env",
         extra="ignore",
