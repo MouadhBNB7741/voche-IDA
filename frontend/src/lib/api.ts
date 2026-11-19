@@ -32,6 +32,13 @@ export const CLINICAL = {
   ALERT_BY_ID: (id: string) => `${API_BASE}/alerts/trials/${id}`,
 };
 
+export const AI = {
+  CONVERSATIONS: `${API_BASE}/ai/conversations`,
+  CONVERSATION: (id: string) => `${API_BASE}/ai/conversations/${id}`,
+  MESSAGES: (id: string) => `${API_BASE}/ai/conversations/${id}/messages`,
+  FEEDBACK: (messageId: string) => `${API_BASE}/ai/messages/${messageId}/feedback`,
+};
+
 export const SURVEYS = {
   LIST: `${API_BASE}/surveys`,
   BY_ID: (id: string) => `${API_BASE}/surveys/${id}`,
