@@ -3,6 +3,7 @@ from typing import Optional
 from fastapi import Request, HTTPException, Security, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.core.security import decode_jwt
+from app.core.token_blacklist import is_token_revoked
 from app.api.dependencies.connections import get_connection
 from app.models.user_model import UserModel
 
@@ -38,7 +39,7 @@ async def _get_token_user(token_creds: Optional[HTTPAuthorizationCredentials], c
     try:
         payload = decode_jwt(token_creds.credentials)
         user_id = payload.get("sub")
-        if not user_id:
+        if not user_id or await is_token_revoked(payload):
             return None
 
         user = await conn.fetchrow("""

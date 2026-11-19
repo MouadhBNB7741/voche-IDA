@@ -14,6 +14,9 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: str
 
+class GoogleSignInRequest(BaseModel):
+    credential: str = Field(..., min_length=1, max_length=4096)  # ID token from Google Identity Services
+
 class PasswordUpdateRequest(BaseModel):
     current_password: str
     new_password: str = Field(..., min_length=8)
@@ -30,5 +33,6 @@ class PasswordResetConfirm(BaseModel):
 class LoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
-    user_type: str
+    user_type: Optional[str] = None  # None for a new Google user until onboarding
     message: Optional[str] = None
+    is_new_user: bool = False

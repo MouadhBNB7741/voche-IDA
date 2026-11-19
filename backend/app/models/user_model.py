@@ -8,16 +8,54 @@ class UserModel(DBModel):
     Encapsulates all SQL logic related to 'users' table.
     """
     
+    _LOGIN_COLUMNS = """
+        id, email, password_hash, user_type, is_active, status, deletion_scheduled_at,
+        suspended_until, suspended_reason
+    """
+
     async def get_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         """Fetch user by email."""
-        query = """
-            SELECT id, email, password_hash, user_type, is_active, status, deletion_scheduled_at,
-                   suspended_until, suspended_reason
-            FROM users
-            WHERE email = $1
+        query = f"SELECT {self._LOGIN_COLUMNS} FROM users WHERE email = $1"
+        user = await self.conn.fetchrow(query, email)
+        return self._record_to_dict(user) if user else None
+
+    async def get_by_email_any_case(self, email: str) -> Optional[Dict[str, Any]]:
+        """Fetch user by email, ignoring upper and lower case (John@x.com is john@x.com)."""
+        query = f"""
+            SELECT {self._LOGIN_COLUMNS} FROM users
+            WHERE LOWER(email) = LOWER($1)
+            ORDER BY created_at
+            LIMIT 1
         """
         user = await self.conn.fetchrow(query, email)
         return self._record_to_dict(user) if user else None
+
+    # ── Social sign-in accounts ──────────────────────────────────────────────
+
+    async def get_by_oauth_account(self, provider: str, provider_user_id: str) -> Optional[Dict[str, Any]]:
+        """Fetch the user linked to a Google (or other provider) account."""
+        query = f"""
+            SELECT {self._LOGIN_COLUMNS} FROM users
+            WHERE id = (
+                SELECT user_id FROM user_oauth_accounts
+                WHERE provider = $1 AND provider_user_id = $2
+            )
+        """
+        user = await self.conn.fetchrow(query, provider, provider_user_id)
+        return self._record_to_dict(user) if user else None
+
+    async def link_oauth_account(self, user_id: str, provider: str, provider_user_id: str, provider_email: str) -> None:
+        await self.conn.execute("""
+            INSERT INTO user_oauth_accounts (user_id, provider, provider_user_id, provider_email)
+            VALUES ($1, $2, $3, $4)
+        """, user_id, provider, provider_user_id, provider_email)
+
+    async def update_oauth_email(self, provider: str, provider_user_id: str, provider_email: str) -> None:
+        """Keep the provider's email up to date (the user may have changed it there)."""
+        await self.conn.execute("""
+            UPDATE user_oauth_accounts SET provider_email = $3
+            WHERE provider = $1 AND provider_user_id = $2 AND provider_email IS DISTINCT FROM $3
+        """, provider, provider_user_id, provider_email)
 
     # ── Account states ───────────────────────────────────────────────────────
 
@@ -142,28 +180,30 @@ class UserModel(DBModel):
 
     async def create_user(
         self, 
-        email: str, 
-        password_hash: str, 
-        user_type: str, 
-        first_name: str, 
-        last_name: str, 
-        display_name: str
+        email: str,
+        password_hash: Optional[str],
+        user_type: Optional[str],
+        first_name: str,
+        last_name: str,
+        display_name: str,
+        status: str = "active",
     ) -> Dict[str, Any]:
-        """Create new user and associated profile atomically."""
+        """Create new user and associated profile atomically.
+        Google sign-in users have no password, and no role until onboarding ("onboarding" status)."""
         query_user = """
             INSERT INTO users (
-                email, password_hash, user_type, 
+                email, password_hash, user_type,
                 first_name, last_name, display_name,
                 status, is_active, is_verified, profile_completed,
                 notification_preferences, verification
             )
-            VALUES ($1, $2, $3, $4, $5, $6, 'active', TRUE, FALSE, FALSE, '{"emailAlerts": true, "pushNotifications": true, "frequency": "instant", "notificationTypes": {"trial_match": true, "trial_alert": true, "community_reply": true, "community_like": true, "event_reminder": true, "event_update": true, "org_request_update": true, "resource_update": true, "survey_available": true, "system_announcement": true}}'::jsonb, '{"status": "not_submitted"}'::jsonb)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE, FALSE, FALSE, '{"emailAlerts": true, "pushNotifications": true, "frequency": "instant", "notificationTypes": {"trial_match": true, "trial_alert": true, "community_reply": true, "community_like": true, "event_reminder": true, "event_update": true, "org_request_update": true, "resource_update": true, "survey_available": true, "system_announcement": true}}'::jsonb, '{"status": "not_submitted"}'::jsonb)
             RETURNING id, user_type
         """
         
         user = await self.conn.fetchrow(
             query_user, 
-            email, password_hash, user_type, first_name, last_name, display_name
+            email, password_hash, user_type, first_name, last_name, display_name, status
         )
         
         # Create empty profile

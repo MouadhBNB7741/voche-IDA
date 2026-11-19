@@ -1,23 +1,27 @@
 import logging
 import secrets
-from fastapi import APIRouter, HTTPException, Depends, status
-from fastapi.security import OAuth2PasswordRequestForm
+from typing import Optional
+from fastapi import APIRouter, HTTPException, Depends, Security, status
+from fastapi.security import OAuth2PasswordRequestForm, HTTPAuthorizationCredentials
 from app.schemas.auth import (
-    RegisterRequest, 
-    LoginRequest, 
-    LoginResponse, 
-    PasswordUpdateRequest, 
-    PasswordResetRequest, 
-    PasswordResetConfirm, 
+    RegisterRequest,
+    LoginRequest,
+    LoginResponse,
+    GoogleSignInRequest,
+    PasswordUpdateRequest,
+    PasswordResetRequest,
+    PasswordResetConfirm,
 )
 from app.schemas.user import UserDetailsResponse
 from app.models.user_model import UserModel
 from app.models.password_reset_model import PasswordResetModel
 from app.models.profile_model import ProfileModel
-from app.core.security import hash_password, verify_password, create_jwt
+from app.core.security import hash_password, verify_password, create_jwt, decode_jwt
+from app.core.token_blacklist import revoke_token
 from app.api.dependencies.connections import get_connection, get_transaction
 from app.services.email import EmailService
-from app.api.middleware.auth_middleware import auth_middleware, account_suspended_error
+from app.services.google_auth import verify_google_credential, sign_in_with_google
+from app.api.middleware.auth_middleware import auth_middleware, account_suspended_error, security_optional
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -59,10 +63,45 @@ async def register(data: RegisterRequest, conn=Depends(get_transaction)):
     })
 
     return LoginResponse(
-        access_token=token, 
+        access_token=token,
         token_type="bearer",
-        user_type=user['user_type']
+        user_type=user['user_type'],
+        is_new_user=True,
     )
+
+async def _start_session(conn, user: dict, is_new_user: bool = False) -> LoginResponse:
+    """Checks shared by every way of signing in (password or Google), then our login token."""
+    user_model = UserModel(conn)
+    user = await user_model.lift_expired_suspension(user)
+    if user["status"] == 'suspended':
+        raise account_suspended_error(user)
+
+    # "onboarding": signed in with Google, role not chosen yet
+    if not user["is_active"] or user["status"] not in ('active', 'onboarding'):
+        raise HTTPException(status_code=403, detail="Account is inactive or suspended")
+
+    # Check and annul account deletion schedule
+    deletion_message = None
+    if user.get("deletion_scheduled_at"):
+        await conn.execute("UPDATE users SET deletion_scheduled_at = NULL WHERE id = $1", user["id"])
+        deletion_message = "Your account deletion schedule has been annulled because you logged back in."
+
+    # Update last login
+    await user_model.update_last_login(str(user['id']))
+
+    token = create_jwt({
+        "sub": str(user["id"]),
+        "user_type": user["user_type"]
+    })
+
+    return LoginResponse(
+        access_token=token,
+        token_type="bearer",
+        user_type=user['user_type'],
+        message=deletion_message,
+        is_new_user=is_new_user,
+    )
+
 
 @router.post("/login", response_model=LoginResponse)
 async def login(data: LoginRequest, conn=Depends(get_connection)):
@@ -74,38 +113,43 @@ async def login(data: LoginRequest, conn=Depends(get_connection)):
 
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    
+
     # Google sign-in accounts have no password
     if not user["password_hash"] or not verify_password(data.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    user = await user_model.lift_expired_suspension(user)
-    if user["status"] == 'suspended':
-        raise account_suspended_error(user)
+    return await _start_session(conn, user)
 
-    if not user["is_active"] or user["status"] != 'active':
-        raise HTTPException(status_code=403, detail="Account is inactive or suspended")
 
-    # Check and annul account deletion schedule
-    deletion_message = None
-    if user.get("deletion_scheduled_at"):
-        await conn.execute("UPDATE users SET deletion_scheduled_at = NULL WHERE id = $1", user["id"])
-        deletion_message = "Your account deletion schedule has been annulled because you logged back in."
+@router.post("/google", response_model=LoginResponse)
+async def google_sign_in(data: GoogleSignInRequest, conn=Depends(get_connection)):
+    """
+    Sign in with the ID token from the "Sign in with Google" button.
+    Links to an existing account with the same email if Google verified it,
+    otherwise creates an account that picks its role during onboarding.
+    """
+    claims = await verify_google_credential(data.credential)
+    user, created = await sign_in_with_google(conn, claims)
+    return await _start_session(conn, user, is_new_user=created)
 
-    # Update last login
-    await user_model.update_last_login(str(user['id']))
-    
-    token = create_jwt({
-        "sub": str(user["id"]),
-        "user_type": user["user_type"]
-    })
-    
-    return LoginResponse(
-        access_token=token, 
-        token_type="bearer",
-        user_type=user['user_type'],
-        message=deletion_message
-    )
+
+@router.post("/logout")
+async def logout(token: Optional[HTTPAuthorizationCredentials] = Security(security_optional)):
+    """
+    Revoke the login token, so it stops working even if someone copied it.
+    """
+    if token:
+        try:
+            payload = decode_jwt(token.credentials)
+        except HTTPException:
+            payload = None  # already expired or invalid: nothing to revoke
+        if payload:
+            try:
+                await revoke_token(payload)
+            except Exception as e:
+                logging.error(f"Could not revoke token on logout: {e}")
+                raise HTTPException(status_code=503, detail="Could not sign you out on the server. Please try again.")
+    return {"message": "Signed out"}
 
 
 
@@ -141,7 +185,13 @@ async def update_password(
     # Verify old password
     current_hash = await user_model.get_password_hash(user_id)
     if not current_hash:
-        raise HTTPException(status_code=404, detail="User not found")
+        # Signed up with Google. Setting a first password goes through the emailed
+        # reset link, so someone using a stolen session cannot add one.
+        raise HTTPException(
+            status_code=400,
+            detail="Your account signs in with Google and has no password yet. "
+                   "Use \"Forgot password?\" on the login page to set one.",
+        )
 
     if not verify_password(data.current_password, current_hash):
         raise HTTPException(status_code=400, detail="Incorrect current password")

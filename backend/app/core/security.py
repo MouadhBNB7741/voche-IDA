@@ -1,3 +1,5 @@
+import uuid
+from typing import Optional
 from fastapi import HTTPException
 import jwt
 from passlib.context import CryptContext
@@ -15,10 +17,15 @@ def hash_password(password: str) -> str:
 def verify_password(password: str, hashed: str) -> bool:
     return pwd_context.verify(password, hashed)
 
-def create_jwt(payload: dict, expires_minutes: int = 60):
+def create_jwt(payload: dict, expires_minutes: Optional[int] = None):
+    """Sign a login token. It lasts ACCESS_TOKEN_EXPIRE_MINUTES unless told otherwise,
+    and carries a unique id (jti) so logging out can revoke it."""
     payload = payload.copy()
     # Use timezone-aware UTC to avoid deprecation warnings in Python 3.12+
-    payload["exp"] = datetime.now(timezone.utc) + timedelta(minutes=expires_minutes)
+    now = datetime.now(timezone.utc)
+    payload["iat"] = now
+    payload["exp"] = now + timedelta(minutes=expires_minutes or settings.access_token_expire_minutes)
+    payload["jti"] = uuid.uuid4().hex
     return jwt.encode(payload, settings.secret_key, algorithm=JWT_ALGORITHM)
 
 def decode_jwt(token: str) -> dict:

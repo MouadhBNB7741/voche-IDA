@@ -7,7 +7,11 @@ class Settings(BaseSettings):
     database_url: str = ""
     redis_url: str = ""
     secret_key: str = "unsafe_secret_key"
-    
+    access_token_expire_minutes: int = 60
+
+    # Google sign-in: the OAuth Client ID (public, the same one the frontend uses)
+    google_client_id: str = ""
+
     # Email Configuration
     smtp_host: str = "smtp.gmail.com"
     smtp_port: int = 587
