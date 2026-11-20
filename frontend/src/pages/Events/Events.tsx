@@ -23,6 +23,7 @@ import { EVENTS } from '../../lib/api';
 import type { Event } from '../../types/db';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
+import { useMyEventIds } from '../../hooks/useEvents';
 
 const fetchEvents = async (): Promise<Event[]> => {
   const res = await apiClient.get(EVENTS.LIST);
@@ -74,11 +75,14 @@ export default function Events() {
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
-  const { data: events = [], isLoading, isError } = useQuery({
+  const { data: allEvents = [], isLoading, isError } = useQuery({
     queryKey: ['events'],
     queryFn: fetchEvents,
     staleTime: 5 * 60 * 1000,
   });
+  // The list doesn't say which events you registered for: that comes from your own registrations
+  const myEventIds = useMyEventIds();
+  const events = allEvents.map(event => ({ ...event, is_registered: myEventIds.has(event.event_id) }));
 
   const registerMutation = useMutation({
     mutationFn: (id: string) => registerForEvent(id),

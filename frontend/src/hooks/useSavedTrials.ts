@@ -1,13 +1,11 @@
-import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useData } from "../contexts/DataContext";
-import { useAuth } from "./useAuth";
+import { useAuthContext } from "../contexts/AuthContext";
 import { apiClient } from "../lib/apiClient";
 import { USERS } from "../lib/api";
 
+/** Ids of the trials the logged-in user saved, from the server. */
 export function useSavedTrials() {
-  const { user } = useAuth();
-  const { actions } = useData();
+  const { user } = useAuthContext();
 
   const { data: savedTrialIds = [] } = useQuery<string[]>({
     queryKey: ["savedTrials"],
@@ -28,11 +26,5 @@ export function useSavedTrials() {
     retry: false,
   });
 
-  useEffect(() => {
-    if (savedTrialIds.length > 0) {
-      savedTrialIds.forEach((id) => actions.saveTrial(id));
-    }
-  }, [savedTrialIds]);
-
-  return { savedTrialIds };
+  return { savedTrialIds: user ? savedTrialIds : [] };
 }

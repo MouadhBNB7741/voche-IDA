@@ -117,29 +117,6 @@ export default function ResourceDetail() {
     }
   };
 
-  const simulateDownload = () => {
-    if (isDownloading) return;
-    setIsDownloading(true);
-    toast.info("Starting Download", {
-      description: `Preparing ${resource?.title}...`,
-    });
-    setTimeout(() => {
-      const blob = new Blob(["Mock PDF Content"], { type: "application/pdf" });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${resource?.title || "resource"}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      setIsDownloading(false);
-      toast.success("Download Complete", {
-        description: "File has been saved to your device.",
-      });
-    }, 1500);
-  };
-
   const saveBlob = (blob: Blob, fileName: string) => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -151,13 +128,9 @@ export default function ResourceDetail() {
     document.body.removeChild(a);
   };
 
-  // A real file is downloaded, a link is opened; resources with neither keep the old demo download
+  // A real file is downloaded, a link is opened
   const handleDownload = async () => {
-    if (!resource || isDownloading) return;
-    if (!resource.has_file && !resource.url) {
-      simulateDownload();
-      return;
-    }
+    if (!resource || isDownloading || (!resource.has_file && !resource.url)) return;
     setIsDownloading(true);
     try {
       const info = await resourceService.getDownload(resource.resource_id);
@@ -172,6 +145,29 @@ export default function ResourceDetail() {
       handleError(err, "Could not download this resource. Please try again.");
     } finally {
       setIsDownloading(false);
+    }
+  };
+
+  // Opens the file in a new tab (PDFs show in the browser), or the link
+  const handlePreview = async () => {
+    if (!resource) return;
+    if (!resource.has_file) {
+      if (resource.url) window.open(resource.url, "_blank", "noopener,noreferrer");
+      return;
+    }
+    const tab = window.open("", "_blank");
+    try {
+      const blob = await resourceService.getFile(resource.resource_id);
+      if (tab) {
+        const url = window.URL.createObjectURL(blob);
+        tab.location.href = url;
+        window.setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
+      } else {
+        saveBlob(blob, resource.file_name || resource.title);
+      }
+    } catch (err) {
+      tab?.close();
+      handleError(err, "Could not open a preview. Please try again.");
     }
   };
 
@@ -203,7 +199,7 @@ export default function ResourceDetail() {
       }
       return;
     }
-    setTimeout(() => setVideoLoading(false), 1000);
+    setVideoLoading(false);
   };
 
   const getPrimaryAction = () => {
@@ -219,6 +215,14 @@ export default function ResourceDetail() {
         </Button>
       );
     }
+    if (!resource.has_file && !resource.url) {
+      return (
+        <Button className="w-full gap-2" disabled>
+          <BookOpen size={16} />
+          No file or link yet
+        </Button>
+      );
+    }
     switch (resource.type) {
       case "video":
         return (
@@ -231,10 +235,11 @@ export default function ResourceDetail() {
         return (
           <Button
             className="w-full gap-2 shadow-md cursor-pointer"
-            onClick={() => toast.success("Course Started")}
+            onClick={handleDownload}
+            disabled={isDownloading}
           >
-            <Award size={16} />
-            Start Course
+            {isDownloading ? <Loader2 size={16} className="animate-spin" /> : <Award size={16} />}
+            Open Course
           </Button>
         );
       default:
@@ -249,7 +254,7 @@ export default function ResourceDetail() {
             ) : (
               <Download size={16} />
             )}
-            {isDownloading ? "Downloading..." : "Download Resource"}
+            {isDownloading ? "Downloading..." : resource.has_file ? "Download Resource" : "Open Resource"}
           </Button>
         );
     }
@@ -397,29 +402,6 @@ export default function ResourceDetail() {
             <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
               {resource.description}
             </p>
-            <div className="mt-6 p-5 bg-muted/40 rounded-xl border border-border/50">
-              <h3 className="font-bold mb-3 text-xs uppercase tracking-wide text-muted-foreground">
-                Topics Covered
-              </h3>
-              <ul className="grid sm:grid-cols-2 gap-2 text-sm">
-                <li className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                  Introduction to Key Concepts
-                </li>
-                <li className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                  Advanced Methodologies
-                </li>
-                <li className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                  Case Studies & Analysis
-                </li>
-                <li className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                  Implementation Guide
-                </li>
-              </ul>
-            </div>
           </Card>
 
           {/* Tags */}
@@ -454,20 +436,16 @@ export default function ResourceDetail() {
                 </div>
               </div>
               {getPrimaryAction()}
-              <Button
-                variant="outline"
-                className="w-full gap-2 border-dashed border-border cursor-pointer"
-                onClick={() => {
-                  if (!isAuthenticated) {
-                    openAuthModal("Sign in to your Voche account to preview this resource.");
-                    return;
-                  }
-                  toast.info("Opening Preview...");
-                }}
-              >
-                <Eye size={16} />
-                Preview Resource
-              </Button>
+              {canAccess && resource.type !== "video" && (resource.has_file || resource.url) && (
+                <Button
+                  variant="outline"
+                  className="w-full gap-2 border-dashed border-border cursor-pointer"
+                  onClick={handlePreview}
+                >
+                  <Eye size={16} />
+                  Preview Resource
+                </Button>
+              )}
             </div>
           </Card>
 
@@ -679,22 +657,7 @@ export default function ResourceDetail() {
             ) : videoSrc ? (
               <video src={videoSrc} controls autoPlay className="h-full w-full" aria-label={resource.title} />
             ) : (
-              <div className="w-full h-full bg-slate-900 flex flex-col items-center justify-center text-white p-8 text-center relative">
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-60"></div>
-                <div className="relative z-10">
-                  <Play
-                    size={80}
-                    className="mb-6 text-primary drop-shadow-lg cursor-pointer hover:scale-110 transition-transform"
-                  />
-                  <h3 className="text-2xl font-bold mb-2 tracking-tight">
-                    {resource.title}
-                  </h3>
-                  <p className="text-slate-300 max-w-lg mx-auto text-lg">
-                    Mock Video Player — in production this would be an embedded
-                    video stream.
-                  </p>
-                </div>
-              </div>
+              <p className="text-sm text-white/80">This video could not be loaded.</p>
             )}
           </div>
         </DialogContent>

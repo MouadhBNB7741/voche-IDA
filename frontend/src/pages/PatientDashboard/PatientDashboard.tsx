@@ -25,7 +25,6 @@ import {
 } from 'lucide-react';
 import { DesignSettings } from '../../components/profile/DesignSettings';
 import { useAuth } from '../../contexts/AuthContext';
-import { useData } from '../../contexts/DataContext';
 import { toast } from 'sonner';
 import {
   Select,
@@ -55,9 +54,8 @@ import { useQueryClient } from '@tanstack/react-query';
 export default function PatientDashboard() {
   const navigate = useNavigate();
   const { user, isAuthenticated, isLoading, isProfileComplete } = useAuth();
-  const { state } = useData();
 
-  useSavedTrials();
+  const { savedTrialIds } = useSavedTrials();
   const { data: allTrials = [] } = useTrials();
   const { toggleSave } = useSaveTrial();
 
@@ -117,7 +115,7 @@ export default function PatientDashboard() {
   }, [user]);
 
   // Derived state for saved trials
-  const savedTrials = allTrials.filter(trial => state.savedTrials.includes(trial.trial_id));
+  const savedTrials = allTrials.filter(trial => savedTrialIds.includes(trial.trial_id));
 
   const handleSave = async () => {
     try {

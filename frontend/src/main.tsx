@@ -4,7 +4,6 @@ import { BrowserRouter } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import { queryClient } from './lib/reactQuery'
 import { AuthProvider } from './contexts/AuthContext'
-import { DataProvider } from './contexts/DataContext'
 import { ThemeProvider, useTheme } from './contexts/ThemeContext'
 import { SettingsProvider } from './contexts/SettingsContext'
 import './index.css'
@@ -28,18 +27,23 @@ function VocheToaster() {
   );
 }
 
+// The old demo data was kept in the browser under this key: clear it
+try {
+  localStorage.removeItem('voche_app_state')
+} catch {
+  // storage unavailable (private mode): nothing to clear
+}
+
 createRoot(document.getElementById('root')!).render(
 
   <QueryClientProvider client={queryClient}>
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <ThemeProvider>
         <SettingsProvider>
-          <DataProvider>
-            <AuthProvider>
-              <App />
-              <VocheToaster />
-            </AuthProvider>
-          </DataProvider>
+          <AuthProvider>
+            <App />
+            <VocheToaster />
+          </AuthProvider>
         </SettingsProvider>
       </ThemeProvider>
     </BrowserRouter>

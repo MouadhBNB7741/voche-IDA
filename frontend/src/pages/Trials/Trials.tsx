@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useData } from "../../contexts/DataContext";
+import { useSavedTrials } from "../../hooks/useSavedTrials";
 import { Skeleton } from "../../components/ui/skeleton";
 
 import { PageHeader } from "../../components/ui/PageHeader";
@@ -48,9 +48,8 @@ const STATUS_OPTIONS = [
 
 export default function Trials() {
   const navigate = useNavigate();
-  const { state } = useData();
   const { toggleSave, isSaved } = useSaveTrial();
-  const savedTrials = state.savedTrials;
+  const { savedTrialIds: savedTrials } = useSavedTrials();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDisease, setSelectedDisease] = useState("all");

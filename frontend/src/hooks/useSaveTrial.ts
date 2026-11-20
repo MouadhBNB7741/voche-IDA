@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useData } from "../contexts/DataContext";
+import { useSavedTrials } from "./useSavedTrials";
 import { toast } from "sonner";
 import { apiClient } from "../lib/apiClient";
 import { CLINICAL } from "../lib/api";
@@ -8,7 +8,7 @@ import { useErrorHandler } from "./useErrorHandler";
 
 export function useSaveTrial() {
   const queryClient = useQueryClient();
-  const { state, actions } = useData();
+  const { savedTrialIds } = useSavedTrials();
   const { isAuthenticated, openAuthModal } = useAuthContext();
   const { handleError } = useErrorHandler();
 
@@ -54,13 +54,6 @@ export function useSaveTrial() {
           : [...old, trialId]; // add if saving
       });
 
-      // Optimistically update DataContext
-      if (isSaved) {
-        actions.unsaveTrial(trialId);
-      } else {
-        actions.saveTrial(trialId);
-      }
-
       return { previousSavedTrials };
     },
 
@@ -76,17 +69,10 @@ export function useSaveTrial() {
       }
     },
 
-    onError: (err, { trialId, isSaved }, context) => {
+    onError: (err, _variables, context) => {
       // Restore previous cache
       if (context?.previousSavedTrials) {
         queryClient.setQueryData(["savedTrials"], context.previousSavedTrials);
-      }
-
-      // Rollback DataContext
-      if (isSaved) {
-        actions.saveTrial(trialId); // re-save since unsave failed
-      } else {
-        actions.unsaveTrial(trialId); // re-remove since save failed
       }
 
       handleError(err, "Could not update your saved trials. Please try again.");
@@ -103,11 +89,11 @@ export function useSaveTrial() {
       openAuthModal("Sign in to your Voche account to save clinical trials.");
       return;
     }
-    const isSaved = state.savedTrials.includes(trialId);
+    const isSaved = savedTrialIds.includes(trialId);
     mutation.mutate({ trialId, isSaved });
   };
 
-  const isSaved = (trialId: string) => state.savedTrials.includes(trialId);
+  const isSaved = (trialId: string) => savedTrialIds.includes(trialId);
 
   return { toggleSave, isSaved, isPending: mutation.isPending };
 }

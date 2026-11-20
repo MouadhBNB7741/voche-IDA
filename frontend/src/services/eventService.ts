@@ -21,6 +21,13 @@ export const eventService = {
     await apiClient.delete(EVENTS.REGISTER(id));
   },
 
+  /** Ids of the events the logged-in user is registered for. */
+  getMyEventIds: async (): Promise<string[]> => {
+    const response = await apiClient.get(EVENTS.MY_EVENTS, { params: { limit: 100 } });
+    const items: { event_id: string }[] = response.data?.data ?? [];
+    return items.map(item => item.event_id);
+  },
+
   /** Members' suggestions wait for an admin's approval; admins' events are published at once. */
   suggest: async (suggestion: EventSuggestion): Promise<Event> => {
     const response = await apiClient.post<Event>(EVENTS.LIST, suggestion);

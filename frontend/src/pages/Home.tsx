@@ -21,22 +21,54 @@ import {
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PageHeader } from '../components/ui/PageHeader';
-import { toast } from 'sonner';
-import { useData } from '../contexts/DataContext';
-import { useAuth } from '../contexts/AuthContext';
-import type { Event, Notification, ClinicalTrial } from '../types/db';
+import { useAuthContext } from '../contexts/AuthContext';
+import { useEvents, useMyEventIds, useToggleRegistration } from '../hooks/useEvents';
+import { useTrials } from '../hooks/useTrials';
+import { useNotificationFeed } from '../hooks/useNotifications';
+import { useSavedTrials } from '../hooks/useSavedTrials';
+import { isEventPassed } from './Events/Events';
+import type { ClinicalTrial, Event } from '../types/db';
+
+function todayLocal(): string {
+  const now = new Date();
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+}
+
+function eventPlace(event: Event): string {
+  return event.location || (event.virtual_link ? 'Online' : 'Location to be announced');
+}
+
+function trialPlace(trial: ClinicalTrial): string {
+  if (trial.location) return trial.location;
+  return trial.countries?.length ? trial.countries.slice(0, 2).join(', ') : 'Location not listed';
+}
+
+function EmptyPanel({ text }: { text: string }) {
+  return (
+    <p className="md:col-span-3 text-center py-12 text-sm font-bold text-muted-foreground uppercase tracking-widest opacity-60">
+      {text}
+    </p>
+  );
+}
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { state, actions } = useData();
-  const { user } = useAuth(); 
+  const { user, openAuthModal } = useAuthContext();
 
-  const trials = state.trials as ClinicalTrial[] || [];
-  const events = state.events as Event[] || [];
-  const notifications = state.notifications as Notification[] || [];
+  const { data: events = [], isLoading: eventsLoading } = useEvents();
+  const { data: trials = [], isLoading: trialsLoading } = useTrials({ limit: 2 });
+  const { data: notificationPage } = useNotificationFeed();
+  const { savedTrialIds } = useSavedTrials();
+  const myEventIds = useMyEventIds();
+  const toggleRegistration = useToggleRegistration();
 
   const featuredTrials = trials.slice(0, 2);
-  const upcomingEvents = events.slice(0, 3);
+  // Upcoming by date; an event whose registration has closed is still upcoming
+  const upcomingEvents = events
+    .filter(event => event.event_date >= todayLocal() && !['completed', 'cancelled'].includes(event.status))
+    .sort((a, b) => a.event_date.localeCompare(b.event_date))
+    .slice(0, 3);
+  const notifications = notificationPage?.data ?? [];
   const recentNotifications = notifications.slice(0, 3);
 
   const getAvatarUrl = (avatar?: string) => {
@@ -48,19 +80,9 @@ export default function Dashboard() {
     return `${cleanBaseUrl}${cleanAvatarPath}`;
   };
 
-  const handleRegister = (e: React.MouseEvent, eventId: string, eventName: string) => {
+  const handleRegister = (e: React.MouseEvent, eventId: string) => {
     e.stopPropagation();
-    if (state.registeredEvents.includes(eventId)) {
-      actions.unregisterEvent(eventId);
-      toast.info("Registration Cancelled", {
-        description: `You are no longer registered for ${eventName}.`
-      });
-    } else {
-      actions.registerEvent(eventId, eventName);
-      toast.success("Registered Successfully", {
-        description: `You have been registered for ${eventName}. Check your email for details.`
-      });
-    }
+    toggleRegistration.mutate({ id: eventId, registered: myEventIds.has(eventId) });
   };
   const quickActions = [
     {
@@ -144,6 +166,7 @@ export default function Dashboard() {
           </div>
           
           <div className="grid md:grid-cols-3 gap-10">
+            {!eventsLoading && upcomingEvents.length === 0 && <EmptyPanel text="No upcoming events yet" />}
             {upcomingEvents.map((event, index) => (
               <Card key={`guest-event-card-item-${event.event_id || index}`} className="bg-background/40 border-border/5 rounded-[3rem] p-10 shadow-2xl hover:shadow-[0_45px_90px_-25px_rgba(16,185,129,0.3)] hover:bg-card hover:border-primary-color/20 hover:-translate-y-4 transition-all duration-1000 group/item cursor-pointer h-full flex flex-col">
                 <Badge variant="outline" className="mb-8 border-primary-color/10 bg-primary-color/5 text-primary-color font-black uppercase tracking-[0.3em] text-[10px] px-5 py-2.5 rounded-full shadow-inner w-fit">
@@ -161,14 +184,14 @@ export default function Dashboard() {
                     <div className="w-12 h-12 rounded-2xl bg-primary-color/5 flex items-center justify-center group-hover/item:bg-primary-color group-hover/item:text-white transition-all duration-700">
                        <MapPin size={20} />
                     </div>
-                    <span className="text-foreground truncate max-w-[150px]">Denmark Hub</span>
+                    <span className="text-foreground truncate max-w-[150px]">{eventPlace(event)}</span>
                   </div>
                 </div>
                 <div className="flex gap-4 pt-4">
                   <Button size="lg" className="w-full bg-primary-color text-primary-foreground font-black rounded-2xl h-16 shadow-2xl shadow-primary-color/20 hover:shadow-primary-color/50 hover:scale-105 transition-all cursor-pointer" onClick={() => navigate(`/events/${event.event_id}`)}>
                     Details
                   </Button>
-                  <Button size="lg" variant="ghost" className="px-6 rounded-2xl border-0 bg-muted/40 hover:bg-muted/60 cursor-pointer" title="Login to register">
+                  <Button size="lg" variant="ghost" className="px-6 rounded-2xl border-0 bg-muted/40 hover:bg-muted/60 cursor-pointer" title="Sign in to register" aria-label="Sign in to register" onClick={() => openAuthModal("Sign in to your Voche account to register for events.")}>
                     <Lock size={24} className="text-primary-color/70 hover:text-primary-color transition-colors" />
                   </Button>
                 </div>
@@ -240,7 +263,7 @@ export default function Dashboard() {
                   <div className="p-2 bg-destructive/5 rounded-xl group-hover/info:bg-destructive/10 transition-colors">
                     <Heart size={16} className="text-destructive opacity-70" fill="currentColor" />
                   </div>
-                  {state.savedTrials.length} Matches Found
+                  {savedTrialIds.length} Saved {savedTrialIds.length === 1 ? 'Trial' : 'Trials'}
                 </div>
                 <div className="flex items-center gap-3 group/info hover:text-blue-500 transition-colors">
                   <div className="p-2 bg-blue-500/5 rounded-xl group-hover/info:bg-blue-500/10 transition-colors">
@@ -313,7 +336,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between mb-10">
             <h2 className="text-2xl font-black tracking-tighter flex items-center gap-4">
               <FlaskConical size={28} className="text-primary-color" />
-              Matches
+              Latest Trials
             </h2>
             <Link to="/trials">
               <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary-color font-black uppercase tracking-widest text-[10px] hover:bg-primary-color/5 rounded-xl px-4 h-10 transition-all cursor-pointer">
@@ -322,11 +345,14 @@ export default function Dashboard() {
             </Link>
           </div>
           <div className="space-y-6">
+            {!trialsLoading && featuredTrials.length === 0 && (
+              <p className="text-center py-12 text-sm font-bold text-muted-foreground uppercase tracking-widest opacity-60">No trials listed yet</p>
+            )}
             {featuredTrials.map((trial, index) => (
               <div key={`auth-trial-match-item-v3-${trial.trial_id || index}`} className="border border-border/5 rounded-[2.5rem] p-7 hover:shadow-2xl hover:bg-card hover:border-primary-color/20 transition-all duration-700 bg-background/30 group cursor-pointer" onClick={() => navigate(`/trials/${trial.trial_id}`)}>
                 <div className="flex justify-between items-start mb-5">
                   <Badge variant="outline" className="bg-primary-color/5 text-primary-color border-primary-color/10 font-black uppercase text-[9px] tracking-widest px-4 py-1.5 rounded-full shadow-sm">
-                    {trial.disease_area || 'Oncology'}
+                    {trial.disease_area || trial.status || 'Clinical trial'}
                   </Badge>
                   <Badge variant="secondary" className="px-4 py-1.5 font-black text-[9px] rounded-lg bg-secondary-color/10 text-secondary-color border-0 uppercase tracking-widest">
                     {trial.phase}
@@ -336,15 +362,15 @@ export default function Dashboard() {
                 <div className="flex items-center text-xs text-muted-foreground mb-8 gap-6 font-bold uppercase tracking-widest opacity-80">
                   <span className="flex items-center gap-2">
                     <MapPin size={16} className="text-primary-color" />
-                    Denmark Hub
+                    {trialPlace(trial)}
                   </span>
                   <span className="flex items-center gap-2 text-primary-color">
                     <Activity size={16} className="opacity-60" />
-                    {trial.enrollment} Enrolled
+                    {trial.enrollment_count ?? trial.enrollment ?? 0} Enrolled
                   </span>
                 </div>
                 <Button className="w-full shadow-2xl shadow-primary-color/10 rounded-2xl font-black h-14 bg-primary-color text-primary-foreground text-xs uppercase tracking-widest border-0 hover:shadow-primary-color/50 transition-all duration-500 cursor-pointer">
-                  Consultation
+                  View Trial
                 </Button>
               </div>
             ))}
@@ -391,8 +417,11 @@ export default function Dashboard() {
           </Link>
         </div>
         <div className="grid md:grid-cols-3 gap-12">
+          {!eventsLoading && upcomingEvents.length === 0 && <EmptyPanel text="No upcoming events yet" />}
           {upcomingEvents.map((event, index) => {
-            const isRegistered = state.registeredEvents.includes(event.event_id);
+            const isRegistered = myEventIds.has(event.event_id);
+            const isSaving = toggleRegistration.isPending && toggleRegistration.variables?.id === event.event_id;
+            const registrationClosed = isEventPassed(event);
             return (
               <Card key={`auth-ev-calendar-match-v3-${event.event_id || index}`} className="border-border/5 bg-background/25 backdrop-blur-xl rounded-[3.5rem] p-12 hover:shadow-[0_45px_100px_-25px_rgba(16,185,129,0.4)] hover:bg-card hover:border-primary-color/30 hover:-translate-y-4 transition-all duration-1000 group/ev relative cursor-pointer flex flex-col">
                 <Badge variant="outline" className="mb-10 border-primary-color/10 bg-primary-color/5 text-primary-color font-black uppercase tracking-[0.4em] text-[10px] px-6 py-3 rounded-full shadow-inner w-fit">
@@ -410,16 +439,17 @@ export default function Dashboard() {
                      <div className="w-12 h-12 rounded-2xl bg-primary-color/5 flex items-center justify-center border border-primary-color/5 group-hover/ev:bg-primary-color group-hover/ev:text-white transition-all duration-700">
                       <MapPin size={22} />
                     </div>
-                    <span className="text-foreground truncate max-w-[170px]">Denmark Hub</span>
+                    <span className="text-foreground truncate max-w-[170px]">{eventPlace(event)}</span>
                   </div>
                 </div>
                 <Button
                   size="lg"
                   variant={isRegistered ? "default" : "outline"}
                   className={`w-full rounded-2xl font-black h-18 shadow-2xl text-[10px] uppercase tracking-[0.25em] border-0 transition-all cursor-pointer ${isRegistered ? "bg-success-color hover:bg-success-color/90 text-white shadow-success-color/20" : "bg-muted/40 hover:bg-primary-color hover:text-white shadow-primary-color/10"}`}
-                  onClick={(e) => handleRegister(e, event.event_id, event.title)}
+                  onClick={(e) => handleRegister(e, event.event_id)}
+                  disabled={isSaving || (registrationClosed && !isRegistered)}
                 >
-                  {isRegistered ? <><CheckCircle2 size={28} className="mr-3" /> Registered</> : "Apply Now"}
+                  {isRegistered ? <><CheckCircle2 size={28} className="mr-3" /> Registered</> : registrationClosed ? "Registration closed" : "Register"}
                 </Button>
               </Card>
             );

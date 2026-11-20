@@ -180,6 +180,7 @@ export interface ClinicalTrial {
   enrollment: number;
   enrollment_count?: number;
   max_enrollment?: number;
+  location?: string | null; // first site, in list results
   contact?: string;
   metadata: Record<string, any>;
   last_updated: string;
@@ -575,19 +576,4 @@ export interface AuthState {
   isAuthenticated: boolean;
   error: string | null;
   authStatus: 'idle' | 'pending' | 'success' | 'error';
-}
-
-export interface AppState {
-  users: User[];
-  trials: ClinicalTrial[];
-  events: Event[];
-  resources: Resource[];
-  forumPosts: ForumPost[];
-  communities: Community[]; 
-  workingGroups: WorkingGroup[]; 
-  surveys: Survey[]; 
-  notifications: Notification[];
-  currentUser: User | null;
-  savedTrials: string[]; 
-  registeredEvents: string[];
 }
