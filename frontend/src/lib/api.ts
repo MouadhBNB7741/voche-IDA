@@ -85,6 +85,8 @@ export const EVENTS = {
   DETAILS: (id: string) => `${API_BASE}/events/${id}`,
   REGISTER: (id: string) => `${API_BASE}/events/${id}/register`,
   MY_EVENTS: `${API_BASE}/users/me/events`,
+  // Suggestions (POST to LIST) and their approval
+  MY_SUGGESTIONS: `${API_BASE}/events/my-suggestions`,
 };
 
 export const RESOURCES = {
@@ -92,6 +94,12 @@ export const RESOURCES = {
   DETAILS: (id: string) => `${API_BASE}/resources/${id}`,
   RATE: (id: string) => `${API_BASE}/resources/${id}/rating`,
   PROGRESS: (id: string) => `${API_BASE}/resources/${id}/progress`,
+  DOWNLOAD: (id: string) => `${API_BASE}/resources/${id}/download`,
+  FILE: (id: string) => `${API_BASE}/resources/${id}/file`,
+  // Submissions and their approval
+  CAN_SUBMIT: `${API_BASE}/resources/can-submit`,
+  SUBMIT: `${API_BASE}/resources/submit`,
+  MINE: `${API_BASE}/resources/mine`,
 };
 
 export const SYSTEM = {

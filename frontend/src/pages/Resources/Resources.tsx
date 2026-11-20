@@ -19,7 +19,13 @@ import {
   Play,
   Award,
   TrendingUp,
+  Plus,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
+import { useAuthContext } from "../../contexts/AuthContext";
+import { useTheme } from "../../contexts/ThemeContext";
+import { SubmitResourceModal } from "../../components/resources/SubmitResourceModal";
 import { Input } from "../../components/ui/input";
 import {
   Select,
@@ -101,6 +107,26 @@ export default function ResourceLibrary() {
   const resources = data?.data || [];
   const totalPages = data?.meta?.pages || 1;
 
+  // Sharing resources: verified HCPs, approved organization members and admins
+  const { isAuthenticated } = useAuthContext();
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+  const [isSubmitOpen, setIsSubmitOpen] = useState(false);
+  const { data: access } = useQuery({
+    queryKey: ["resources", "can-submit", isAuthenticated],
+    queryFn: resourceService.canSubmit,
+    enabled: isAuthenticated,
+    staleTime: 5 * 60 * 1000,
+  });
+  const canSubmit = !!access?.can_submit;
+  const { data: mine } = useQuery({
+    queryKey: ["resources", "mine"],
+    queryFn: resourceService.getMine,
+    enabled: canSubmit,
+  });
+  // Published ones are in the list below; show what is still waiting or was turned down
+  const openSubmissions = (mine?.data ?? []).filter((r) => r.approval_status !== "approved");
+
   const getTypeIcon = (type: string) => {
     const typeConfig = resourceTypes.find((t) => t.id === type);
     return typeConfig ? typeConfig.icon : FileText;
@@ -147,24 +173,87 @@ export default function ResourceLibrary() {
         description="Access comprehensive educational materials, toolkits, and training resources."
         variant="green"
         action={
-          <div className="flex gap-4 text-sm font-medium bg-white/10 backdrop-blur-md p-4 rounded-xl shadow-inner text-white">
-            <div className="flex flex-col items-center gap-1">
-              <BookOpen size={20} />
-              <span>{data?.meta?.total || 0}+ Items</span>
+          <div className="flex flex-col items-stretch gap-3">
+            <div className="flex gap-4 text-sm font-medium bg-white/10 backdrop-blur-md p-4 rounded-xl shadow-inner text-white">
+              <div className="flex flex-col items-center gap-1">
+                <BookOpen size={20} />
+                <span>{data?.meta?.total || 0}+ Items</span>
+              </div>
+              <div className="w-px bg-white/20 h-full"></div>
+              <div className="flex flex-col items-center gap-1">
+                <Globe size={20} />
+                <span>25 Langs</span>
+              </div>
+              <div className="w-px bg-white/20 h-full"></div>
+              <div className="flex flex-col items-center gap-1">
+                <Award size={20} />
+                <span>Certified</span>
+              </div>
             </div>
-            <div className="w-px bg-white/20 h-full"></div>
-            <div className="flex flex-col items-center gap-1">
-              <Globe size={20} />
-              <span>25 Langs</span>
-            </div>
-            <div className="w-px bg-white/20 h-full"></div>
-            <div className="flex flex-col items-center gap-1">
-              <Award size={20} />
-              <span>Certified</span>
-            </div>
+            {canSubmit && (
+              <Button
+                onClick={() => setIsSubmitOpen(true)}
+                className="gap-2 bg-white text-primary-color hover:bg-white/90 font-semibold shadow-md cursor-pointer"
+              >
+                <Plus size={16} />
+                Share a resource
+              </Button>
+            )}
           </div>
         }
       />
+
+      {canSubmit && (
+        <SubmitResourceModal
+          open={isSubmitOpen}
+          onOpenChange={setIsSubmitOpen}
+          categories={categories.filter((c) => c !== "All")}
+        />
+      )}
+
+      {openSubmissions.length > 0 && (
+        <Card className="p-5 space-y-3">
+          <div>
+            <h2 className="font-semibold">Your submissions</h2>
+            <p className="text-sm text-muted-foreground">
+              Resources you shared that aren't in the hub yet.
+            </p>
+          </div>
+          <ul className="divide-y divide-border">
+            {openSubmissions.map((submission) => (
+              <li key={submission.resource_id} className="flex flex-col gap-1 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <button
+                  type="button"
+                  onClick={() => navigate(`/resources/${submission.resource_id}`)}
+                  className="text-left font-medium hover:text-primary-color cursor-pointer"
+                >
+                  {submission.title}
+                </button>
+                {submission.approval_status === "rejected" ? (
+                  <div className="flex flex-col items-start gap-1 sm:items-end">
+                    <Badge variant="outline" className={`gap-1 ${isDark ? "border-red-500/40 bg-red-500/15 text-red-300" : "border-red-300 bg-red-100 text-red-800"}`}>
+                      <XCircle size={12} aria-hidden="true" /> Not approved
+                    </Badge>
+                    {submission.rejection_reason && (
+                      <p className="text-xs text-muted-foreground max-w-md sm:text-right">
+                        {submission.rejection_reason}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <Badge variant="outline" className={`gap-1 self-start sm:self-auto ${isDark ? "border-amber-500/40 bg-amber-500/15 text-amber-300" : "border-amber-300 bg-amber-100 text-amber-800"}`}>
+                    <Clock size={12} aria-hidden="true" /> Waiting for review
+                  </Badge>
+                )}
+              </li>
+            ))}
+          </ul>
+          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <CheckCircle2 size={12} aria-hidden="true" />
+            You'll get a notification and an email when an admin decides.
+          </p>
+        </Card>
+      )}
 
       {/* Resource Types */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -464,7 +553,7 @@ export default function ResourceLibrary() {
                         ({resource.rating})
                       </span>
                     </div>
-                    {resource.downloads && (
+                    {resource.downloads > 0 && (
                       <div className="flex items-center gap-1 text-xs text-muted-foreground font-medium bg-muted px-2 py-0.5 rounded-full">
                         <Download size={10} />
                         {resource.downloads.toLocaleString()}

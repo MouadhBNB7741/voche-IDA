@@ -1,6 +1,6 @@
 import { apiClient } from '../lib/apiClient';
 import { EVENTS } from '../lib/api';
-import type { Event, ApiResponse } from '../types/db';
+import type { Event, ApiResponse, EventSuggestion } from '../types/db';
 
 export const eventService = {
   getAll: async (): Promise<Event[]> => {
@@ -19,6 +19,12 @@ export const eventService = {
 
   cancelRegistration: async (id: string): Promise<void> => {
     await apiClient.delete(EVENTS.REGISTER(id));
+  },
+
+  /** Members' suggestions wait for an admin's approval; admins' events are published at once. */
+  suggest: async (suggestion: EventSuggestion): Promise<Event> => {
+    const response = await apiClient.post<Event>(EVENTS.LIST, suggestion);
+    return response.data;
   },
 };
 

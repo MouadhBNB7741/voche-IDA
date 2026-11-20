@@ -75,6 +75,39 @@ export const resourceService = {
   ): Promise<void> => {
     await apiClient.patch(RESOURCES.PROGRESS(id), { progress, last_position });
   },
+
+  // ── Sharing resources ────────────────────────────────────────────────
+  canSubmit: async (): Promise<{ can_submit: boolean; reason?: string | null }> => {
+    const response = await apiClient.get(RESOURCES.CAN_SUBMIT);
+    return response.data;
+  },
+
+  /** Sends the form as multipart: the file (if any) and the text fields. */
+  submit: async (form: FormData): Promise<Resource> => {
+    const response = await apiClient.post<Resource>(RESOURCES.SUBMIT, form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return response.data;
+  },
+
+  getMine: async (): Promise<ResourcesResponse> => {
+    const response = await apiClient.get<ResourcesResponse>(RESOURCES.MINE);
+    return response.data;
+  },
+
+  /** Counts the download and says whether the resource is an uploaded file or a link. */
+  getDownload: async (
+    id: string,
+  ): Promise<{ has_file: boolean; download_url?: string | null; file_name?: string | null }> => {
+    const response = await apiClient.get(RESOURCES.DOWNLOAD(id));
+    return response.data;
+  },
+
+  /** The uploaded file, fetched with the user's login so resources that need sign-in work too. */
+  getFile: async (id: string): Promise<Blob> => {
+    const response = await apiClient.get(RESOURCES.FILE(id), { responseType: "blob" });
+    return response.data;
+  },
 };
 
 export default resourceService;

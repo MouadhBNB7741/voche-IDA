@@ -46,6 +46,8 @@ export type EventType = 'webinar' | 'conference' | 'training' | 'roundtable';
 export type EventStatus = 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
 export type EventRegistrationStatus = 'registered' | 'attended' | 'no_show' | 'cancelled';
 export type ResourceType = 'video' | 'document' | 'toolkit' | 'course';
+// Submitted resources and suggested events wait for an admin (resources can also be draft or archived)
+export type ApprovalStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'archived';
 
 // Surveys
 export type SurveyStatus = 'draft' | 'active' | 'closed';
@@ -342,9 +344,25 @@ export interface Event {
   status: EventStatus;
   tags: string[];
   banner_image?: string;
+  approval_status?: ApprovalStatus;
+  created_by?: string | null;
+  rejection_reason?: string | null;
   created_at: string;
   updated_at: string;
   is_registered?: boolean; // UI Convenience
+}
+
+export interface EventSuggestion {
+  title: string;
+  description: string;
+  type: EventType;
+  organizer: string;
+  event_date: string;   // YYYY-MM-DD
+  event_time: string;   // HH:MM
+  timezone: string;
+  location?: string;
+  virtual_link?: string;
+  tags?: string[];
 }
 
 export interface EventRegistration {
@@ -374,6 +392,14 @@ export interface Resource {
   rating: number;
   featured: boolean;
   requires_auth: boolean;
+  approval_status?: ApprovalStatus;
+  has_file?: boolean;
+  file_name?: string | null;
+  file_type?: string | null;
+  file_size?: number | null;
+  submitted_by?: string | null;
+  rejection_reason?: string | null;
+  reviewed_at?: string | null;
   created_at: string;
   updated_at: string;
   ratings_count?: number;

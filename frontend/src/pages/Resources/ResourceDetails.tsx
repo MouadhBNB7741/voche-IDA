@@ -140,9 +140,69 @@ export default function ResourceDetail() {
     }, 1500);
   };
 
-  const handleVideoPlay = () => {
+  const saveBlob = (blob: Blob, fileName: string) => {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  };
+
+  // A real file is downloaded, a link is opened; resources with neither keep the old demo download
+  const handleDownload = async () => {
+    if (!resource || isDownloading) return;
+    if (!resource.has_file && !resource.url) {
+      simulateDownload();
+      return;
+    }
+    setIsDownloading(true);
+    try {
+      const info = await resourceService.getDownload(resource.resource_id);
+      if (info.has_file) {
+        const blob = await resourceService.getFile(resource.resource_id);
+        saveBlob(blob, info.file_name || resource.file_name || resource.title);
+        toast.success("Download complete");
+      } else if (info.download_url) {
+        window.open(info.download_url, "_blank", "noopener,noreferrer");
+      }
+    } catch (err) {
+      handleError(err, "Could not download this resource. Please try again.");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const [videoSrc, setVideoSrc] = useState<string | null>(null);
+  const closeVideo = (open: boolean) => {
+    setIsVideoOpen(open);
+    if (!open && videoSrc) {
+      window.URL.revokeObjectURL(videoSrc);
+      setVideoSrc(null);
+    }
+  };
+
+  const handleVideoPlay = async () => {
+    if (resource && !resource.has_file && resource.url) {
+      window.open(resource.url, "_blank", "noopener,noreferrer");
+      return;
+    }
     setVideoLoading(true);
     setIsVideoOpen(true);
+    if (resource?.has_file && resource.file_type?.startsWith("video/")) {
+      try {
+        const blob = await resourceService.getFile(resource.resource_id);
+        setVideoSrc(window.URL.createObjectURL(blob));
+      } catch (err) {
+        handleError(err, "Could not load this video. Please try again.");
+        setIsVideoOpen(false);
+      } finally {
+        setVideoLoading(false);
+      }
+      return;
+    }
     setTimeout(() => setVideoLoading(false), 1000);
   };
 
@@ -181,7 +241,7 @@ export default function ResourceDetail() {
         return (
           <Button
             className="w-full gap-2 shadow-md cursor-pointer"
-            onClick={simulateDownload}
+            onClick={handleDownload}
             disabled={isDownloading}
           >
             {isDownloading ? (
@@ -244,6 +304,7 @@ export default function ResourceDetail() {
   }
 
   const TypeIcon = getTypeIcon(resource.type);
+  const approval = resource.approval_status ?? "approved";
 
   return (
     <div className="container mx-auto p-4 max-w-4xl space-y-6 animate-in fade-in duration-300">
@@ -255,6 +316,29 @@ export default function ResourceDetail() {
         <ArrowLeft size={16} />
         Back to Resources
       </Button>
+
+      {approval !== "approved" && (
+        <Card className="flex items-start gap-3 p-4 border-dashed" role="status">
+          <Clock size={18} className="mt-0.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <div className="text-sm">
+            {approval === "rejected" ? (
+              <>
+                <p className="font-semibold">This resource wasn't approved</p>
+                {resource.rejection_reason && (
+                  <p className="text-muted-foreground">Reason: {resource.rejection_reason}</p>
+                )}
+              </>
+            ) : (
+              <>
+                <p className="font-semibold">Waiting for review</p>
+                <p className="text-muted-foreground">
+                  Only you and the admins can see it until it's approved.
+                </p>
+              </>
+            )}
+          </div>
+        </Card>
+      )}
 
       <PageHeader
         title={resource.title}
@@ -406,7 +490,7 @@ export default function ResourceDetail() {
                   {resource.language}
                 </span>
               </div>
-              {resource.downloads && (
+              {resource.downloads > 0 && (
                 <div className="flex justify-between border-b border-border/50 pb-2">
                   <span className="text-muted-foreground">Downloads</span>
                   <span className="font-medium">
@@ -581,7 +665,7 @@ export default function ResourceDetail() {
       </div>
 
       {/* Video Modal */}
-      <Dialog open={isVideoOpen} onOpenChange={setIsVideoOpen}>
+      <Dialog open={isVideoOpen} onOpenChange={closeVideo}>
         <DialogContent className="sm:max-w-4xl p-0 overflow-hidden bg-black border-none">
           <DialogHeader className="sr-only">
             <DialogTitle>Video Player</DialogTitle>
@@ -592,6 +676,8 @@ export default function ResourceDetail() {
                 <Loader2 size={48} className="animate-spin text-primary" />
                 <p className="text-sm font-medium">Loading Media...</p>
               </div>
+            ) : videoSrc ? (
+              <video src={videoSrc} controls autoPlay className="h-full w-full" aria-label={resource.title} />
             ) : (
               <div className="w-full h-full bg-slate-900 flex flex-col items-center justify-center text-white p-8 text-center relative">
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-60"></div>
