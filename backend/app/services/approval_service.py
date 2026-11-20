@@ -221,7 +221,7 @@ async def tell_admins_resource_submitted(conn, resource: Dict[str, Any]) -> None
     await tell_admins(conn, NotificationType.RESOURCE_UPDATE, {
         "title": "New resource to review",
         "message": f"{name} shared \"{resource['title']}\". It is waiting for approval.",
-        "link": f"/resources/{resource['resource_id']}",
+        "link": "/admin?tab=approvals",
     })
 
 
@@ -231,7 +231,7 @@ async def tell_admins_event_suggested(conn, event: Dict[str, Any]) -> None:
     await tell_admins(conn, NotificationType.EVENT_UPDATE, {
         "title": "New event to review",
         "message": f"{name} suggested \"{event['title']}\". It is waiting for approval.",
-        "link": f"/events/{event['event_id']}",
+        "link": "/admin?tab=approvals",
     })
 
 

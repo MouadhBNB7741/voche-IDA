@@ -5,7 +5,9 @@ from typing import List, Optional
 from app.api.dependencies.connections import get_connection
 
 from app.models.doctor_model import DoctorModel
-from app.schemas.doctor import VerificationRequest, VerificationResponse, VerificationReview
+from app.schemas.doctor import (
+    PendingVerificationResponse, VerificationRequest, VerificationResponse, VerificationReview,
+)
 from app.api.middleware.auth_middleware import auth_middleware, auth_middleware_onboarding
 from app.services.storage_service import get_private_storage
 from app.services.verification_service import (
@@ -95,8 +97,8 @@ async def get_my_verification(
         raise HTTPException(status_code=404, detail="No verification found")
     return result
 
-@router.get("/verifications/pending", response_model=List[VerificationResponse])
-@router.get("/admin/verifications", response_model=List[VerificationResponse])
+@router.get("/verifications/pending", response_model=List[PendingVerificationResponse])
+@router.get("/admin/verifications", response_model=List[PendingVerificationResponse])
 async def list_pending_verifications(
     current_user: dict = Depends(auth_middleware),
     conn=Depends(get_connection)

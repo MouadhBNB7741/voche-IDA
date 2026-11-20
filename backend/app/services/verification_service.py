@@ -97,7 +97,7 @@ async def tell_admins_licence_submitted(conn, user_id: str) -> None:
     await tell_admins(conn, NotificationType.VERIFICATION_UPDATE, {
         "title": "New licence to review",
         "message": f"{name} sent a licence for verification.",
-        "link": None,
+        "link": "/admin?tab=licences",
     })
 
 

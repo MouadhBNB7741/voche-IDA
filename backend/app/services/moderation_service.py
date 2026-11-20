@@ -333,3 +333,28 @@ class ModerationService:
                 "message": f"Your account was permanently suspended.{because}{removed}",
             }
         return None
+
+
+async def alert_admins_if_urgent(conn, report: Optional[Dict[str, Any]]) -> None:
+    """A report that may concern self-harm can't wait until someone opens the queue:
+    every admin is notified, once per post or comment while its reports are open."""
+    if not report or report.get("priority") != "critical":
+        return
+    try:
+        open_critical = await conn.fetchval(
+            """
+            SELECT COUNT(*) FROM content_reports
+            WHERE target_type = $1 AND target_id = $2 AND priority = 'critical'
+              AND status = ANY($3::text[])
+            """,
+            report["target_type"], report["target_id"], list(OPEN_REPORT_STATUSES),
+        )
+        if open_critical and open_critical > 1:
+            return  # admins were already told about this post or comment
+        await NotificationService(conn).notify_admins(NotificationType.MODERATION_ACTION, {
+            "title": "Urgent report: possible self-harm",
+            "message": "A post or reply may mention self-harm. Please review it in the moderation queue.",
+            "link": "/admin?tab=moderation",
+        })
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"Could not alert admins about an urgent report: {e}")

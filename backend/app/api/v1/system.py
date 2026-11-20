@@ -5,14 +5,18 @@ Endpoints:
   POST   /system/feedback    — Submit user feedback (auth required)
   GET    /system/metadata    — Platform enums/metadata (public)
   GET    /system/status      — System monitoring (internal)
+  GET    /system/admin/overview — Health, review queues and platform figures (admins)
+  GET    /system/audit-logs  — Admin decisions, most recent first (admins)
   GET    /health             — Health check (public, registered at root level)
 """
 import logging
-from typing import Optional, List
-from fastapi import APIRouter, Depends, Request, HTTPException
+from typing import Literal, Optional, List
+from fastapi import APIRouter, Depends, Query, Request, HTTPException
 
 from app.api.dependencies.connections import get_connection
+from app.api.middleware.admin_middleware import admin_required
 from app.api.middleware.auth_middleware import auth_middleware, auth_middleware_optional
+from app.services.admin_service import admin_overview, list_audit_logs
 from app.services.system_service import SystemService
 from app.schemas.system import FeedbackRequest
 from app.db.redis import get_redis_client
@@ -217,6 +221,29 @@ async def system_status(
     """
     service = SystemService(conn)
     return await service.system_status()
+
+
+# ── Admin portal ────────────────────────────────────────────────────────────
+
+@router.get("/admin/overview")
+async def get_admin_overview(
+    conn=Depends(get_connection),
+    current_user: dict = Depends(admin_required),
+):
+    """Platform health, what waits for review, and a few platform figures (admins only)."""
+    return await admin_overview(conn)
+
+
+@router.get("/audit-logs")
+async def get_audit_logs(
+    category: Optional[Literal["moderation", "verification", "resource", "event"]] = Query(None),
+    page: int = Query(1, ge=1),
+    limit: int = Query(25, ge=1, le=100),
+    conn=Depends(get_connection),
+    current_user: dict = Depends(admin_required),
+):
+    """Admin decisions (moderation, licences, resources, events), most recent first (admins only)."""
+    return await list_audit_logs(conn, category, page, limit)
 
 
 # ── GET /health ─────────────────────────────────────────────────────────────

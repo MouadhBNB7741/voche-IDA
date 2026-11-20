@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from app.models.base_model import DBModel
 from app.models.moderation_model import ModerationModel, VISIBLE_STATUSES_FOR_AUTHOR
-from app.services.moderation_service import FilterResult, score_content
+from app.services.moderation_service import FilterResult, alert_admins_if_urgent, score_content
 
 # Shown next to a verified doctor's name
 VERIFIED_HCP_SQL = "(u.user_type = 'hcp' AND u.is_verified = TRUE) AS author_is_verified_hcp"
@@ -657,7 +657,7 @@ class CommunityModel(DBModel):
         """Send content the automatic filter flagged to the moderation queue."""
         if not check.needs_review:
             return
-        await ModerationModel(self.conn).save_auto_report(
+        report = await ModerationModel(self.conn).save_auto_report(
             target_type=target_type,
             target_id=target_id,
             content=content,
@@ -665,6 +665,8 @@ class CommunityModel(DBModel):
             description=check.reason,
             priority=check.priority,
         )
+        if not report["was_critical"]:
+            await alert_admins_if_urgent(self.conn, report)
 
     # ------------------------------------------------------------------
     # 7c. DELETE COMMENT (soft delete)

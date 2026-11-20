@@ -51,3 +51,9 @@ class VerificationResponse(BaseModel):
         if isinstance(data, dict):
             return {**data, "has_document": bool(data.get("document_url"))}
         return data
+
+
+class PendingVerificationResponse(VerificationResponse):
+    """A licence in the admin queue, with the doctor who sent it."""
+    display_name: Optional[str] = None
+    email: Optional[str] = None

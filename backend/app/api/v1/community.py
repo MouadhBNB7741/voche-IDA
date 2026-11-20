@@ -7,6 +7,7 @@ from app.api.dependencies.connections import get_connection
 from app.api.middleware.auth_middleware import auth_middleware, auth_middleware_optional
 from app.models.community_model import CommunityModel, can_view_content
 from app.models.user_model import UserModel
+from app.services.moderation_service import alert_admins_if_urgent
 from app.schemas.community import (
     CommunityListResponse,
     CommunityResponse,
@@ -731,6 +732,7 @@ async def report_content(
             payload=request.model_dump(),
             community_id=str(community_id),
         )
+        await alert_admins_if_urgent(conn, report)
 
         # Save to redis to prevent duplicates (24 hours expiration)
         if redis:

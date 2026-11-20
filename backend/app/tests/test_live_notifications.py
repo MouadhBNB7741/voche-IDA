@@ -364,6 +364,7 @@ async def test_new_licence_alerts_admins(client, people):
     assert res.status_code == 201
     alerts = await notifications_for(people["admin"], "verification_update")
     assert [a["title"] for a in alerts] == ["New licence to review"]
+    assert alerts[0]["link"] == "/admin?tab=licences"
     assert "Test Doctor" in alerts[0]["message"]
 
 
@@ -462,7 +463,8 @@ async def test_new_resource_and_event_alert_admins(client, people):
     resource_alerts = await notifications_for(admin, "resource_update")
     event_alerts = await notifications_for(admin, "event_update")
     assert resource_alerts[0]["title"] == "New resource to review"
-    assert resource_alerts[0]["link"] == f"/resources/{resource.json()['resource_id']}"
+    assert resource_alerts[0]["link"] == "/admin?tab=approvals"
+    assert event_alerts[0]["link"] == "/admin?tab=approvals"
     assert event_alerts[0]["title"] == "New event to review"
     assert "Test Patient" in event_alerts[0]["message"]
 

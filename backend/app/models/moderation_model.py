@@ -31,10 +31,11 @@ class ModerationModel(DBModel):
         description: str,
         priority: str,
     ) -> Dict[str, Any]:
-        """One open automatic report per post or comment: a later edit refreshes it."""
-        existing = await self.conn.fetchval(
+        """One open automatic report per post or comment: a later edit refreshes it.
+        The result's "was_critical" says whether the report was already critical before."""
+        existing = await self.conn.fetchrow(
             """
-            SELECT report_id FROM content_reports
+            SELECT report_id, priority FROM content_reports
             WHERE target_type = $1 AND target_id = $2
               AND source = 'auto_filter' AND status = ANY($3::text[])
             """,
@@ -48,7 +49,7 @@ class ModerationModel(DBModel):
                 WHERE report_id = $1
                 RETURNING *
                 """,
-                existing, reason, description, priority, content,
+                existing["report_id"], reason, description, priority, content,
             )
         else:
             row = await self.conn.fetchrow(
@@ -62,7 +63,10 @@ class ModerationModel(DBModel):
                 """,
                 target_type, target_id, content, reason, description, priority,
             )
-        return self._record_to_dict(row)
+        return {
+            **self._record_to_dict(row),
+            "was_critical": bool(existing and existing["priority"] == "critical"),
+        }
 
     # ------------------------------------------------------------------
     # User reports: flag content once enough different users report it
