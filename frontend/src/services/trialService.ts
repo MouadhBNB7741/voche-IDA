@@ -1,9 +1,13 @@
 import { apiClient } from '../lib/apiClient';
 import { CLINICAL } from '../lib/api';
-import type { ClinicalTrial, PaginatedResponse } from '../types/db';
-
-const SAVED_TRIALS_KEY = 'voce_saved_trials';
-const CONNECTED_TRIALS_KEY = 'voce_connected_trials';
+import type {
+  AlertFrequency,
+  ClinicalTrial,
+  PaginatedResponse,
+  ScreeningAnswers,
+  ScreeningResult,
+  TrialPhase,
+} from '../types/db';
 
 export const trialService = {
 
@@ -17,6 +21,7 @@ export const trialService = {
     page?: number;
     limit?: number;
     sort_by?: string;
+    eligibleForMe?: boolean;
   } = {}): Promise<ClinicalTrial[]> {
     const urlParams = new URLSearchParams();
     
@@ -30,6 +35,7 @@ export const trialService = {
     if (filters.page) urlParams.append('page', String(filters.page));
     if (filters.limit) urlParams.append('limit', String(filters.limit));
     if (filters.sort_by) urlParams.append('sort_by', filters.sort_by);
+    if (filters.eligibleForMe) urlParams.append('eligible_for_me', 'true');
 
     const response = await apiClient.get<PaginatedResponse<ClinicalTrial>>(
       CLINICAL.TRIALS,
@@ -43,56 +49,21 @@ export const trialService = {
     return response.data;
   },
 
-  getSavedTrials(): string[] {
-    const stored = localStorage.getItem(SAVED_TRIALS_KEY);
-    return stored ? JSON.parse(stored) : [];
+  async screenEligibility(trialId: string, answers: ScreeningAnswers): Promise<ScreeningResult> {
+    const response = await apiClient.post<ScreeningResult>(CLINICAL.SCREEN(trialId), answers);
+    return response.data;
   },
 
-  saveTrial(trialId: string): void {
-    const saved = this.getSavedTrials();
-    if (!saved.includes(trialId)) {
-      saved.push(trialId);
-      localStorage.setItem(SAVED_TRIALS_KEY, JSON.stringify(saved));
-    }
+  async expressInterest(trialId: string, message?: string): Promise<void> {
+    await apiClient.post(CLINICAL.INTEREST(trialId), { message });
   },
 
-  unsaveTrial(trialId: string): void {
-    const saved = this.getSavedTrials().filter(id => id !== trialId);
-    localStorage.setItem(SAVED_TRIALS_KEY, JSON.stringify(saved));
-  },
-
-  isTrialSaved(trialId: string): boolean {
-    return this.getSavedTrials().includes(trialId);
-  },
-
-  toggleSavedTrial(trialId: string): boolean {
-    if (this.isTrialSaved(trialId)) {
-      this.unsaveTrial(trialId);
-      return false;
-    } else {
-      this.saveTrial(trialId);
-      return true;
-    }
-  },
-
-  getSavedTrialDetails(): ClinicalTrial[] {
-    return [];
-  },
-
-  getConnectedTrials(): string[] {
-    const stored = localStorage.getItem(CONNECTED_TRIALS_KEY);
-    return stored ? JSON.parse(stored) : [];
-  },
-
-  connectTrial(trialId: string): void {
-    const connected = this.getConnectedTrials();
-    if (!connected.includes(trialId)) {
-      connected.push(trialId);
-      localStorage.setItem(CONNECTED_TRIALS_KEY, JSON.stringify(connected));
-    }
-  },
-
-  isTrialConnected(trialId: string): boolean {
-    return this.getConnectedTrials().includes(trialId);
+  async createAlert(alert: {
+    disease_area?: string;
+    location?: string;
+    phase?: TrialPhase;
+    alert_frequency: AlertFrequency;
+  }): Promise<void> {
+    await apiClient.post(CLINICAL.ALERTS, alert);
   },
 };

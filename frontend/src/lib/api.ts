@@ -28,6 +28,7 @@ export const CLINICAL = {
   TRIAL_BY_ID: (id: string) => `${API_BASE}/trials/${id}`,
   SAVE_TRIAL: (id: string) => `${API_BASE}/trials/${id}/save`,
   INTEREST: (id: string) => `${API_BASE}/trials/${id}/interest`,
+  SCREEN: (id: string) => `${API_BASE}/trials/${id}/screen`,
   ALERTS: `${API_BASE}/alerts/trials`,
   ALERT_BY_ID: (id: string) => `${API_BASE}/alerts/trials/${id}`,
 };

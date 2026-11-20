@@ -37,6 +37,7 @@ class TrialSite(BaseModel):
 class TrialSummary(BaseModel):
     """Lightweight trial info for search results"""
     id: UUID = Field(..., alias="trial_id")
+    countries: List[str] = []
     title: str
     phase: Optional[str]
     status: Optional[str]

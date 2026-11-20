@@ -142,6 +142,7 @@ class ClinicalModel(DBModel):
                 t.phase,
                 t.status,
                 t.disease_area,
+                ARRAY(SELECT jsonb_array_elements_text(t.countries)) AS countries,
                 {location_agg},
                 t.enrollment AS enrollment_count,
                 t.max_enrollment,
