@@ -7,7 +7,7 @@ import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import {
   Bell, Check, Trash2, MessageSquare,
-  FlaskConical, Calendar, Info, Clock,
+  FlaskConical, Calendar, Info, Clock, ShieldAlert,
 } from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { toast } from 'sonner';
@@ -94,6 +94,7 @@ export default function Notifications() {
       case 'event_reminder':
       case 'event_update': return Calendar;
       case 'system_announcement': return Info;
+      case 'moderation_action': return ShieldAlert;
       default: return Bell;
     }
   };
@@ -106,6 +107,7 @@ export default function Notifications() {
       case 'community_like': return 'bg-secondary-color/10 text-secondary-color';
       case 'event_reminder':
       case 'event_update': return 'bg-accent-color/10 text-accent-color';
+      case 'moderation_action': return 'bg-amber-500/15 text-amber-600';
       default: return 'bg-muted-color text-muted-foreground';
     }
   };

@@ -33,11 +33,13 @@ export type SeverityLevel = 'low' | 'medium' | 'high' | 'critical';
 // Community & Moderation
 export type CommunityType = 'disease_specific' | 'general' | 'hcp_only';
 export type ModerationLevel = 'open' | 'pre_moderated' | 'restricted';
-export type ModerationStatus = 'pending' | 'approved' | 'flagged' | 'removed';
+export type ModerationStatus = 'draft' | 'pending' | 'approved' | 'flagged' | 'hidden' | 'removed';
 export type PostType = 'question' | 'story' | 'discussion' | 'announcement';
 export type ReportTargetType = 'post' | 'comment' | 'user';
-export type ReportReason = 'misinformation' | 'harassment' | 'spam' | 'medical_advice' | 'other';
-export type ReportStatus = 'pending' | 'reviewed' | 'resolved';
+export type ReportReason =
+  | 'misinformation' | 'harassment' | 'spam' | 'medical_advice'
+  | 'self_harm' | 'inappropriate_content' | 'other';
+export type ReportStatus = 'pending' | 'under_review' | 'actioned' | 'dismissed' | 'reviewed' | 'resolved';
 
 // Events & Resources
 export type EventType = 'webinar' | 'conference' | 'training' | 'roundtable';
@@ -54,8 +56,9 @@ export type NotificationType =
   | 'trial_match' | 'trial_alert' 
   | 'community_reply' | 'community_like' 
   | 'event_reminder' | 'event_update' 
-  | 'org_request_update' | 'resource_update' 
-  | 'survey_available' | 'system_announcement';
+  | 'org_request_update' | 'resource_update'
+  | 'survey_available' | 'system_announcement'
+  | 'moderation_action';
 export type FeedbackCategory = 'platform' | 'trial' | 'patient' | 'feature' | 'bug' | 'other';
 
 
@@ -263,6 +266,7 @@ export interface ForumPost {
   created_at: string;
   updated_at: string;
   author_name?: string; // UI convenience
+  author_is_verified_hcp?: boolean;
   is_liked_by_me?: boolean;
 }
 
@@ -278,6 +282,7 @@ export interface Comment {
   created_at: string;
   updated_at: string;
   author_name?: string;
+  author_is_verified_hcp?: boolean;
   is_liked_by_me?: boolean;
 }
 

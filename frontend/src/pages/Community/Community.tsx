@@ -15,7 +15,17 @@ import {
   Users,
   Search,
   Filter,
+  Flag,
+  MoreHorizontal,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../../components/ui/dropdownmenu";
+import { ReportModal, type ReportTarget } from "../../components/community/ReportModal";
+import { ModerationStatusBadge, VerifiedHcpBadge } from "../../components/community/ModerationBadges";
 import { Input } from "../../components/ui/input";
 import {
   Select,
@@ -116,6 +126,18 @@ export default function Community() {
 
   const [likedPosts, setLikedPosts] = useState<string[]>([]);
   const [isNewPostOpen, setIsNewPostOpen] = useState(false);
+
+  // Reporting a post from the feed
+  const [reportTarget, setReportTarget] = useState<(ReportTarget & { communityId: string }) | null>(null);
+  const [reportedPosts, setReportedPosts] = useState<string[]>([]);
+
+  const openReport = (communityId: string, postId: string) => {
+    if (!isAuthenticated) {
+      openAuthModal("Sign in to your Voche account to report inappropriate content.");
+      return;
+    }
+    setReportTarget({ type: "post", id: postId, communityId });
+  };
 
   // New Post Form State
   const [newPostTitle, setNewPostTitle] = useState("");
@@ -507,19 +529,21 @@ export default function Community() {
                     </Avatar>
 
                     <div className="flex-1 space-y-3">
-                      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2">
-                        <div className="space-y-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="space-y-1 min-w-0">
                           <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">
                             {post.title}
                           </h3>
                           <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                            <span className="font-medium text-foreground flex items-center gap-1.5">
+                            <span className="font-medium text-foreground flex flex-wrap items-center gap-1.5">
                               {post.author_name ?? "Anonymous"}
+                              <VerifiedHcpBadge show={post.author_is_verified_hcp} />
                               {isAuthor && (
                                 <Badge variant="secondary" className="bg-primary-color/15 text-primary-color border-primary-color/30 text-[10px] py-0 px-2 font-semibold">
                                   Author
                                 </Badge>
                               )}
+                              <ModerationStatusBadge status={post.moderation_status} />
                             </span>
                             <span>•</span>
                             <Clock size={12} />
@@ -534,6 +558,36 @@ export default function Community() {
                             </Badge>
                           </div>
                         </div>
+
+                        {!isAuthor && !reportedPosts.includes(post.post_id) && (
+                          // The menu renders in a portal, but React still bubbles its clicks to the card
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 shrink-0 text-muted-foreground cursor-pointer"
+                                  aria-label="More options for this post"
+                                >
+                                  <MoreHorizontal size={18} />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent
+                                align="end"
+                                className="rounded-xl border border-border bg-background text-foreground shadow-lg p-1"
+                              >
+                                <DropdownMenuItem
+                                  className="cursor-pointer gap-2"
+                                  onSelect={() => openReport(post.community_id, post.post_id)}
+                                >
+                                  <Flag size={14} />
+                                  Report post
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        )}
                       </div>
 
                       <p className="text-muted-foreground leading-relaxed line-clamp-2">
@@ -635,6 +689,13 @@ export default function Community() {
           )}
         </>
       )}
+
+      <ReportModal
+        communityId={reportTarget?.communityId ?? ""}
+        target={reportTarget}
+        onClose={() => setReportTarget(null)}
+        onReported={(target) => setReportedPosts((prev) => [...prev, target.id])}
+      />
     </div>
   );
 }

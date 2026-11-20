@@ -70,8 +70,17 @@ export function useCreatePost(communityId: string) {
     mutationFn: (payload: CreatePostPayload) =>
       communityService.createPost(communityId, payload),
 
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['community'] });
+      // The API wraps the post as { success, data }
+      const post = (result as any)?.data ?? result;
+      if (post?.moderation_status === 'pending') {
+        toast.info('Your post is waiting for review', {
+          description: 'A moderator will check it before other members can see it. You can still see it in the feed.',
+          duration: 8000,
+        });
+        return;
+      }
       toast.success('Discussion Created', {
         description: 'Your post has been published to the community.',
       });
@@ -140,7 +149,7 @@ export function useCreateReply(communityId: string, postId: string) {
     mutationFn: (payload: CreateReplyPayload) =>
       communityService.createReply(communityId, postId, payload),
 
-    onSuccess: () => {
+    onSuccess: (reply) => {
       queryClient.invalidateQueries({
         queryKey: ['community', communityId, 'posts', postId, 'replies'],
       });
@@ -148,6 +157,13 @@ export function useCreateReply(communityId: string, postId: string) {
       queryClient.invalidateQueries({
         queryKey: ['community', communityId, 'posts', postId],
       });
+      if (reply?.moderation_status === 'pending') {
+        toast.info('Your reply is waiting for review', {
+          description: 'A moderator will check it before other members can see it.',
+          duration: 8000,
+        });
+        return;
+      }
       toast.success('Reply Posted', {
         description: 'Your contribution has been added to the discussion.',
       });
@@ -254,8 +270,8 @@ export function useReportContent(communityId: string) {
       communityService.reportContent(communityId, payload),
 
     onSuccess: () => {
-      toast.success('Report Submitted', {
-        description: 'Thank you for helping keep our community safe.',
+      toast.success('Report sent', {
+        description: 'Thank you. A moderator will review it.',
       });
     },
 

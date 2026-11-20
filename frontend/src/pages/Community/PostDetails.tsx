@@ -27,15 +27,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../components/ui/select';
-import { Label } from '../../components/ui/label';
 import { PageHeader } from '../../components/ui/PageHeader';
+import { ReportModal, type ReportTarget } from '../../components/community/ReportModal';
+import {
+  ModerationStatusBadge,
+  VerifiedHcpBadge,
+  moderationHint,
+} from '../../components/community/ModerationBadges';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import {
@@ -46,17 +44,9 @@ import {
   useUnlikePost,
   useLikeReply,
   useUnlikeReply,
-  useReportContent,
   useDeletePost,
   useDeleteReply,
 } from '../../hooks/useCommunity';
-
-const reportReasons = [
-  { value: 'spam',           label: 'Spam' },
-  { value: 'misinformation', label: 'Misinformation' },
-  { value: 'harassment',     label: 'Harassment / Abuse' },
-  { value: 'other',          label: 'Other' },
-];
 
 export default function PostDetail() {
   const { communityId, postId } = useParams<{ communityId: string; postId: string }>();
@@ -72,7 +62,6 @@ export default function PostDetail() {
   const unlikePost = useUnlikePost(communityId ?? '');
   const likeReply = useLikeReply(communityId ?? '', postId ?? '');
   const unlikeReply = useUnlikeReply(communityId ?? '', postId ?? '');
-  const reportContent = useReportContent(communityId ?? '');
   const deletePostMutation = useDeletePost(communityId ?? '');
   const deleteReplyMutation = useDeleteReply(communityId ?? '', postId ?? '');
 
@@ -104,9 +93,7 @@ export default function PostDetail() {
   }, [replies]);
 
   // Report modal state
-  const [showReportModal, setShowReportModal] = useState(false);
-  const [reportTarget, setReportTarget] = useState<{ type: 'post' | 'reply'; id: string } | null>(null);
-  const [reportReason, setReportReason] = useState('');
+  const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
 
   // Delete confirmation modal state
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'post' | 'reply'; id: string } | null>(null);
@@ -155,34 +142,12 @@ export default function PostDetail() {
     setReplyText('');
   };
 
-  const openReportModal = (type: 'post' | 'reply', targetId: string) => {
+  const openReportModal = (type: 'post' | 'comment', targetId: string) => {
     if (!isAuthenticated) {
       openAuthModal("Sign in to your Voche account to report inappropriate content.");
       return;
     }
     setReportTarget({ type, id: targetId });
-    setReportReason('');
-    setShowReportModal(true);
-  };
-
-  const handleSubmitReport = async () => {
-    if (!isAuthenticated) return;
-    if (!reportTarget || !reportReason) return;
-    try {
-      await reportContent.mutateAsync({
-        target_type: reportTarget.type === 'reply' ? 'comment' : 'post',
-        target_id: reportTarget.id,
-        reason: reportReason,
-      });
-      // Save locally to prevent duplicate report UI
-      setReportedItems(prev => [...prev, reportTarget.id]);
-    } catch (err) {
-      // Error is handled by the useReportContent mutation
-    } finally {
-      setShowReportModal(false);
-      setReportTarget(null);
-      setReportReason('');
-    }
   };
 
   const handleDeletePostClick = () => {
@@ -318,7 +283,7 @@ export default function PostDetail() {
                 Delete Post
               </Button>
             )}
-            {!reportedItems.includes(post.post_id) && (
+            {post.user_id !== user?.id && !reportedItems.includes(post.post_id) && (
               <Button
                 variant="outline"
                 className="border-white/30 text-white hover:bg-white/10 cursor-pointer"
@@ -345,13 +310,15 @@ export default function PostDetail() {
             <div>
               <h1 className="text-2xl font-bold mb-2 tracking-tight">{post.title}</h1>
               <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                <span className="font-semibold text-foreground flex items-center gap-1.5">
+                <span className="font-semibold text-foreground flex flex-wrap items-center gap-1.5">
                   {post.author_name ?? 'Anonymous'}
+                  <VerifiedHcpBadge show={post.author_is_verified_hcp} />
                   {post.user_id === user?.id && (
                     <Badge variant="secondary" className="bg-primary-color/15 text-primary-color border-primary-color/30 text-[10px] py-0 px-2 font-semibold">
                       Author
                     </Badge>
                   )}
+                  <ModerationStatusBadge status={post.moderation_status} />
                 </span>
                 <span>•</span>
                 <Clock size={12} />
@@ -363,6 +330,13 @@ export default function PostDetail() {
                 ))}
               </div>
             </div>
+
+            {moderationHint(post.moderation_status) && (
+              <p className="flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                <ShieldAlert size={16} className="shrink-0" aria-hidden="true" />
+                {moderationHint(post.moderation_status)}
+              </p>
+            )}
 
             <div className="prose dark:prose-invert max-w-none text-foreground/90 leading-relaxed">
               <p className="whitespace-pre-wrap">{post.content}</p>
@@ -453,11 +427,13 @@ export default function PostDetail() {
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex flex-wrap items-center gap-2 text-sm">
                         <span className="font-semibold">{reply.author_name ?? 'Community Member'}</span>
+                        <VerifiedHcpBadge show={reply.author_is_verified_hcp} />
                         {reply.user_id === post.user_id && (
                           <Badge variant="secondary" className="bg-primary-color/10 text-primary-color border-primary-color/20 text-[9px] py-0 px-1.5 font-semibold">
                             Author
                           </Badge>
                         )}
+                        <ModerationStatusBadge status={reply.moderation_status} />
                         <span className="text-muted-foreground">•</span>
                         <span className="text-muted-foreground text-xs">
                           {new Date(reply.created_at).toLocaleDateString()}
@@ -475,12 +451,14 @@ export default function PostDetail() {
                             <Trash2 size={13} />
                           </Button>
                         )}
-                        {!reportedItems.includes(reply.comment_id) && (
+                        {reply.user_id !== user?.id && !reportedItems.includes(reply.comment_id) && (
                           <Button
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7 text-muted-foreground hover:text-destructive cursor-pointer"
-                            onClick={() => openReportModal('reply', reply.comment_id)}
+                            onClick={() => openReportModal('comment', reply.comment_id)}
+                            aria-label="Report this reply"
+                            title="Report this reply"
                           >
                             <Flag size={13} />
                           </Button>
@@ -548,77 +526,12 @@ export default function PostDetail() {
         </div>
       </div>
 
-      {/* Report Modal */}
-      <Dialog open={showReportModal} onOpenChange={setShowReportModal}>
-        <DialogContent className={`sm:max-w-[425px] border shadow-xl ${
-          !isDark 
-            ? "bg-white text-zinc-950 border-zinc-200" 
-            : "bg-zinc-900 text-white border-zinc-800"
-        }`}>
-          <DialogHeader>
-            <DialogTitle className={!isDark ? 'text-zinc-950' : 'text-white'}>
-              Report {reportTarget?.type === 'post' ? 'Post' : 'Reply'}
-            </DialogTitle>
-            <DialogDescription className={!isDark ? 'text-zinc-500' : 'text-zinc-400'}>
-              Help us keep the community safe. Please select a reason for reporting this content.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label className={!isDark ? 'text-zinc-700' : 'text-zinc-300'}>Reason for Report</Label>
-              <Select value={reportReason} onValueChange={setReportReason}>
-                <SelectTrigger className={`w-full border ${
-                  !isDark 
-                    ? 'bg-white border-zinc-200 text-zinc-900' 
-                    : 'bg-zinc-950 border-zinc-800 text-white'
-                }`}>
-                  <SelectValue placeholder="Select a reason" />
-                </SelectTrigger>
-                <SelectContent className={`border opacity-100 ${
-                  !isDark 
-                    ? 'bg-white border-zinc-200 text-zinc-950' 
-                    : 'bg-zinc-900 border-zinc-800 text-white'
-                }`}>
-                  {reportReasons.map(reason => (
-                    <SelectItem 
-                      key={reason.value} 
-                      value={reason.value} 
-                      className={`cursor-pointer ${
-                        !isDark 
-                          ? 'text-zinc-900 hover:bg-zinc-100 focus:bg-zinc-100 focus:text-zinc-900' 
-                          : 'text-white hover:bg-zinc-800 focus:bg-zinc-800 focus:text-white'
-                      }`}
-                    >
-                      {reason.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter className="gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => setShowReportModal(false)}
-              className={`cursor-pointer ${
-                !isDark 
-                  ? 'border-zinc-200 hover:bg-zinc-50 text-zinc-900' 
-                  : 'border-zinc-800 hover:bg-zinc-800 text-white'
-              }`}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSubmitReport}
-              disabled={!reportReason || reportContent.isPending}
-              variant="destructive"
-              className="cursor-pointer bg-red-600 text-white hover:bg-red-700 hover:scale-[1.02] active:scale-[0.98] transition-transform"
-            >
-              {reportContent.isPending ? 'Submitting...' : 'Submit Report'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ReportModal
+        communityId={communityId ?? ''}
+        target={reportTarget}
+        onClose={() => setReportTarget(null)}
+        onReported={(target) => setReportedItems(prev => [...prev, target.id])}
+      />
 
       {/* Delete Confirmation Modal */}
       <Dialog open={deleteTarget !== null} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
