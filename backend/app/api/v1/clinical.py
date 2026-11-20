@@ -2,7 +2,7 @@ import logging
 from typing import List, Optional, Any, Dict
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 
 from app.api.dependencies.connections import get_connection
 from app.api.middleware.admin_middleware import admin_required
@@ -30,7 +30,8 @@ from app.schemas.clinical import (
     ReferralResponse,
 )
 from app.schemas.notification import NotificationType
-from app.services import eligibility_service
+from app.db.postgres import PostgresDB
+from app.services import eligibility_service, trial_sync_service
 from app.services.audit_service import AuditService
 from app.services.email import EmailService
 from app.services.notification_service import NotificationService
@@ -289,6 +290,8 @@ async def change_trial_status(
         user_id=admin["id"], action="trial_status_changed", target_type="trial", target_id=str(trial_id),
         metadata={"from": current, "to": request.status},
     )
+    if request.status == "Recruiting":
+        await trial_sync_service.notify_matches(conn, trial_id)
     return {"trial_id": trial_id, "previous_status": current, "status": request.status}
 
 
@@ -392,3 +395,46 @@ async def respond_to_referral(
     if await model.referral_exists_for_patient(referral_id, current_user["id"], current_user["email"]):
         raise HTTPException(status_code=409, detail="This referral has already been answered")
     raise HTTPException(status_code=404, detail="Referral not found")
+
+
+# ----------------------------------------------------------------------
+# CLINICALTRIALS.GOV SYNC (admin)
+# ----------------------------------------------------------------------
+async def _run_sync_in_background(log_id):
+    async with PostgresDB.get_pool().acquire() as conn:
+        if not await conn.fetchval("SELECT pg_try_advisory_lock($1)", trial_sync_service.SYNC_LOCK_ID):
+            await conn.execute(
+                "UPDATE trial_sync_logs SET status = 'failed', sync_completed_at = NOW(), "
+                "error_details = 'Another sync was already running' WHERE id = $1",
+                log_id,
+            )
+            return
+        try:
+            await trial_sync_service.run_sync(conn, log_id=log_id)
+        finally:
+            await conn.execute("SELECT pg_advisory_unlock($1)", trial_sync_service.SYNC_LOCK_ID)
+
+
+@router.post("/trials/sync", status_code=status.HTTP_202_ACCEPTED)
+async def trigger_trial_sync(
+    background_tasks: BackgroundTasks,
+    conn=Depends(get_connection),
+    admin: dict = Depends(admin_required),
+):
+    """Start a ClinicalTrials.gov sync now. It runs in the background; check GET /trials/sync/logs for the result."""
+    log_id = await conn.fetchval("INSERT INTO trial_sync_logs DEFAULT VALUES RETURNING id")
+    await AuditService(conn).log_action(
+        user_id=admin["id"], action="trial_sync_triggered", target_type="trial_sync", target_id=str(log_id),
+    )
+    background_tasks.add_task(_run_sync_in_background, log_id)
+    return {"sync_id": log_id, "status": "running"}
+
+
+@router.get("/trials/sync/logs")
+async def list_trial_sync_logs(
+    conn=Depends(get_connection),
+    admin: dict = Depends(admin_required),
+):
+    """The 20 most recent sync runs, newest first."""
+    rows = await conn.fetch("SELECT * FROM trial_sync_logs ORDER BY sync_started_at DESC LIMIT 20")
+    return [dict(r) for r in rows]

@@ -109,6 +109,18 @@ class EmailService:
         return await EmailService._send(email, "You have been referred to a clinical trial - voche", html_content, text_content)
 
     @staticmethod
+    async def send_trial_alert(email: str, trial_title: str, trial_id: str):
+        """Instant trial alert: a new or newly recruiting trial matches one of the user's alerts."""
+        link = f"{settings.frontend_url}/trials/{trial_id}"
+        text_content = f"A clinical trial matching your alert is now open: {trial_title}.\n\nView it: {link}"
+        html_content = (
+            f"<p>A clinical trial matching your alert is now open: <strong>{html.escape(trial_title)}</strong>.</p>"
+            f'<p><a href="{link}">View the trial</a></p>'
+            "<p>You can change or stop trial alerts in your Voche account settings.</p>"
+        )
+        return await EmailService._send(email, "New trial matching your alert - voche", html_content, text_content)
+
+    @staticmethod
     async def _send(email: str, subject: str, html_content: str, text_content: str):
         """Send one email over SMTP in a worker thread, so a slow mail server never blocks the API."""
         try:
