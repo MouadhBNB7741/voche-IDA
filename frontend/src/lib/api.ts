@@ -31,6 +31,14 @@ export const DOCTORS = {
   VERIFICATION: `${API_BASE}/doctors/verification`,
   VERIFICATION_UPLOAD: `${API_BASE}/doctors/verification/upload`,
   DOCUMENT: (id: string) => `${API_BASE}/doctors/verification/${id}/document`,
+  // Admin review of licences
+  PENDING: `${API_BASE}/doctors/verifications/pending`,
+  REVIEW: (id: string) => `${API_BASE}/doctors/verifications/${id}`,
+};
+
+export const MODERATION = {
+  QUEUE: `${API_BASE}/moderation/queue`,
+  DECIDE: (reportId: string) => `${API_BASE}/moderation/reports/${reportId}/decide`,
 };
 
 export const CLINICAL = {
@@ -87,6 +95,8 @@ export const EVENTS = {
   MY_EVENTS: `${API_BASE}/users/me/events`,
   // Suggestions (POST to LIST) and their approval
   MY_SUGGESTIONS: `${API_BASE}/events/my-suggestions`,
+  PENDING: `${API_BASE}/events/pending`,
+  APPROVAL: (id: string) => `${API_BASE}/events/${id}/approval`,
 };
 
 export const RESOURCES = {
@@ -100,6 +110,8 @@ export const RESOURCES = {
   CAN_SUBMIT: `${API_BASE}/resources/can-submit`,
   SUBMIT: `${API_BASE}/resources/submit`,
   MINE: `${API_BASE}/resources/mine`,
+  PENDING: `${API_BASE}/resources/pending`,
+  APPROVAL: (id: string) => `${API_BASE}/resources/${id}/approval`,
 };
 
 export const SYSTEM = {
@@ -107,4 +119,6 @@ export const SYSTEM = {
   STATS: `${API_BASE}/system/stats`,
   FEEDBACK: `${API_BASE}/system/feedback`,
   FEEDBACK_LOCK: `${API_BASE}/system/feedback/lock`,
+  ADMIN_OVERVIEW: `${API_BASE}/system/admin/overview`,
+  AUDIT_LOGS: `${API_BASE}/system/audit-logs`,
 };

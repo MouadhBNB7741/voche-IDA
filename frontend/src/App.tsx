@@ -16,6 +16,7 @@ import Assistant from './pages/Assistant';
 import PatientDashboard from './pages/PatientDashboard/PatientDashboard';
 import HCPDashboard from './pages/HCPDashboard/HCPDashboard';
 import Notifications from './pages/Notifications';
+import AdminDashboard from './pages/Admin/AdminDashboard';
 import Login from './pages/Auth/Login';
 import Signup from './pages/Auth/Signup';
 import ForgotPassword from "./pages/Auth/ForgotPassword";
@@ -53,6 +54,7 @@ export default function App() {
         <Route path="/patientdashboard" element={<PatientDashboard />} />
         <Route path="/hcpdashboard" element={<HCPDashboard />} />
         <Route path="/notifications" element={<Notifications />} />
+        <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/403" element={<Forbidden />} />
         <Route path="/404" element={<NotFound />} />
       </Route>

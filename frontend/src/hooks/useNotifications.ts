@@ -102,6 +102,10 @@ export function useLiveNotifications() {
       if (notification.type === 'resource_update') queryClient.invalidateQueries({ queryKey: ['resources'] });
       if (notification.type === 'event_update') queryClient.invalidateQueries({ queryKey: ['events'] });
       if (notification.type === 'moderation_action') queryClient.invalidateQueries({ queryKey: ['community'] });
+      // Admins: new submissions and urgent reports refresh the admin portal
+      if (['resource_update', 'event_update', 'verification_update', 'moderation_action'].includes(notification.type)) {
+        queryClient.invalidateQueries({ queryKey: ['admin'] });
+      }
 
       const link = notification.link;
       toast(notification.title, {

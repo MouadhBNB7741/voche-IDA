@@ -16,6 +16,7 @@ import {
   BellRing,
   ChevronDown,
   ShieldCheck,
+  ShieldAlert,
   BellDot
 } from "lucide-react";
 
@@ -213,6 +214,16 @@ export default function Navigation() {
                   <UserIcon className="h-4 w-4 opacity-70" />
                   <span className="font-bold text-xs">Profile</span>
                 </DropdownMenuItem>
+
+                {user.user_type === 'admin' && (
+                  <DropdownMenuItem
+                    onClick={() => navigate("/admin")}
+                    className="px-4 py-2.5 rounded-xl focus:bg-primary-color/10 focus:text-primary-color cursor-pointer transition-colors gap-3"
+                  >
+                    <ShieldAlert className="h-4 w-4 opacity-70" />
+                    <span className="font-bold text-xs">Admin portal</span>
+                  </DropdownMenuItem>
+                )}
 
                 <DropdownMenuItem onClick={() => navigate("/notifications")}
                   className="px-4 py-2.5 rounded-xl focus:bg-primary-color/10 focus:text-primary-color cursor-pointer transition-colors gap-3">
