@@ -1,10 +1,13 @@
+import logging
 from typing import List, Optional, Any, Dict
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.api.dependencies.connections import get_connection
+from app.api.middleware.admin_middleware import admin_required
 from app.api.middleware.auth_middleware import auth_middleware, auth_middleware_optional
+from app.api.middleware.hcp_middleware import verified_hcp_required
 from app.models.clinical_model import ClinicalModel
 from app.schemas.clinical import (
     TrialSearchParams,
@@ -18,8 +21,21 @@ from app.schemas.clinical import (
     AlertResponse,
     InterestResponse,
     TrialSaveResponse,
+    TrialStatusUpdate,
+    TrialStatusResponse,
+    ScreeningRequest,
+    ScreeningResponse,
+    ReferralCreate,
+    ReferralRespond,
+    ReferralResponse,
 )
-from app.services.email import EmailService  # hypothetical
+from app.schemas.notification import NotificationType
+from app.services import eligibility_service
+from app.services.audit_service import AuditService
+from app.services.email import EmailService
+from app.services.notification_service import NotificationService
+
+logger = logging.getLogger(__name__)
 
 # Assuming main.py mounts this with /api/v1 context
 router = APIRouter(tags=["Clinical"])
@@ -39,15 +55,24 @@ async def search_trials(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     sort_by: str = Query("relevance"),
+    eligible_for_me: bool = Query(False, description="Only trials matching my profile's condition and country"),
     conn=Depends(get_connection),
     current_user: Optional[dict] = Depends(auth_middleware_optional),
 ):
     """
-    Search and list clinical trials.
+    Search and list clinical trials. Draft trials are only listed for platform admins.
     """
     model = ClinicalModel(conn)
     user_id = current_user["id"] if current_user else None
-    
+
+    match = {"conditions": None, "country": None}
+    if eligible_for_me:
+        if not current_user:
+            raise HTTPException(status_code=401, detail="Sign in to see trials matching your profile")
+        match = await model.get_match_profile(user_id)
+        if not match["conditions"] and not match["country"]:
+            raise HTTPException(status_code=400, detail="Add your condition or country to your profile to use this filter")
+
     # Extract params to pass individually or as kwargs
     results = await model.search_trials(
         keyword=keyword,
@@ -60,6 +85,9 @@ async def search_trials(
         limit=limit,
         sort_by=sort_by,
         user_id=user_id,
+        include_drafts=bool(current_user and current_user["user_type"] == "admin"),
+        match_conditions=match["conditions"],
+        match_country=match["country"],
     )
     return results
 
@@ -75,7 +103,8 @@ async def get_trial_by_id(
     """
     model = ClinicalModel(conn)
     user_id = current_user["id"] if current_user else None
-    trial = await model.get_trial_by_id(str(trial_id), user_id)
+    is_admin = bool(current_user and current_user["user_type"] == "admin")
+    trial = await model.get_trial_by_id(str(trial_id), user_id, include_drafts=is_admin)
     if not trial:
         raise HTTPException(status_code=404, detail="Trial not found")
         
@@ -131,7 +160,6 @@ async def express_interest(
     request: ExpressInterestRequest,
     conn=Depends(get_connection),
     current_user: dict = Depends(auth_middleware),
-    email_service: EmailService = Depends(),
 ):
     """
     Express interest in a trial.
@@ -231,3 +259,136 @@ async def get_my_saved_trials(
     model = ClinicalModel(conn)
     saved = await model.get_saved_trials(current_user["id"])
     return saved
+
+
+# ----------------------------------------------------------------------
+# LIFECYCLE (admin)
+# ----------------------------------------------------------------------
+@router.patch("/trials/{trial_id}/status", response_model=TrialStatusResponse)
+async def change_trial_status(
+    trial_id: UUID,
+    request: TrialStatusUpdate,
+    conn=Depends(get_connection),
+    admin: dict = Depends(admin_required),
+):
+    """Move a trial to its next lifecycle state. Completed and Terminated are final."""
+    model = ClinicalModel(conn)
+    current = await model.get_trial_status(str(trial_id))
+    if current is None:
+        raise HTTPException(status_code=404, detail="Trial not found")
+    if request.status not in model.STATUS_TRANSITIONS.get(current, set()):
+        allowed = sorted(model.STATUS_TRANSITIONS.get(current, set()))
+        raise HTTPException(
+            status_code=409,
+            detail=f"Cannot change status from {current} to {request.status}. Allowed: {', '.join(allowed) or 'none'}",
+        )
+    if not await model.change_status(str(trial_id), current, request.status):
+        raise HTTPException(status_code=409, detail="Trial status changed in the meantime. Please reload and try again.")
+
+    await AuditService(conn).log_action(
+        user_id=admin["id"], action="trial_status_changed", target_type="trial", target_id=str(trial_id),
+        metadata={"from": current, "to": request.status},
+    )
+    return {"trial_id": trial_id, "previous_status": current, "status": request.status}
+
+
+# ----------------------------------------------------------------------
+# ELIGIBILITY PRE-SCREENER
+# ----------------------------------------------------------------------
+@router.post("/trials/{trial_id}/screen", response_model=ScreeningResponse)
+async def screen_eligibility(
+    trial_id: UUID,
+    request: ScreeningRequest,
+    conn=Depends(get_connection),
+):
+    """Check a patient's answers against the trial's eligibility rules. Answers are not stored."""
+    rules = await ClinicalModel(conn).get_eligibility_rules(str(trial_id))
+    if rules is None:
+        raise HTTPException(status_code=404, detail="Trial not found")
+    return {"trial_id": trial_id, **eligibility_service.screen(rules, request.model_dump())}
+
+
+# ----------------------------------------------------------------------
+# HCP REFERRALS
+# ----------------------------------------------------------------------
+REFERRABLE_STATUSES = {"Not yet recruiting", "Recruiting"}
+
+
+@router.post("/trials/{trial_id}/refer", response_model=ReferralResponse, status_code=status.HTTP_201_CREATED)
+async def refer_patient(
+    trial_id: UUID,
+    request: ReferralCreate,
+    conn=Depends(get_connection),
+    hcp: dict = Depends(verified_hcp_required),
+):
+    """A verified HCP refers a patient (by email) to a trial. Notifies the patient in-app and by email."""
+    model = ClinicalModel(conn)
+    trial = await model.get_trial_by_id(str(trial_id))
+    if not trial:
+        raise HTTPException(status_code=404, detail="Trial not found")
+    if trial["status"] not in REFERRABLE_STATUSES:
+        raise HTTPException(status_code=409, detail=f"This trial is {trial['status']} and is not accepting referrals")
+
+    email = request.patient_email.lower()
+    if email == hcp["email"].lower():
+        raise HTTPException(status_code=400, detail="You cannot refer yourself")
+    patient = await conn.fetchrow("SELECT id FROM users WHERE lower(email) = $1 AND is_active = TRUE", email)
+    patient_id = patient["id"] if patient else None
+
+    referral = await model.create_referral(str(trial_id), hcp["id"], patient_id, email, request.clinical_notes)
+
+    if patient_id:
+        notifications = NotificationService(conn)
+        if await notifications._should_notify(str(patient_id), NotificationType.TRIAL_MATCH):
+            await notifications.create_notification(
+                user_id=str(patient_id),
+                notif_type=NotificationType.TRIAL_MATCH.value,
+                title="Your doctor referred you to a trial",
+                message=f"{referral['hcp_name']} referred you to: {trial['title']}",
+                link=f"/trials/{trial_id}",
+            )
+    try:
+        await EmailService.send_trial_referral(email, referral["hcp_name"], trial["title"], str(trial_id), bool(patient_id))
+    except Exception as e:
+        # The referral is saved and visible in-app; a mail outage must not undo it.
+        logger.warning(f"Referral {referral['id']} saved but email failed: {e}")
+    return referral
+
+
+@router.get("/referrals/sent", response_model=List[ReferralResponse])
+async def list_sent_referrals(
+    conn=Depends(get_connection),
+    hcp: dict = Depends(verified_hcp_required),
+):
+    """Referrals this HCP has sent, newest first, with their current status."""
+    return await ClinicalModel(conn).list_sent_referrals(hcp["id"])
+
+
+@router.get("/referrals/received", response_model=List[ReferralResponse])
+async def list_received_referrals(
+    conn=Depends(get_connection),
+    current_user: dict = Depends(auth_middleware),
+):
+    """Trials the current user's doctors referred them to. Opening the list marks new referrals as viewed."""
+    return await ClinicalModel(conn).list_received_referrals(current_user["id"], current_user["email"])
+
+
+@router.patch("/referrals/{referral_id}/respond", response_model=ReferralResponse)
+async def respond_to_referral(
+    referral_id: UUID,
+    request: ReferralRespond,
+    conn=Depends(get_connection),
+    current_user: dict = Depends(auth_middleware),
+):
+    """
+    The referred patient accepts or declines. Accepting moves the referral to consent_pending:
+    the patient still has to give informed consent before enrolment.
+    """
+    model = ClinicalModel(conn)
+    new_status = "consent_pending" if request.action == "accept" else "declined"
+    referral = await model.respond_to_referral(referral_id, current_user["id"], current_user["email"], new_status)
+    if referral:
+        return referral
+    if await model.referral_exists_for_patient(referral_id, current_user["id"], current_user["email"]):
+        raise HTTPException(status_code=409, detail="This referral has already been answered")
+    raise HTTPException(status_code=404, detail="Referral not found")

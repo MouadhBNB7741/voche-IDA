@@ -27,6 +27,9 @@ class ClinicalModel(DBModel):
         limit: int = 20,
         sort_by: str = "relevance",
         user_id: Optional[str] = None,
+        include_drafts: bool = False,
+        match_conditions: Optional[List[str]] = None,
+        match_country: Optional[str] = None,
     ) -> Dict[str, Any]:
         params = []
         def add_param(value: Any) -> str:
@@ -69,7 +72,24 @@ class ClinicalModel(DBModel):
             sp_ph = add_param(f"%{sponsor}%")
             where_conditions.append(f"t.sponsor ILIKE {sp_ph}")
 
+        if not include_drafts:
+            where_conditions.append("t.status <> 'Draft'")
+
+        # "Eligible for me": trial condition matches the patient's condition/interests,
+        # and the trial runs in the patient's country.
+        if match_conditions:
+            mc_ph = add_param([f"%{c}%" for c in match_conditions])
+            where_conditions.append(f"t.disease_area ILIKE ANY({mc_ph})")
+        if match_country:
+            ctry_ph = add_param(match_country)
+            where_conditions.append(
+                f"""(t.countries ? {ctry_ph} OR EXISTS (
+                    SELECT 1 FROM trial_sites ts WHERE ts.trial_id = t.trial_id AND ts.country ILIKE {ctry_ph}
+                ))"""
+            )
+
         where_clause = "WHERE " + " AND ".join(where_conditions) if where_conditions else ""
+        where_params = list(params)
 
         if user_id:
             user_ph = add_param(user_id)
@@ -136,37 +156,11 @@ class ClinicalModel(DBModel):
         records = await self.conn.fetch(query, *params)
         items = self._records_to_list(records)
 
-        # Count Query Logic
-        count_params = []
-        def add_c_param(value):
-            count_params.append(value)
-            return f"${len(count_params)}"
-        
-        c_conditions = []
-        if keyword_val:
-            kp = add_c_param(keyword_val)
-            c_conditions.append(f"to_tsvector('english', t.title || ' ' || COALESCE(t.summary, '')) @@ plainto_tsquery('english', {kp})")
-        if disease_areas:
-            dp = add_c_param(disease_areas)
-            c_conditions.append(f"t.disease_area = ANY({dp})")
-        if phases:
-            pp = add_c_param(phases)
-            c_conditions.append(f"t.phase = ANY({pp})")
-        if statuses:
-            sp = add_c_param(statuses)
-            c_conditions.append(f"t.status = ANY({sp})")
-        if location:
-            lp = add_c_param(f"%{location}%")
-            c_conditions.append(f"EXISTS (SELECT 1 FROM trial_sites ts WHERE ts.trial_id = t.trial_id AND (ts.country ILIKE {lp} OR ts.city ILIKE {lp}))")
-        if sponsor:
-            spp = add_c_param(f"%{sponsor}%")
-            c_conditions.append(f"t.sponsor ILIKE {spp}")
-            
-        c_where = "WHERE " + " AND ".join(c_conditions) if c_conditions else ""
-        
-        c_sql = f"SELECT COUNT(*) FROM clinical_trials t {c_where}"
-        total = await self.conn.fetchval(c_sql, *count_params) or 0
-        
+        # Same filters as the list query, so the total can never disagree with the items.
+        total = await self.conn.fetchval(
+            f"SELECT COUNT(*) FROM clinical_trials t {where_clause}", *where_params
+        ) or 0
+
         pages = (total + limit - 1) // limit if limit > 0 else 0
 
         return {
@@ -180,7 +174,9 @@ class ClinicalModel(DBModel):
     # ------------------------------------------------------------------
     # 2. GET TRIAL BY ID
     # ------------------------------------------------------------------
-    async def get_trial_by_id(self, trial_id: str, user_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    async def get_trial_by_id(
+        self, trial_id: str, user_id: Optional[str] = None, include_drafts: bool = False
+    ) -> Optional[Dict[str, Any]]:
         params = [trial_id]
         if user_id:
             params.append(user_id)
@@ -201,6 +197,7 @@ class ClinicalModel(DBModel):
                 t.sponsor,
                 t.countries, 
                 t.eligibility_criteria,
+                t.eligibility_rules,
                 t.enrollment AS enrollment_count,
                 t.max_enrollment,
                 t.start_date,
@@ -231,7 +228,7 @@ class ClinicalModel(DBModel):
                     WHERE ts.trial_id = t.trial_id
                 ) AS location
             FROM clinical_trials t
-            WHERE t.trial_id = $1
+            WHERE t.trial_id = $1 {"" if include_drafts else "AND t.status <> 'Draft'"}
         """
         record = await self.conn.fetchrow(query, *params)
         if not record:
@@ -240,7 +237,7 @@ class ClinicalModel(DBModel):
         data = dict(record)
         
         # Deserialize JSON fields if they are strings
-        for field in ['sites', 'countries', 'metadata', 'objectives', 'safety_info']:
+        for field in ['sites', 'countries', 'metadata', 'eligibility_rules', 'objectives', 'safety_info']:
             if field in data and isinstance(data[field], str):
                 try:
                     data[field] = json.loads(data[field])
@@ -473,3 +470,134 @@ class ClinicalModel(DBModel):
                 except: pass
             results.append(d)
         return results
+
+    # ------------------------------------------------------------------
+    # LIFECYCLE
+    # ------------------------------------------------------------------
+    # Allowed status changes. Completed and Terminated are final.
+    STATUS_TRANSITIONS = {
+        "Draft": {"Not yet recruiting", "Recruiting"},
+        "Not yet recruiting": {"Recruiting", "Suspended", "Terminated"},
+        "Recruiting": {"Active", "Completed", "Suspended", "Terminated"},
+        "Active": {"Completed", "Suspended", "Terminated"},
+        "Suspended": {"Recruiting", "Active", "Terminated"},
+        "Completed": set(),
+        "Terminated": set(),
+    }
+
+    async def get_trial_status(self, trial_id: str) -> Optional[str]:
+        return await self.conn.fetchval("SELECT status FROM clinical_trials WHERE trial_id = $1", trial_id)
+
+    async def change_status(self, trial_id: str, from_status: str, to_status: str) -> bool:
+        """Compare-and-set, so two admins changing the same trial at once cannot skip a step."""
+        row = await self.conn.fetchrow(
+            "UPDATE clinical_trials SET status = $3, last_updated = NOW() "
+            "WHERE trial_id = $1 AND status = $2 RETURNING trial_id",
+            trial_id, from_status, to_status,
+        )
+        return row is not None
+
+    async def get_eligibility_rules(self, trial_id: str) -> Optional[Dict[str, Any]]:
+        rules = await self.conn.fetchval(
+            "SELECT eligibility_rules FROM clinical_trials WHERE trial_id = $1 AND status <> 'Draft'", trial_id
+        )
+        if rules is None:
+            return None
+        return json.loads(rules) if isinstance(rules, str) else rules
+
+    async def get_match_profile(self, user_id: str) -> Dict[str, Any]:
+        """Condition, interests and country used by the 'eligible for me' search filter."""
+        row = await self.conn.fetchrow(
+            """
+            SELECT u.country, p.condition, p.interests
+            FROM users u LEFT JOIN user_profiles p ON p.user_id = u.id
+            WHERE u.id = $1
+            """,
+            user_id,
+        )
+        if not row:
+            return {"conditions": [], "country": None}
+        interests = row["interests"]
+        if isinstance(interests, str):
+            interests = json.loads(interests)
+        conditions = [c for c in [row["condition"], *(interests or [])] if isinstance(c, str) and c.strip()]
+        return {"conditions": conditions, "country": row["country"]}
+
+    # ------------------------------------------------------------------
+    # REFERRALS
+    # ------------------------------------------------------------------
+    REFERRAL_COLUMNS = """
+        r.id, r.trial_id, t.title AS trial_title, t.status AS trial_status,
+        r.hcp_user_id, hcp.display_name AS hcp_name,
+        r.patient_user_id, COALESCE(pat.display_name, r.patient_email) AS patient_name,
+        r.patient_email, r.clinical_notes, r.status, r.created_at, r.updated_at
+    """
+    REFERRAL_JOINS = """
+        FROM trial_referrals r
+        JOIN clinical_trials t ON t.trial_id = r.trial_id
+        JOIN users hcp ON hcp.id = r.hcp_user_id
+        LEFT JOIN users pat ON pat.id = r.patient_user_id
+    """
+
+    async def create_referral(self, trial_id, hcp_user_id, patient_user_id, patient_email, clinical_notes):
+        referral_id = await self.conn.fetchval(
+            """
+            INSERT INTO trial_referrals (trial_id, hcp_user_id, patient_user_id, patient_email, clinical_notes)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING id
+            """,
+            trial_id, hcp_user_id, patient_user_id, patient_email, clinical_notes,
+        )
+        return await self.get_referral(referral_id)
+
+    async def get_referral(self, referral_id) -> Optional[Dict[str, Any]]:
+        row = await self.conn.fetchrow(f"SELECT {self.REFERRAL_COLUMNS} {self.REFERRAL_JOINS} WHERE r.id = $1", referral_id)
+        return dict(row) if row else None
+
+    async def list_sent_referrals(self, hcp_user_id) -> List[Dict[str, Any]]:
+        rows = await self.conn.fetch(
+            f"SELECT {self.REFERRAL_COLUMNS} {self.REFERRAL_JOINS} WHERE r.hcp_user_id = $1 ORDER BY r.created_at DESC",
+            hcp_user_id,
+        )
+        return self._records_to_list(rows)
+
+    async def list_received_referrals(self, user_id, email: str) -> List[Dict[str, Any]]:
+        """Claims referrals sent to this email before the patient had an account, and marks new ones as viewed."""
+        async with self.conn.transaction():
+            await self.conn.execute(
+                "UPDATE trial_referrals SET patient_user_id = $1, updated_at = NOW() "
+                "WHERE patient_user_id IS NULL AND lower(patient_email) = lower($2)",
+                user_id, email,
+            )
+            await self.conn.execute(
+                "UPDATE trial_referrals SET status = 'viewed', updated_at = NOW() "
+                "WHERE patient_user_id = $1 AND status = 'sent'",
+                user_id,
+            )
+            rows = await self.conn.fetch(
+                f"SELECT {self.REFERRAL_COLUMNS} {self.REFERRAL_JOINS} WHERE r.patient_user_id = $1 ORDER BY r.created_at DESC",
+                user_id,
+            )
+        return self._records_to_list(rows)
+
+    async def respond_to_referral(self, referral_id, user_id, email: str, new_status: str) -> Optional[Dict[str, Any]]:
+        """Only the referred patient can respond, and only while the referral is still open."""
+        row = await self.conn.fetchrow(
+            """
+            UPDATE trial_referrals
+            SET status = $4, patient_user_id = $2, updated_at = NOW()
+            WHERE id = $1
+              AND (patient_user_id = $2 OR (patient_user_id IS NULL AND lower(patient_email) = lower($3)))
+              AND status IN ('sent', 'viewed')
+            RETURNING id
+            """,
+            referral_id, user_id, email, new_status,
+        )
+        return await self.get_referral(row["id"]) if row else None
+
+    async def referral_exists_for_patient(self, referral_id, user_id, email: str) -> bool:
+        return bool(await self.conn.fetchval(
+            "SELECT 1 FROM trial_referrals WHERE id = $1 "
+            "AND (patient_user_id = $2 OR (patient_user_id IS NULL AND lower(patient_email) = lower($3)))",
+            referral_id, user_id, email,
+        ))

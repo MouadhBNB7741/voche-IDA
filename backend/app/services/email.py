@@ -1,3 +1,5 @@
+import asyncio
+import html
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -86,39 +88,53 @@ class EmailService:
         If you didn't request this, please ignore this email.
         """
         
+        return await EmailService._send(email, "Reset Your Password - voche", html_content, text_content)
+
+    @staticmethod
+    async def send_trial_referral(email: str, doctor_name: str, trial_title: str, trial_id: str, has_account: bool):
+        """Tell a patient their doctor referred them to a trial (or invite them to sign up first)."""
+        link = f"{settings.frontend_url}/trials/{trial_id}" if has_account else f"{settings.frontend_url}/signup"
+        action = "View the trial" if has_account else "Create your free Voche account to view it"
+        text_content = (
+            f"{doctor_name} has referred you to a clinical trial on Voche: {trial_title}.\n\n"
+            f"{action}: {link}\n\n"
+            "Joining a trial is always your choice. Please talk to your doctor before deciding."
+        )
+        html_content = (
+            f"<p>{html.escape(doctor_name)} has referred you to a clinical trial on Voche: "
+            f"<strong>{html.escape(trial_title)}</strong>.</p>"
+            f'<p><a href="{link}">{action}</a></p>'
+            "<p>Joining a trial is always your choice. Please talk to your doctor before deciding.</p>"
+        )
+        return await EmailService._send(email, "You have been referred to a clinical trial - voche", html_content, text_content)
+
+    @staticmethod
+    async def _send(email: str, subject: str, html_content: str, text_content: str):
+        """Send one email over SMTP in a worker thread, so a slow mail server never blocks the API."""
         try:
-            # Create message
-            message = MIMEMultipart("alternative")
-            message["Subject"] = "Reset Your Password - voche"
-            message["From"] = settings.email_from or settings.smtp_user
-            message["To"] = email
-            
-            # Attach both plain and HTML versions
-            part1 = MIMEText(text_content, "plain")
-            part2 = MIMEText(html_content, "html")
-            message.attach(part1)
-            message.attach(part2)
-            
-            # Send via SMTP
-            smtp_method = smtplib.SMTP_SSL if settings.smtp_port == 465 else smtplib.SMTP
-            logger.info(f"Connecting to SMTP server {settings.smtp_host}:{settings.smtp_port}...")
-            
-            with smtp_method(settings.smtp_host, settings.smtp_port) as server:
-                if settings.smtp_port != 465:
-                    server.starttls()  # Secure connection for 587
-                
-                logger.info(f"Attempting SMTP login for {settings.smtp_user}...")
-                server.login(settings.smtp_user, settings.smtp_password)
-                
-                logger.info(f"Sending email to {email}...")
-                server.send_message(message)
-            
-            logger.info(f"✅ Password reset email successfully sent to {email}")
+            await asyncio.to_thread(EmailService._send_sync, email, subject, html_content, text_content)
+            logger.info(f"✅ Email '{subject}' sent to {email}")
             return True
-            
         except smtplib.SMTPAuthenticationError:
             logger.error(f"❌ SMTP Authentication failed for {settings.smtp_user}. Check your credentials.")
             raise Exception("Email authentication failed.")
         except Exception as e:
             logger.error(f"❌ Failed to send email to {email}: {str(e)}")
             raise Exception(f"Failed to send email: {str(e)}")
+
+    @staticmethod
+    def _send_sync(email: str, subject: str, html_content: str, text_content: str):
+        message = MIMEMultipart("alternative")
+        message["Subject"] = subject
+        message["From"] = settings.email_from or settings.smtp_user
+        message["To"] = email
+        message.attach(MIMEText(text_content, "plain"))
+        message.attach(MIMEText(html_content, "html"))
+
+        smtp_method = smtplib.SMTP_SSL if settings.smtp_port == 465 else smtplib.SMTP
+        logger.info(f"Connecting to SMTP server {settings.smtp_host}:{settings.smtp_port}...")
+        with smtp_method(settings.smtp_host, settings.smtp_port, timeout=20) as server:
+            if settings.smtp_port != 465:
+                server.starttls()  # Secure connection for 587
+            server.login(settings.smtp_user, settings.smtp_password)
+            server.send_message(message)
