@@ -60,7 +60,7 @@ export type NotificationType =
   | 'event_reminder' | 'event_update' 
   | 'org_request_update' | 'resource_update'
   | 'survey_available' | 'system_announcement'
-  | 'moderation_action';
+  | 'moderation_action' | 'verification_update';
 export type FeedbackCategory = 'platform' | 'trial' | 'patient' | 'feature' | 'bug' | 'other';
 
 

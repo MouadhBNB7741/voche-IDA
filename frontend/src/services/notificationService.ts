@@ -1,5 +1,13 @@
 import { apiClient } from '../lib/apiClient';
 import { USERS } from '../lib/api';
+import type { Notification } from '../types/db';
+
+/** One page of GET /notifications */
+export interface NotificationPage {
+  data: Notification[];
+  unread_count: number;
+  meta: { total: number; page: number; limit: number; total_pages: number };
+}
 
 export interface NotificationPreferences {
   frequency: 'instant' | 'daily' | 'weekly';
@@ -60,13 +68,9 @@ updatePreferences: async (data: Partial<NotificationPreferences>): Promise<Notif
   /**
    * Get paginated notifications for the authenticated user.
    */
-  getNotifications: async (params?: { page?: number; limit?: number; read?: boolean; type?: string }): Promise<any> => {
-    try {
-      const response = await apiClient.get(USERS.NOTIFICATIONS, { params });
-      return response.data?.data ?? response.data;
-    } catch (err) {
-      throw err;
-    }
+  getNotifications: async (params?: { page?: number; limit?: number; read?: boolean; type?: string }): Promise<NotificationPage> => {
+    const response = await apiClient.get(USERS.NOTIFICATIONS, { params });
+    return response.data;
   },
 
   /**

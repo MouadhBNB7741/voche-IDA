@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -7,13 +7,14 @@ import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import {
   Bell, Check, Trash2, MessageSquare,
-  FlaskConical, Calendar, Info, Clock, ShieldAlert,
+  FlaskConical, Calendar, Info, Clock, ShieldAlert, BadgeCheck, BookOpen, Building2,
 } from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { toast } from 'sonner';
 import type { NotificationType } from '../types/db';
 import { apiClient } from '../lib/apiClient';
 import { USERS } from '../lib/api';
+import { useNotificationFeed } from '../hooks/useNotifications';
 
 export default function Notifications() {
   const navigate = useNavigate();
@@ -27,14 +28,7 @@ export default function Notifications() {
     }
   }, [authLoading, isAuthenticated, navigate]);
 
-  const { data: notifData, isLoading: loadingNotifs } = useQuery({
-    queryKey: ['notifications'],
-    queryFn: async () => {
-      const res = await apiClient.get(`${USERS.NOTIFICATIONS}?limit=20`);
-      return res.data;
-    },
-    enabled: isAuthenticated,
-  });
+  const { data: notifData, isLoading: loadingNotifs } = useNotificationFeed();
 
   const notifications = notifData?.data ?? [];
   const unreadCount = notifData?.unread_count ?? 0;
@@ -95,6 +89,9 @@ export default function Notifications() {
       case 'event_update': return Calendar;
       case 'system_announcement': return Info;
       case 'moderation_action': return ShieldAlert;
+      case 'verification_update': return BadgeCheck;
+      case 'resource_update': return BookOpen;
+      case 'org_request_update': return Building2;
       default: return Bell;
     }
   };
@@ -108,6 +105,8 @@ export default function Notifications() {
       case 'event_reminder':
       case 'event_update': return 'bg-accent-color/10 text-accent-color';
       case 'moderation_action': return 'bg-amber-500/15 text-amber-600';
+      case 'verification_update': return 'bg-emerald-500/15 text-emerald-600';
+      case 'resource_update': return 'bg-primary-color/10 text-primary-color';
       default: return 'bg-muted-color text-muted-foreground';
     }
   };
