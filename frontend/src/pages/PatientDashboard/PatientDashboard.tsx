@@ -42,6 +42,7 @@ import { PageHeader } from '../../components/ui/PageHeader';
 import { NotificationSettings } from '../../components/profile/NotificationSettings';
 import { useAvatarUpload } from '../../hooks/useAvatarUpload';
 import { languages, toLanguageCode } from '../../utils/languages';
+import { roleLabelFor } from '../../utils/dashboard';
 
 import userService from '../../services/userService';
 import { useSavedTrials } from "../../hooks/useSavedTrials";
@@ -202,7 +203,7 @@ export default function PatientDashboard() {
       <PageHeader
         title={formData.first_name && formData.last_name ? `${formData.first_name} ${formData.last_name}` : formData.display_name || 'Guest User'}
         description={formData.bio}
-        badgeText={user?.user_type === 'hcp' ? 'Healthcare Professional' : user?.user_type === 'caregiver' ? 'Caregiver' : 'Patient Advocate'}
+        badgeText={roleLabelFor(user?.user_type)}
         variant="green"
         className="mb-0"
         action={

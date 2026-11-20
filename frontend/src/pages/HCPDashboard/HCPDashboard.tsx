@@ -42,6 +42,7 @@ import { PageHeader } from '../../components/ui/PageHeader';
 import { useAvatarUpload } from '../../hooks/useAvatarUpload';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
 import { languages, toLanguageCode } from '../../utils/languages';
+import { roleLabelFor } from '../../utils/dashboard';
 import userService from '../../services/userService';
 import { apiClient } from '../../lib/apiClient';
 import { SYSTEM } from '../../lib/api';
@@ -185,7 +186,7 @@ export default function HCPDashboard() {
       <PageHeader
         title={formData.name}
         description={formData.bio}
-        badgeText={user?.user_type === 'hcp' ? 'Healthcare Professional' : 'Patient Advocate'}
+        badgeText={roleLabelFor(user?.user_type)}
         variant="green"
         className="mb-0"
         action={
