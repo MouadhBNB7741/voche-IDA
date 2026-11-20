@@ -28,7 +28,7 @@ from app.schemas.events import (
     UserEventListResponse,
 )
 from app.schemas.resources import ApprovalDecisionRequest, ApprovalDecisionResponse
-from app.services.approval_service import ApprovalError, decide_event
+from app.services.approval_service import ApprovalError, decide_event, tell_admins_event_suggested
 
 router = APIRouter(prefix="/events", tags=["Events"])
 
@@ -76,11 +76,14 @@ async def suggest_event(
 ):
     """Suggest an event. Members' suggestions wait for an admin's approval; admins' events go live directly."""
     is_admin = current_user.get("user_type") == "admin"
-    return await EventModel(conn).create_event(
+    event = await EventModel(conn).create_event(
         created_by=current_user["id"],
         payload=request.model_dump(),
         approval_status="approved" if is_admin else "pending",
     )
+    if event["approval_status"] == "pending":
+        await tell_admins_event_suggested(conn, event)
+    return event
 
 
 @router.get("/my-suggestions", response_model=EventSubmissionListResponse)

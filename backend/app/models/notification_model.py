@@ -139,8 +139,15 @@ class NotificationModel(DBModel):
         Insert multiple notifications at once. Returns count of inserted rows.
         Each dict must have: user_id, type, title, message. Optional: link, expires_at.
         """
+        return len(await self.bulk_create_returning(notifications))
+
+    async def bulk_create_returning(
+        self,
+        notifications: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        """Like bulk_create, but returns the inserted rows."""
         if not notifications:
-            return 0
+            return []
 
         values_parts = []
         params: list = []
@@ -163,10 +170,11 @@ class NotificationModel(DBModel):
         query = f"""
             INSERT INTO notifications (user_id, type, title, message, link, expires_at)
             VALUES {', '.join(values_parts)}
+            RETURNING notification_id, user_id, type, title, message,
+                      link, read, expires_at, created_at
         """
-        result = await self.conn.execute(query, *params)
-        # result is like 'INSERT 0 5'
-        return int(result.split()[-1])
+        rows = await self.conn.fetch(query, *params)
+        return self._records_to_list(rows)
 
     # ── UPDATE ──────────────────────────────────────────────────────────
 

@@ -13,6 +13,7 @@ from fastapi import HTTPException, UploadFile
 from app.core.config import settings
 from app.models.event_model import EventModel
 from app.models.resource_model import ResourceModel
+from app.models.user_model import UserModel
 from app.schemas.notification import NotificationType
 from app.services.audit_service import AuditService
 from app.services.email import EmailService
@@ -175,7 +176,7 @@ async def decide_resource(conn, resource_id: str, admin: Dict[str, Any], decisio
             "message": f"\"{title}\" wasn't approved. Reason: {reason}",
             "link": "/resources",
         }
-    await _tell_submitter(conn, resource["submitted_by"], NotificationType.RESOURCE_UPDATE, message)
+    await tell_user(conn, resource["submitted_by"], NotificationType.RESOURCE_UPDATE, message)
     return updated
 
 
@@ -210,11 +211,39 @@ async def decide_event(conn, event_id: str, admin: Dict[str, Any], decision: str
             "message": f"\"{title}\" wasn't approved. Reason: {reason}",
             "link": "/events",
         }
-    await _tell_submitter(conn, event["created_by"], NotificationType.EVENT_UPDATE, message)
+    await tell_user(conn, event["created_by"], NotificationType.EVENT_UPDATE, message)
     return updated
 
 
-async def _tell_submitter(conn, user_id: Any, notif_type: NotificationType, message: Dict[str, str]) -> None:
+async def tell_admins_resource_submitted(conn, resource: Dict[str, Any]) -> None:
+    """Let admins know a resource is waiting for review."""
+    name = await UserModel(conn).get_display_name(resource["submitted_by"], "A member")
+    await tell_admins(conn, NotificationType.RESOURCE_UPDATE, {
+        "title": "New resource to review",
+        "message": f"{name} shared \"{resource['title']}\". It is waiting for approval.",
+        "link": f"/resources/{resource['resource_id']}",
+    })
+
+
+async def tell_admins_event_suggested(conn, event: Dict[str, Any]) -> None:
+    """Let admins know an event suggestion is waiting for review."""
+    name = await UserModel(conn).get_display_name(event["created_by"], "A member")
+    await tell_admins(conn, NotificationType.EVENT_UPDATE, {
+        "title": "New event to review",
+        "message": f"{name} suggested \"{event['title']}\". It is waiting for approval.",
+        "link": f"/events/{event['event_id']}",
+    })
+
+
+async def tell_admins(conn, notif_type: NotificationType, message: Dict[str, Any]) -> None:
+    """Notify every admin. A failure is logged and never fails the submission."""
+    try:
+        await NotificationService(conn).notify_admins(notif_type, message)
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"Could not notify admins: {e}")
+
+
+async def tell_user(conn, user_id: Any, notif_type: NotificationType, message: Dict[str, str]) -> None:
     """In-app notification and email. Failures are logged and never undo the decision."""
     if not user_id:
         return

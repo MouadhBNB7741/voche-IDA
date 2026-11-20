@@ -8,7 +8,9 @@ from app.models.doctor_model import DoctorModel
 from app.schemas.doctor import VerificationRequest, VerificationResponse, VerificationReview
 from app.api.middleware.auth_middleware import auth_middleware, auth_middleware_onboarding
 from app.services.storage_service import get_private_storage
-from app.services.verification_service import content_type_for, submit_licence
+from app.services.verification_service import (
+    content_type_for, decide_licence, submit_licence, tell_admins_licence_submitted,
+)
 
 router = APIRouter(prefix="/doctors", tags=["Doctor Verification"])
 
@@ -34,6 +36,7 @@ async def submit_verification(
         )
     
     result = await model.create_verification(current_user["id"], request.model_dump())
+    await tell_admins_licence_submitted(conn, current_user["id"])
     return result
 
 @router.post("/verification/upload", response_model=VerificationResponse, status_code=status.HTTP_201_CREATED)
@@ -92,6 +95,7 @@ async def get_my_verification(
         raise HTTPException(status_code=404, detail="No verification found")
     return result
 
+@router.get("/verifications/pending", response_model=List[VerificationResponse])
 @router.get("/admin/verifications", response_model=List[VerificationResponse])
 async def list_pending_verifications(
     current_user: dict = Depends(auth_middleware),
@@ -104,26 +108,19 @@ async def list_pending_verifications(
     result = await model.get_pending_verifications()
     return result
 
+@router.patch("/verifications/{verification_id}", response_model=VerificationResponse)
 @router.patch("/admin/verifications/{verification_id}", response_model=VerificationResponse)
 async def review_verification(
-    verification_id: str,
+    verification_id: UUID,
     review: VerificationReview,
     current_user: dict = Depends(auth_middleware),
     conn=Depends(get_connection)
 ):
+    """Approve or reject a pending licence (admins). Rejecting needs a reason.
+    The doctor gets a notification and an email, and the decision is audit-logged."""
     if not is_admin(current_user):
         raise HTTPException(status_code=403, detail="Admin access required")
-        
-    model = DoctorModel(conn)
-    
-    result = await model.review_verification(
-        verification_id, 
-        current_user["id"], 
-        review.status.value, 
-        review.rejection_reason
+
+    return await decide_licence(
+        conn, str(verification_id), current_user, review.status.value, review.rejection_reason
     )
-    
-    if not result:
-        raise HTTPException(status_code=404, detail="Verification not found")
-        
-    return result

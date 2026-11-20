@@ -10,6 +10,7 @@ from app.core.config import settings
 from app.db.postgres import PostgresDB
 from app.db.redis import connect_redis, disconnect_redis
 from app.db.init_db import init_db
+from app.services.connection_manager import manager as live_notifications
 from app.api.v1.auth import router as auth_router
 from app.api.v1.users import router as users_router
 from app.api.v1.clinical import router as clinical_router
@@ -44,7 +45,9 @@ async def lifespan(app: FastAPI):
         await connect_redis()
     except Exception as e:
         logger.warning(f"Redis connection failed: {e}")
-        
+    # Live notifications reach every backend instance through Redis when it is connected
+    await live_notifications.start()
+
     # Start all registered crons
     cron_manager.start()
 
@@ -52,6 +55,7 @@ async def lifespan(app: FastAPI):
     # --- Shutdown ---
     logger.info("🛑 Voche Backend Shutting down...")
     cron_manager.stop()
+    await live_notifications.stop()
     await PostgresDB.disconnect()
     await disconnect_redis()
 

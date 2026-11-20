@@ -32,6 +32,7 @@ from app.services.approval_service import (
     resource_submission_access,
     store_resource_file,
     submitter_organization,
+    tell_admins_resource_submitted,
 )
 
 router = APIRouter(prefix="/resources", tags=["Resources"])
@@ -147,6 +148,8 @@ async def submit_resource(
     except Exception:
         await delete_resource_file((file_info or {}).get("file_key"))
         raise
+    if resource["approval_status"] == "pending":
+        await tell_admins_resource_submitted(conn, resource)
     return resource
 
 

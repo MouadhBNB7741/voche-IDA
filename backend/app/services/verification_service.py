@@ -10,6 +10,10 @@ from typing import Any, Dict, Optional
 from fastapi import HTTPException, UploadFile
 
 from app.models.doctor_model import DoctorModel
+from app.models.user_model import UserModel
+from app.schemas.notification import NotificationType
+from app.services.approval_service import tell_admins, tell_user
+from app.services.audit_service import AuditService
 from app.services.storage_service import get_private_storage
 
 logger = logging.getLogger(__name__)
@@ -79,7 +83,60 @@ async def submit_licence(conn, user_id: str, details: Dict[str, Any], file: Uplo
 
     key = await store_licence(user_id, file)
     try:
-        return await model.create_verification(user_id, {**details, "document_url": key})
+        row = await model.create_verification(user_id, {**details, "document_url": key})
     except Exception:
         await delete_licence(key)
         raise
+    await tell_admins_licence_submitted(conn, user_id)
+    return row
+
+
+async def tell_admins_licence_submitted(conn, user_id: str) -> None:
+    """Let admins know a licence is waiting for review."""
+    name = await UserModel(conn).get_display_name(user_id, "A doctor")
+    await tell_admins(conn, NotificationType.VERIFICATION_UPDATE, {
+        "title": "New licence to review",
+        "message": f"{name} sent a licence for verification.",
+        "link": None,
+    })
+
+
+async def decide_licence(conn, verification_id: str, admin: Dict[str, Any], status: str,
+                         reason: Optional[str]) -> Dict[str, Any]:
+    """Approve or reject a pending licence. The decision goes in the audit log, and the
+    doctor gets a notification and an email."""
+    async with conn.transaction():
+        request = await conn.fetchrow(
+            "SELECT user_id, status, license_number FROM doctor_verifications "
+            "WHERE verification_id = $1 FOR UPDATE",
+            verification_id,
+        )
+        if not request:
+            raise HTTPException(status_code=404, detail="Verification not found")
+        if request["status"] != "pending":
+            raise HTTPException(status_code=409, detail=f"This licence is already {request['status']}")
+        result = await DoctorModel(conn).review_verification(verification_id, str(admin["id"]), status, reason)
+        await AuditService(conn).log_action(
+            user_id=str(admin["id"]),
+            action=f"verification.{status}",
+            target_type="doctor_verification",
+            target_id=verification_id,
+            metadata={"doctor_id": str(request["user_id"]), "license_number": request["license_number"], "reason": reason},
+        )
+
+    if status == "approved":
+        message = {
+            "title": "Your licence is verified",
+            "message": "An admin approved your licence. Your posts now show the Verified HCP badge, "
+                       "and you can share resources.",
+            "link": "/hcpdashboard",
+        }
+    else:
+        message = {
+            "title": "Your licence wasn't approved",
+            "message": f"An admin couldn't approve your licence. Reason: {reason} "
+                       "You can send a new document from your dashboard.",
+            "link": "/hcpdashboard",
+        }
+    await tell_user(conn, request["user_id"], NotificationType.VERIFICATION_UPDATE, message)
+    return result

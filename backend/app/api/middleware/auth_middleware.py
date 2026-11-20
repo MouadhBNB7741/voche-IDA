@@ -56,6 +56,14 @@ async def _get_token_user(token_creds: Optional[HTTPAuthorizationCredentials], c
         return None
 
 
+async def user_for_token(token: str, conn) -> Optional[dict]:
+    """The user a raw token belongs to, for connections that don't use the Authorization
+    header (the notifications WebSocket). Returns None if the token is invalid or logged out."""
+    if not token:
+        return None
+    return await _get_token_user(HTTPAuthorizationCredentials(scheme="Bearer", credentials=token), conn)
+
+
 def _is_active(user: dict) -> bool:
     return bool(user["is_active"]) and user["status"] == 'active'
 

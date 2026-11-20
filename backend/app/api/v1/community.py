@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.api.dependencies.connections import get_connection
 from app.api.middleware.auth_middleware import auth_middleware, auth_middleware_optional
 from app.models.community_model import CommunityModel, can_view_content
+from app.models.user_model import UserModel
 from app.schemas.community import (
     CommunityListResponse,
     CommunityResponse,
@@ -434,7 +435,7 @@ async def reply_to_post(
                     user_id=post["user_id"],
                     notif_type=NotificationType.COMMUNITY_REPLY,
                     data={
-                        "replier_name": current_user.get("display_name", "Someone"),
+                        "replier_name": await UserModel(conn).get_display_name(current_user["id"]),
                         "post_title": post["title"],
                         "link": f"/community/{community_id}/posts/{post_id}"
                     }
@@ -577,7 +578,7 @@ async def like_post(
                      user_id=post["user_id"],
                      notif_type=NotificationType.COMMUNITY_LIKE,
                      data={
-                         "user_name": current_user.get("display_name", "Someone"),
+                         "user_name": await UserModel(conn).get_display_name(current_user["id"]),
                          "link": f"/community/{community_id}/posts/{post_id}"
                      }
                  )
@@ -646,7 +647,7 @@ async def like_reply(
                       user_id=row["user_id"],
                       notif_type=NotificationType.COMMUNITY_LIKE,
                       data={
-                          "user_name": current_user.get("display_name", "Someone"),
+                          "user_name": await UserModel(conn).get_display_name(current_user["id"]),
                           "link": f"/community/{community_id}/posts/{row['post_id']}"
                       }
                   )

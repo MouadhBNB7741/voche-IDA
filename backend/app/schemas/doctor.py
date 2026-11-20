@@ -17,7 +17,16 @@ class VerificationRequest(BaseModel):
 
 class VerificationReview(BaseModel):
     status: VerificationStatus
-    rejection_reason: Optional[str] = None
+    rejection_reason: Optional[str] = Field(None, max_length=1000)
+
+    @model_validator(mode="after")
+    def _check_decision(self):
+        if self.status == VerificationStatus.pending:
+            raise ValueError("A review must approve or reject the licence.")
+        self.rejection_reason = (self.rejection_reason or "").strip() or None
+        if self.status == VerificationStatus.rejected and not self.rejection_reason:
+            raise ValueError("Give the doctor a reason when rejecting a licence.")
+        return self
 
 class VerificationResponse(BaseModel):
     verification_id: UUID

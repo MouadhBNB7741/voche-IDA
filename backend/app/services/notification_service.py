@@ -17,6 +17,7 @@ from datetime import datetime
 
 from app.models.notification_model import NotificationModel
 from app.schemas.notification import NotificationType, NotificationPreferences
+from app.services.connection_manager import manager as live_notifications
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +82,7 @@ class NotificationService:
     ) -> Dict[str, Any]:
         """Low-level create (bypass guard if needed, e.g. for critical system alerts)."""
         try:
-            return await self.model.create(
+            notification = await self.model.create(
                 user_id=user_id,
                 notif_type=notif_type,
                 title=title,
@@ -92,6 +93,26 @@ class NotificationService:
         except Exception as e:
             logger.error(f"Failed to create notification for user {user_id}: {e}")
             return {}
+        await self._push_live([notification])
+        return notification
+
+    async def _insert_many(self, notifications: List[Dict[str, Any]]) -> int:
+        """Save several notifications and push each one to its user's open tabs."""
+        rows = await self.model.bulk_create_returning(notifications)
+        await self._push_live(rows)
+        return len(rows)
+
+    @staticmethod
+    async def _push_live(notifications: List[Dict[str, Any]]) -> None:
+        """Send new notifications to the users' open tabs. Never fails the caller:
+        the notification is saved, and the frontend's refresh picks it up anyway."""
+        try:
+            await live_notifications.publish_many(
+                (str(n["user_id"]), {"type": "notification", "notification": n})
+                for n in notifications if n
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"Could not push live notifications: {e}")
 
     async def notify_admins(
         self,
@@ -120,7 +141,7 @@ class NotificationService:
                 for admin_id in admin_ids
             ]
 
-            return await self.model.bulk_create(notifications)
+            return await self._insert_many(notifications)
         except Exception as e:
             logger.error(f"Failed to notify admins: {e}")
             return 0
@@ -157,7 +178,7 @@ class NotificationService:
             if not notifications:
                 return 0
                 
-            return await self.model.bulk_create(notifications)
+            return await self._insert_many(notifications)
         except Exception as e:
             logger.error(f"Failed to bulk notify: {e}")
             return 0
@@ -169,8 +190,9 @@ class NotificationService:
         Check if the user wants this specific notification type.
         Fetches 'notification_preferences' and validates against schema.
         """
-        # Moderation decisions are always delivered: users can't turn off being told their post was removed
-        if notif_type == NotificationType.MODERATION_ACTION:
+        # Moderation decisions and licence results are always delivered: users can't turn off
+        # being told their post was removed or their licence was rejected
+        if notif_type in (NotificationType.MODERATION_ACTION, NotificationType.VERIFICATION_UPDATE):
             return True
         try:
             user = await self.user_model.get_by_id(user_id)
@@ -268,6 +290,13 @@ class NotificationService:
             NotificationType.MODERATION_ACTION: {
                 "title": data.get("title", "Moderation update"),
                 "message": data.get("message", "A moderator reviewed your content."),
+                "link": data.get("link"),
+            },
+
+            # Licence reviews (the verification service writes the wording)
+            NotificationType.VERIFICATION_UPDATE: {
+                "title": data.get("title", "Licence verification update"),
+                "message": data.get("message", "There is an update on your licence verification."),
                 "link": data.get("link"),
             },
         }

@@ -156,6 +156,15 @@ class UserModel(DBModel):
                 )
         return {"avatar": avatar, "documents": [row["document_url"] for row in documents]}
 
+    async def get_display_name(self, user_id: str, default: str = "Someone") -> str:
+        """The name other members see: display name, else first and last name."""
+        name = await self.conn.fetchval(
+            "SELECT COALESCE(NULLIF(TRIM(display_name), ''), NULLIF(TRIM(CONCAT(first_name, ' ', last_name)), '')) "
+            "FROM users WHERE id = $1",
+            user_id,
+        )
+        return name or default
+
     async def get_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
         """Fetch user by ID."""
         query = """

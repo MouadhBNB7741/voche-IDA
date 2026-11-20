@@ -42,6 +42,9 @@ class NotificationType(str, Enum):
     # Moderation decisions about the user's content or account
     MODERATION_ACTION = "moderation_action"
 
+    # Doctor licence reviews (the result for the doctor, new requests for admins)
+    VERIFICATION_UPDATE = "verification_update"
+
 
 # ── Request Schemas ──────────────────────────────────────────────────────────
 
