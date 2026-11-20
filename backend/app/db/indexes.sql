@@ -274,6 +274,10 @@ CREATE INDEX idx_events_tags ON events USING GIN (tags);
 COMMENT ON INDEX idx_events_event_date IS 'List events chronologically';
 COMMENT ON INDEX idx_events_upcoming IS 'Partial index for upcoming events only';
 
+-- Approval queue and a member's suggestions
+CREATE INDEX idx_events_approval_created ON events(approval_status, created_at DESC);
+CREATE INDEX idx_events_created_by ON events(created_by);
+
 
 -- event_registrations table
 -- Purpose: Attendance tracking, user's events
@@ -298,6 +302,10 @@ CREATE INDEX idx_resources_tags ON resources USING GIN (tags);
 
 COMMENT ON INDEX idx_resources_type IS 'Filter by video, document, toolkit, course';
 COMMENT ON INDEX idx_resources_featured IS 'Partial index for featured resources';
+
+-- Approval queue and a member's submissions
+CREATE INDEX idx_resources_approval_created ON resources(approval_status, created_at DESC);
+CREATE INDEX idx_resources_submitted_by ON resources(submitted_by);
 
 
 -- resource_ratings table

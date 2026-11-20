@@ -11,6 +11,23 @@ from datetime import date
 
 from app.models.base_model import DBModel
 
+DETAIL_COLUMNS = """
+    event_id, title, description, event_date, event_time,
+    timezone, type, organizer, location, virtual_link,
+    participants, max_participants, registration_deadline,
+    status, tags, banner_image, approval_status, created_by,
+    rejection_reason, reviewed_at, created_at, updated_at
+"""
+
+
+def can_view_event(event: Dict[str, Any], viewer: Optional[Dict[str, Any]]) -> bool:
+    """Approved events are public. Others only show to the person who suggested them and to admins."""
+    if event.get("approval_status", "approved") == "approved":
+        return True
+    if not viewer:
+        return False
+    return viewer.get("user_type") == "admin" or str(event.get("created_by")) == str(viewer.get("id"))
+
 
 class EventModel(DBModel):
     """
@@ -56,7 +73,8 @@ class EventModel(DBModel):
             params.append(value)
             return f"${len(params)}"
 
-        conditions = []
+        # The public list only shows approved events
+        conditions = ["e.approval_status = 'approved'"]
 
         if event_type:
             ph = add_param(event_type)
@@ -154,12 +172,8 @@ class EventModel(DBModel):
         event_id: str,
         user_id: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
-        query = """
-            SELECT
-                event_id, title, description, event_date, event_time,
-                timezone, type, organizer, location, virtual_link,
-                participants, max_participants, registration_deadline,
-                status, tags, banner_image, created_at, updated_at
+        query = f"""
+            SELECT {DETAIL_COLUMNS}
             FROM events
             WHERE event_id = $1
         """
@@ -213,7 +227,7 @@ class EventModel(DBModel):
                 SELECT event_id, registration_deadline, participants,
                        max_participants, status
                 FROM events
-                WHERE event_id = $1
+                WHERE event_id = $1 AND approval_status = 'approved'
                 """,
                 event_id,
             )
@@ -403,3 +417,94 @@ class EventModel(DBModel):
                 "pages": pages,
             },
         }
+
+    # ──────────────────────────────────────────────────────────────────────
+    # 6. SUGGESTED EVENTS AND APPROVAL
+    # ──────────────────────────────────────────────────────────────────────
+    async def create_event(
+        self, created_by: str, payload: Dict[str, Any], approval_status: str
+    ) -> Dict[str, Any]:
+        row = await self.conn.fetchrow(
+            f"""
+            INSERT INTO events (
+                title, description, type, organizer, event_date, event_time, timezone,
+                location, virtual_link, max_participants, registration_deadline, tags,
+                status, approval_status, created_by,
+                reviewed_by, reviewed_at
+            )
+            VALUES (
+                $1, $2, $3, $4, $5, $6, $7,
+                $8, $9, $10, $11, $12::jsonb,
+                'upcoming', $13::varchar, $14::uuid,
+                CASE WHEN $13::varchar = 'approved' THEN $14::uuid ELSE NULL END,
+                CASE WHEN $13::varchar = 'approved' THEN NOW() ELSE NULL END
+            )
+            RETURNING {DETAIL_COLUMNS}
+            """,
+            payload["title"], payload["description"], payload["type"], payload["organizer"],
+            payload["event_date"], payload["event_time"], payload.get("timezone") or "UTC",
+            payload.get("location"), payload.get("virtual_link"), payload.get("max_participants"),
+            payload.get("registration_deadline"), json.dumps(payload.get("tags") or []),
+            approval_status, created_by,
+        )
+        data = self._deserialize_tags(self._record_to_dict(row))
+        data["registration_status"] = None
+        return data
+
+    async def list_by_creator(self, user_id: str, page: int = 1, limit: int = 20) -> Dict[str, Any]:
+        total = await self.conn.fetchval("SELECT COUNT(*) FROM events WHERE created_by = $1", user_id) or 0
+        rows = await self.conn.fetch(
+            f"""
+            SELECT {DETAIL_COLUMNS} FROM events
+            WHERE created_by = $1
+            ORDER BY created_at DESC
+            OFFSET $2 LIMIT $3
+            """,
+            user_id, (page - 1) * limit, limit,
+        )
+        return {
+            "data": [self._deserialize_tags(r) for r in self._records_to_list(rows)],
+            "meta": {"total": total, "page": page, "limit": limit, "pages": (total + limit - 1) // limit},
+        }
+
+    async def list_pending(self, page: int = 1, limit: int = 20) -> Dict[str, Any]:
+        total = await self.conn.fetchval("SELECT COUNT(*) FROM events WHERE approval_status = 'pending'") or 0
+        rows = await self.conn.fetch(
+            f"""
+            SELECT s.*, u.display_name AS suggester_name, u.email AS suggester_email, u.user_type AS suggester_type
+            FROM (SELECT {DETAIL_COLUMNS} FROM events WHERE approval_status = 'pending') s
+            LEFT JOIN users u ON u.id = s.created_by
+            ORDER BY s.created_at ASC
+            OFFSET $1 LIMIT $2
+            """,
+            (page - 1) * limit, limit,
+        )
+        return {
+            "data": [self._deserialize_tags(r) for r in self._records_to_list(rows)],
+            "meta": {"total": total, "page": page, "limit": limit, "pages": (total + limit - 1) // limit},
+        }
+
+    async def get_for_decision(self, event_id: str) -> Optional[Dict[str, Any]]:
+        row = await self.conn.fetchrow(
+            "SELECT event_id, title, approval_status, created_by FROM events WHERE event_id = $1 FOR UPDATE",
+            event_id,
+        )
+        return self._record_to_dict(row) if row else None
+
+    async def set_approval(
+        self, event_id: str, status: str, reviewer_id: str, reason: Optional[str]
+    ) -> Dict[str, Any]:
+        row = await self.conn.fetchrow(
+            """
+            UPDATE events
+            SET approval_status = $2::varchar,
+                reviewed_by = $3,
+                reviewed_at = NOW(),
+                rejection_reason = CASE WHEN $2::varchar = 'rejected' THEN $4 ELSE NULL END,
+                updated_at = NOW()
+            WHERE event_id = $1
+            RETURNING event_id AS id, approval_status, reviewed_at, rejection_reason
+            """,
+            event_id, status, reviewer_id, reason,
+        )
+        return self._record_to_dict(row)

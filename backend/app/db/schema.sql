@@ -769,18 +769,26 @@ CREATE TABLE events (
     
     -- Status
     status VARCHAR(50) DEFAULT 'upcoming',        -- upcoming, ongoing, completed, cancelled
-    
+
+    -- Approval: members suggest events, an admin approves them (admins' own events go live directly)
+    approval_status VARCHAR(20) NOT NULL DEFAULT 'approved', -- pending, approved, rejected
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    reviewed_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    reviewed_at TIMESTAMPTZ,
+    rejection_reason TEXT,
+
     -- Additional Info
     tags JSONB DEFAULT '[]',
     banner_image VARCHAR(255),
-    
+
     -- Timestamps
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
-    
+
     -- Constraints
     CONSTRAINT check_event_type CHECK (type IN ('webinar', 'conference', 'training', 'roundtable')),
-    CONSTRAINT check_event_status CHECK (status IN ('upcoming', 'ongoing', 'completed', 'cancelled'))
+    CONSTRAINT check_event_status CHECK (status IN ('upcoming', 'ongoing', 'completed', 'cancelled')),
+    CONSTRAINT check_event_approval_status CHECK (approval_status IN ('pending', 'approved', 'rejected'))
 );
 
 COMMENT ON TABLE events IS 'Educational events, webinars, and conferences';
@@ -856,14 +864,28 @@ CREATE TABLE resources (
     -- Flags
     featured BOOLEAN DEFAULT FALSE,
     requires_auth BOOLEAN DEFAULT FALSE,
-    
+
+    -- Approval: submissions wait for an admin (admins' own resources are published directly)
+    approval_status VARCHAR(20) NOT NULL DEFAULT 'approved', -- draft, pending, approved, rejected, archived
+    submitted_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    reviewed_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    reviewed_at TIMESTAMPTZ,
+    rejection_reason TEXT,
+
+    -- Uploaded file (private storage, served through the API once approved)
+    file_key VARCHAR(500),
+    file_name VARCHAR(255),
+    file_type VARCHAR(100),
+    file_size INTEGER,
+
     -- Timestamps
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
-    
+
     -- Constraints
     CONSTRAINT check_resource_type CHECK (type IN ('video', 'document', 'toolkit', 'course')),
-    CONSTRAINT check_resource_rating CHECK (rating >= 0 AND rating <= 5)
+    CONSTRAINT check_resource_rating CHECK (rating >= 0 AND rating <= 5),
+    CONSTRAINT check_resource_approval_status CHECK (approval_status IN ('draft', 'pending', 'approved', 'rejected', 'archived'))
 );
 
 COMMENT ON TABLE resources IS 'Educational materials, videos, documents, and toolkits';

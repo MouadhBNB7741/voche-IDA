@@ -231,9 +231,9 @@ class NotificationService:
                 "link": f"/events/{data.get('event_id')}",
             },
             NotificationType.EVENT_UPDATE: {
-                "title": "Event Update",
-                "message": f"An update was posted for {data.get('event_title')}.",
-                "link": f"/events/{data.get('event_id')}",
+                "title": data.get("title") or "Event Update",
+                "message": data.get("message") or f"An update was posted for {data.get('event_title')}.",
+                "link": data.get("link", f"/events/{data.get('event_id')}"),
             },
 
             # Organizations
@@ -245,9 +245,9 @@ class NotificationService:
 
             # Resources
             NotificationType.RESOURCE_UPDATE: {
-                "title": "New Resource Available",
-                "message": f"A new resource was added: {data.get('resource_title')}",
-                "link": f"/resources/{data.get('resource_id')}",
+                "title": data.get("title") or "New Resource Available",
+                "message": data.get("message") or f"A new resource was added: {data.get('resource_title')}",
+                "link": data.get("link", f"/resources/{data.get('resource_id')}"),
             },
 
             # Surveys

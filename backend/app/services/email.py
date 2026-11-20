@@ -1,12 +1,72 @@
+import asyncio
+import html
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from typing import Optional
 from app.core.config import settings
 import logging
 
 logger = logging.getLogger(__name__)
 
 class EmailService:
+    @staticmethod
+    def smtp_configured() -> bool:
+        return bool(settings.smtp_user and settings.smtp_password)
+
+    @staticmethod
+    async def send_message(to: str, subject: str, text: str, link: Optional[str] = None) -> bool:
+        """Send a short plain email (with a simple HTML copy).
+
+        Without SMTP settings, as in local development, the email is only written to the log.
+        Never raises: a failed email must not undo the action that triggered it.
+        """
+        if link:
+            text = f"{text}\n\n{link}"
+        if not EmailService.smtp_configured():
+            logger.info(f"Email not sent (SMTP is not configured). To: {to} | Subject: {subject}\n{text}")
+            return False
+
+        paragraphs = "".join(
+            f"<p style=\"margin:0 0 16px 0;color:#475569;font-size:16px;\">{html.escape(p)}</p>"
+            for p in text.split("\n\n") if p.strip() and p != link
+        )
+        button = (
+            f"<p><a href=\"{html.escape(link)}\" style=\"display:inline-block;padding:12px 24px;"
+            f"background:#10b981;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;\">Open VOCHE</a></p>"
+            if link else ""
+        )
+        html_content = (
+            "<!DOCTYPE html><html><body style=\"font-family:Arial,sans-serif;background:#f8fafc;padding:32px;\">"
+            "<div style=\"max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:32px;\">"
+            "<div style=\"color:#10b981;font-weight:800;font-size:24px;margin-bottom:24px;\">voche</div>"
+            f"<h2 style=\"margin:0 0 16px 0;color:#0f172a;font-size:20px;\">{html.escape(subject)}</h2>"
+            f"{paragraphs}{button}</div></body></html>"
+        )
+
+        message = MIMEMultipart("alternative")
+        message["Subject"] = f"{subject} - voche"
+        message["From"] = settings.email_from or settings.smtp_user
+        message["To"] = to
+        message.attach(MIMEText(text, "plain"))
+        message.attach(MIMEText(html_content, "html"))
+
+        def _send() -> None:
+            smtp_method = smtplib.SMTP_SSL if settings.smtp_port == 465 else smtplib.SMTP
+            with smtp_method(settings.smtp_host, settings.smtp_port, timeout=20) as server:
+                if settings.smtp_port != 465:
+                    server.starttls()
+                server.login(settings.smtp_user, settings.smtp_password)
+                server.send_message(message)
+
+        try:
+            await asyncio.to_thread(_send)
+            logger.info(f"Email sent to {to}: {subject}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to send email to {to}: {e}")
+            return False
+
     @staticmethod
     async def send_password_reset(email: str, reset_token: str):
         """Send password reset email with token link"""
