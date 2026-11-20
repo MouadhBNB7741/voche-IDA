@@ -50,8 +50,8 @@ async def seed_db(conn):
             "last_name": "Smith",
             "is_verified": True,
             "verification": {
-                "status": "verified", 
-                "licenseNumber": "MD554433", 
+                "status": "approved",
+                "licenseNumber": "MD554433",
                 "institution": "General Hospital",
                 "specialization": "Oncology"
             },
@@ -123,6 +123,16 @@ async def seed_db(conn):
             VALUES ($1, $2, 'New York, USA')
             ON CONFLICT (user_id) DO UPDATE SET bio = EXCLUDED.bio
         """, uid, u["bio"])
+
+    # The demo doctor's license, already approved by the admin, so Doctor Tools shows it as verified
+    await conn.execute("""
+        INSERT INTO doctor_verifications (
+            user_id, license_number, institution, country, specialization,
+            status, reviewed_by, reviewed_at
+        )
+        SELECT $1::uuid, 'MD554433', 'General Hospital', 'USA', 'Oncology', 'approved', $2::uuid, NOW()
+        WHERE NOT EXISTS (SELECT 1 FROM doctor_verifications WHERE user_id = $1::uuid)
+    """, user_ids["hcp"], user_ids["admin"])
 
     logger.info("✅ Users seeded.")
 
