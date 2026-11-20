@@ -466,8 +466,11 @@ CREATE TABLE forum_posts (
     tags JSONB DEFAULT '[]',
     
     -- Moderation
-    moderation_status VARCHAR(50) DEFAULT 'approved', -- pending, approved, flagged, removed
-    
+    moderation_status VARCHAR(50) DEFAULT 'approved', -- draft, pending (held), approved, flagged, hidden, removed
+    moderation_score REAL DEFAULT 0,              -- Automatic filter score, 0 to 1
+    flagged_reason VARCHAR(255),                  -- Why the filter or reports flagged it
+    edited_at TIMESTAMPTZ,                        -- Last edit by the author
+
     -- Engagement Metrics
     views_count INTEGER DEFAULT 0,
     replies_count INTEGER DEFAULT 0,
@@ -484,7 +487,7 @@ CREATE TABLE forum_posts (
     
     -- Constraints
     CONSTRAINT check_post_type CHECK (post_type IN ('question', 'story', 'discussion', 'announcement')),
-    CONSTRAINT check_post_moderation_status CHECK (moderation_status IN ('pending', 'approved', 'flagged', 'removed'))
+    CONSTRAINT check_post_moderation_status CHECK (moderation_status IN ('draft', 'pending', 'approved', 'flagged', 'hidden', 'removed'))
 );
 
 COMMENT ON TABLE forum_posts IS 'User-generated discussion threads in communities';
@@ -517,6 +520,9 @@ CREATE TABLE comments (
     
     -- Moderation
     moderation_status VARCHAR(50) DEFAULT 'approved',
+    moderation_score REAL DEFAULT 0,
+    flagged_reason VARCHAR(255),
+    edited_at TIMESTAMPTZ,
     is_deleted BOOLEAN DEFAULT FALSE,
     
     -- Timestamps
@@ -524,7 +530,7 @@ CREATE TABLE comments (
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     
     -- Constraints
-    CONSTRAINT check_comment_moderation_status CHECK (moderation_status IN ('pending', 'approved', 'flagged', 'removed'))
+    CONSTRAINT check_comment_moderation_status CHECK (moderation_status IN ('draft', 'pending', 'approved', 'flagged', 'hidden', 'removed'))
 );
 
 COMMENT ON TABLE comments IS 'Replies to forum posts with support for nested threading';
@@ -548,17 +554,19 @@ CREATE TABLE content_reports (
     reporter_id UUID REFERENCES users(id) ON DELETE SET NULL,
     
     -- Target
-    target_type VARCHAR(50) NOT NULL,             -- post, comment, user
+    target_type VARCHAR(50) NOT NULL,             -- post, comment, user, resource
     target_id UUID NOT NULL,
     target_content TEXT,                           -- Snapshot at report time
-    
+
     -- Report Details
-    reason VARCHAR(100) NOT NULL,                  -- misinformation, harassment, spam, medical_advice, other
+    reason VARCHAR(100) NOT NULL,                  -- misinformation, harassment, spam, medical_advice, other, self_harm, inappropriate_content
     description TEXT,
-    
+    source VARCHAR(20) DEFAULT 'user',             -- user, auto_filter (no reporter)
+    priority VARCHAR(20) DEFAULT 'normal',         -- normal, high, critical
+
     -- Status
-    status VARCHAR(50) DEFAULT 'pending',          -- pending, reviewed, resolved
-    
+    status VARCHAR(50) DEFAULT 'pending',          -- pending, under_review, actioned, dismissed (old: reviewed, resolved)
+
     -- Moderation
     moderator_id UUID REFERENCES users(id),
     resolution_notes TEXT,
@@ -569,13 +577,43 @@ CREATE TABLE content_reports (
     resolved_at TIMESTAMPTZ,
     
     -- Constraints
-    CONSTRAINT check_target_type CHECK (target_type IN ('post', 'comment', 'user')),
-    CONSTRAINT check_report_reason CHECK (reason IN ('misinformation', 'harassment', 'spam', 'medical_advice', 'other')),
-    CONSTRAINT check_report_status CHECK (status IN ('pending', 'reviewed', 'resolved'))
+    CONSTRAINT check_target_type CHECK (target_type IN ('post', 'comment', 'user', 'resource')),
+    CONSTRAINT check_report_reason CHECK (reason IN ('misinformation', 'harassment', 'spam', 'medical_advice', 'other', 'self_harm', 'inappropriate_content')),
+    CONSTRAINT check_report_status CHECK (status IN ('pending', 'reviewed', 'resolved', 'under_review', 'actioned', 'dismissed')),
+    CONSTRAINT check_report_source CHECK (source IN ('user', 'auto_filter')),
+    CONSTRAINT check_report_priority CHECK (priority IN ('normal', 'high', 'critical'))
 );
 
 COMMENT ON TABLE content_reports IS 'User reports of inappropriate content for moderator review';
 COMMENT ON COLUMN content_reports.target_content IS 'Snapshot of reported content preserved for review';
+
+
+-- -----------------------------------------------------------------------------
+-- moderation_actions: Every moderator decision
+-- -----------------------------------------------------------------------------
+-- Purpose: Record what a moderator did, to whom and why (an author's history)
+-- Actions: approve, hide or delete content; warn, suspend or ban the author
+-- -----------------------------------------------------------------------------
+
+CREATE TABLE moderation_actions (
+    action_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    moderator_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    target_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    report_id UUID REFERENCES content_reports(report_id) ON DELETE SET NULL,
+    target_type VARCHAR(20),                       -- post, comment
+    target_id UUID,
+    action_type VARCHAR(30) NOT NULL,
+    reason TEXT,
+    duration_hours INTEGER,                        -- Suspensions only
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+
+    CONSTRAINT check_moderation_action_type CHECK (action_type IN (
+        'approve_content', 'hide_content', 'delete_content',
+        'warn_user', 'suspend_user', 'ban_user'
+    ))
+);
+
+COMMENT ON TABLE moderation_actions IS 'Moderator decisions on reported content and their authors';
 
 
 -- ============================================================================

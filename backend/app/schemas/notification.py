@@ -39,6 +39,9 @@ class NotificationType(str, Enum):
     # System
     SYSTEM_ANNOUNCEMENT = "system_announcement"
 
+    # Moderation decisions about the user's content or account
+    MODERATION_ACTION = "moderation_action"
+
 
 # ── Request Schemas ──────────────────────────────────────────────────────────
 

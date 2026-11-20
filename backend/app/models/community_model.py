@@ -2,19 +2,26 @@ import json
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from app.models.base_model import DBModel
+from app.models.moderation_model import ModerationModel, VISIBLE_STATUSES_FOR_AUTHOR
+from app.services.moderation_service import FilterResult, score_content
+
+# Shown next to a verified doctor's name
+VERIFIED_HCP_SQL = "(u.user_type = 'hcp' AND u.is_verified = TRUE) AS author_is_verified_hcp"
+
+# Content a moderator hid or removed can't be edited by its author any more
+LOCKED_BY_MODERATOR = ("hidden", "removed")
 
 
-# Simple profanity filter placeholder
-PROFANITY_WORDS = {"badword1", "badword2", "offensive"}
-
-
-def check_profanity(text: str) -> bool:
-    """Return True if text contains profanity."""
-    lower = text.lower()
-    for word in PROFANITY_WORDS:
-        if word in lower:
-            return True
-    return False
+def can_view_content(item: Dict[str, Any], viewer: Optional[Dict[str, Any]]) -> bool:
+    """Everyone sees approved content. Authors also see their own held or flagged content; admins see all."""
+    status = item.get("moderation_status") or "approved"
+    if status == "approved":
+        return True
+    if not viewer:
+        return False
+    if viewer.get("user_type") == "admin":
+        return True
+    return str(item.get("user_id")) == str(viewer.get("id")) and status in VISIBLE_STATUSES_FOR_AUTHOR
 
 
 class CommunityModel(DBModel):
@@ -127,10 +134,18 @@ class CommunityModel(DBModel):
             params.append(value)
             return f"${len(params)}"
 
-        conditions = [
-            "fp.is_deleted = FALSE",
-            "fp.moderation_status = 'approved'",
-        ]
+        conditions = ["fp.is_deleted = FALSE"]
+
+        # Everyone sees approved posts; authors also see their own posts waiting for review
+        if user_id:
+            viewer_ph = add_param(user_id)
+            visible_ph = add_param(list(VISIBLE_STATUSES_FOR_AUTHOR))
+            conditions.append(
+                f"(fp.moderation_status = 'approved' OR "
+                f"(fp.user_id = {viewer_ph} AND fp.moderation_status = ANY({visible_ph}::text[])))"
+            )
+        else:
+            conditions.append("fp.moderation_status = 'approved'")
 
         if category:
             # Support both community_id (UUID) and community name
@@ -149,33 +164,13 @@ class CommunityModel(DBModel):
         }
         order_by = sort_map.get(sort, "fp.created_at DESC")
 
-        # Count query
         count_sql = f"""
             SELECT COUNT(*)
             FROM forum_posts fp
             JOIN communities c ON fp.community_id = c.community_id
             {where_clause}
         """
-        count_params: list = []
-        # Rebuild params for count query
-        count_conditions = [
-            "fp.is_deleted = FALSE",
-            "fp.moderation_status = 'approved'",
-        ]
-        if category:
-            count_params.append(category)
-            c_ph = f"${len(count_params)}"
-            count_conditions.append(
-                f"(c.name ILIKE {c_ph} OR c.community_id::text = {c_ph})"
-            )
-        count_where = "WHERE " + " AND ".join(count_conditions)
-        count_sql = f"""
-            SELECT COUNT(*)
-            FROM forum_posts fp
-            JOIN communities c ON fp.community_id = c.community_id
-            {count_where}
-        """
-        total = await self.conn.fetchval(count_sql, *count_params) or 0
+        total = await self.conn.fetchval(count_sql, *params) or 0
 
         # Data query
         offset = (page - 1) * limit
@@ -183,8 +178,7 @@ class CommunityModel(DBModel):
         limit_ph = add_param(limit)
 
         if user_id:
-            user_id_ph = add_param(user_id)
-            is_liked_clause = f"EXISTS (SELECT 1 FROM post_likes WHERE post_id = fp.post_id AND user_id = {user_id_ph}) AS is_liked_by_me"
+            is_liked_clause = f"EXISTS (SELECT 1 FROM post_likes WHERE post_id = fp.post_id AND user_id = {viewer_ph}) AS is_liked_by_me"
         else:
             is_liked_clause = "FALSE AS is_liked_by_me"
 
@@ -192,10 +186,16 @@ class CommunityModel(DBModel):
             SELECT
                 fp.post_id,
                 fp.community_id,
+                fp.user_id,
                 fp.title,
+                fp.content,
+                fp.post_type,
+                fp.tags,
+                fp.moderation_status,
                 u.display_name AS author_display_name,
                 u.display_name AS author_name,
                 u.avatar AS author_avatar,
+                {VERIFIED_HCP_SQL},
                 c.name AS community_name,
                 fp.created_at,
                 fp.likes_count,
@@ -210,6 +210,14 @@ class CommunityModel(DBModel):
         """
         records = await self.conn.fetch(query, *params)
         items = self._records_to_list(records)
+        for item in items:
+            if isinstance(item.get("tags"), str):
+                try:
+                    item["tags"] = json.loads(item["tags"])
+                except Exception:
+                    item["tags"] = []
+            if item.get("tags") is None:
+                item["tags"] = []
 
         pages = (total + limit - 1) // limit if limit > 0 else 0
 
@@ -257,6 +265,7 @@ class CommunityModel(DBModel):
                 u.display_name AS author_display_name,
                 u.display_name AS author_name,
                 u.avatar AS author_avatar,
+                {VERIFIED_HCP_SQL},
                 c.name AS community_name
                 {is_liked_clause}
             FROM forum_posts fp
@@ -280,7 +289,7 @@ class CommunityModel(DBModel):
         return data
 
     async def get_post_comments(
-        self, post_id: str, user_id: Optional[str] = None
+        self, post_id: str, user_id: Optional[str] = None, is_admin: bool = False
     ) -> List[Dict[str, Any]]:
         if user_id:
             is_liked_clause = ", EXISTS (SELECT 1 FROM comment_likes WHERE comment_id = cm.comment_id AND user_id = $2) AS is_liked_by_me"
@@ -288,6 +297,19 @@ class CommunityModel(DBModel):
         else:
             is_liked_clause = ", FALSE AS is_liked_by_me"
             params = [post_id]
+
+        # Everyone sees approved comments; authors also see their own comments waiting
+        # for review; admins see every comment so they can moderate the thread.
+        if is_admin:
+            visibility = ""
+        elif user_id:
+            params.append(list(VISIBLE_STATUSES_FOR_AUTHOR))
+            visibility = (
+                f"AND (cm.moderation_status = 'approved' OR "
+                f"(cm.user_id = $2 AND cm.moderation_status = ANY(${len(params)}::text[])))"
+            )
+        else:
+            visibility = "AND cm.moderation_status = 'approved'"
 
         query = f"""
             SELECT
@@ -299,6 +321,7 @@ class CommunityModel(DBModel):
                 u.display_name AS author_display_name,
                 u.display_name AS author_name,
                 u.avatar AS author_avatar,
+                {VERIFIED_HCP_SQL},
                 cm.likes_count,
                 cm.moderation_status,
                 cm.is_deleted,
@@ -309,6 +332,7 @@ class CommunityModel(DBModel):
             JOIN users u ON cm.user_id = u.id
             WHERE cm.post_id = $1
               AND cm.is_deleted = FALSE
+              {visibility}
             ORDER BY cm.created_at ASC
         """
         records = await self.conn.fetch(query, *params)
@@ -336,15 +360,13 @@ class CommunityModel(DBModel):
         if not community:
             raise ValueError("Community not found")
 
-        # Profanity check
         title = payload["title"]
         content = payload["content"]
-        if check_profanity(title) or check_profanity(content):
-            raise ValueError("Content contains inappropriate language")
 
-        # Determine moderation status
+        # Automatic filter: held posts wait for a moderator, borderline ones go to the queue
+        check = score_content(title, content)
         moderation_status = "approved"
-        if community["moderation_level"] == "pre_moderated":
+        if check.held or community["moderation_level"] == "pre_moderated":
             moderation_status = "pending"
 
         post_type = payload.get("post_type", "discussion")
@@ -355,9 +377,10 @@ class CommunityModel(DBModel):
                 INSERT INTO forum_posts (
                     user_id, community_id, title, content,
                     post_type, moderation_status, tags,
+                    moderation_score, flagged_reason,
                     created_at, updated_at
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
                 RETURNING post_id, user_id, community_id, title, content,
                           post_type, moderation_status, tags,
                           views_count, replies_count, likes_count,
@@ -373,7 +396,20 @@ class CommunityModel(DBModel):
                 post_type,
                 moderation_status,
                 tags,
+                check.score,
+                check.reason,
             )
+            await self._report_if_needed("post", str(row["post_id"]), content, check)
+            if moderation_status == "pending" and not check.needs_review:
+                # Held only because the community approves every post: it still needs to reach the queue
+                await ModerationModel(self.conn).save_auto_report(
+                    target_type="post",
+                    target_id=str(row["post_id"]),
+                    content=content,
+                    reason="other",
+                    description="Waiting for approval: this community checks every post before it appears",
+                    priority="normal",
+                )
 
             # Update community post_count
             await self.conn.execute(
@@ -401,13 +437,15 @@ class CommunityModel(DBModel):
     ) -> Optional[Dict[str, Any]]:
         # Verify ownership or admin
         post = await self.conn.fetchrow(
-            "SELECT user_id FROM forum_posts WHERE post_id = $1 AND is_deleted = FALSE",
+            "SELECT user_id, title, content, moderation_status FROM forum_posts WHERE post_id = $1 AND is_deleted = FALSE",
             post_id,
         )
         if not post:
             return None
         if str(post["user_id"]) != str(user_id) and not is_admin:
             raise PermissionError("Not authorized to edit this post")
+        if post["moderation_status"] in LOCKED_BY_MODERATOR and not is_admin:
+            raise PermissionError("A moderator removed this post, so it can't be edited")
 
         set_parts = []
         vals: list = [post_id]
@@ -425,6 +463,19 @@ class CommunityModel(DBModel):
 
         set_parts.append("updated_at = NOW()")
 
+        # An author's edit is checked again; it can be held, but an edit never releases held content
+        check = FilterResult()
+        if not is_admin:
+            new_title = payload.get("title") or post["title"]
+            new_content = payload.get("content") or post["content"]
+            check = score_content(new_title, new_content)
+            vals.extend([check.score, check.reason])
+            set_parts.append(f"moderation_score = ${len(vals) - 1}")
+            set_parts.append(f"flagged_reason = ${len(vals)}")
+            set_parts.append("edited_at = NOW()")
+            if check.held and post["moderation_status"] == "approved":
+                set_parts.append("moderation_status = 'pending'")
+
         query = f"""
             UPDATE forum_posts
             SET {", ".join(set_parts)}
@@ -435,7 +486,10 @@ class CommunityModel(DBModel):
                       is_pinned, is_locked, is_deleted,
                       created_at, updated_at
         """
-        row = await self.conn.fetchrow(query, *vals)
+        async with self.conn.transaction():
+            row = await self.conn.fetchrow(query, *vals)
+            if row:
+                await self._report_if_needed("post", post_id, row["content"], check)
         if not row:
             return None
         data = self._record_to_dict(row)
@@ -495,41 +549,37 @@ class CommunityModel(DBModel):
         if post["is_locked"]:
             raise ValueError("Post is locked for new replies")
 
+        # Automatic filter: a held reply waits for a moderator and isn't counted yet
+        check = score_content(content)
+        moderation_status = "pending" if check.held else "approved"
+
         async with self.conn.transaction():
             query = """
                 INSERT INTO comments (
                     post_id, user_id, parent_comment_id, content,
+                    moderation_status, moderation_score, flagged_reason,
                     created_at, updated_at
                 )
-                VALUES ($1, $2, $3, $4, NOW(), NOW())
+                VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
                 RETURNING comment_id, post_id, user_id, parent_comment_id,
                           content, likes_count, moderation_status, is_deleted,
                           created_at, updated_at
             """
             row = await self.conn.fetchrow(
-                query, post_id, user_id, parent_comment_id, content
+                query, post_id, user_id, parent_comment_id, content,
+                moderation_status, check.score, check.reason,
             )
+            await self._report_if_needed("comment", str(row["comment_id"]), content, check)
 
             # Update replies_count
-            await self.conn.execute(
-                "UPDATE forum_posts SET replies_count = replies_count + 1, updated_at = NOW() WHERE post_id = $1",
-                post_id,
-            )
+            if moderation_status == "approved":
+                await self.conn.execute(
+                    "UPDATE forum_posts SET replies_count = replies_count + 1, updated_at = NOW() WHERE post_id = $1",
+                    post_id,
+                )
 
         data = self._record_to_dict(row)
-
-        # Populate author info from DB
-        user = await self.conn.fetchrow(
-            "SELECT display_name, avatar FROM users WHERE id = $1", user_id
-        )
-        if user:
-            data["author_display_name"] = user["display_name"]
-            data["author_avatar"] = user["avatar"]
-        else:
-             # Should not happen due to FK constraints
-             data["author_display_name"] = "Unknown User"
-             data["author_avatar"] = None
-
+        await self._add_comment_author(data, user_id)
         return data
 
     # ------------------------------------------------------------------
@@ -543,40 +593,78 @@ class CommunityModel(DBModel):
         is_admin: bool = False,
     ) -> Optional[Dict[str, Any]]:
         comment = await self.conn.fetchrow(
-            "SELECT user_id FROM comments WHERE comment_id = $1 AND is_deleted = FALSE",
+            "SELECT user_id, post_id, moderation_status FROM comments WHERE comment_id = $1 AND is_deleted = FALSE",
             comment_id,
         )
         if not comment:
             return None
         if str(comment["user_id"]) != str(user_id) and not is_admin:
             raise PermissionError("Not authorized to edit this comment")
+        if comment["moderation_status"] in LOCKED_BY_MODERATOR and not is_admin:
+            raise PermissionError("A moderator removed this comment, so it can't be edited")
+
+        # An author's edit is checked again; it can be held, but an edit never releases held content
+        check = FilterResult()
+        new_status = comment["moderation_status"]
+        if not is_admin:
+            check = score_content(content)
+            if check.held and new_status == "approved":
+                new_status = "pending"
 
         query = """
             UPDATE comments
-            SET content = $2, updated_at = NOW()
+            SET content = $2, updated_at = NOW(),
+                moderation_status = $3,
+                moderation_score = CASE WHEN $4 THEN $5 ELSE moderation_score END,
+                flagged_reason = CASE WHEN $4 THEN $6 ELSE flagged_reason END,
+                edited_at = CASE WHEN $4 THEN NOW() ELSE edited_at END
             WHERE comment_id = $1 AND is_deleted = FALSE
             RETURNING comment_id, post_id, user_id, parent_comment_id,
                       content, likes_count, moderation_status, is_deleted,
                       created_at, updated_at
         """
-        row = await self.conn.fetchrow(query, comment_id, content)
+        async with self.conn.transaction():
+            row = await self.conn.fetchrow(
+                query, comment_id, content, new_status, not is_admin, check.score, check.reason
+            )
+            if row:
+                await self._report_if_needed("comment", comment_id, content, check)
+                if new_status != comment["moderation_status"]:
+                    await ModerationModel(self.conn).recount_replies(str(comment["post_id"]))
         if not row:
             return None
-        
-        data = self._record_to_dict(row)
 
-        # Populate author info - user_id is the author (verified above)
+        data = self._record_to_dict(row)
+        await self._add_comment_author(data, comment["user_id"])
+        return data
+
+    async def _add_comment_author(self, data: Dict[str, Any], author_id: Any) -> None:
         user = await self.conn.fetchrow(
-            "SELECT display_name, avatar FROM users WHERE id = $1", comment["user_id"]
+            "SELECT display_name, avatar, user_type, is_verified FROM users WHERE id = $1", author_id
         )
         if user:
             data["author_display_name"] = user["display_name"]
             data["author_avatar"] = user["avatar"]
+            data["author_is_verified_hcp"] = user["user_type"] == "hcp" and bool(user["is_verified"])
         else:
-             data["author_display_name"] = "Unknown User"
-             data["author_avatar"] = None
-        
-        return data
+            data["author_display_name"] = "Unknown User"
+            data["author_avatar"] = None
+            data["author_is_verified_hcp"] = False
+
+    async def _report_if_needed(
+        self, target_type: str, target_id: str, content: str, check: FilterResult
+    ) -> None:
+        """Send content the automatic filter flagged to the moderation queue."""
+        if not check.needs_review:
+            return
+        await ModerationModel(self.conn).save_auto_report(
+            target_type=target_type,
+            target_id=target_id,
+            content=content,
+            reason=check.category or "other",
+            description=check.reason,
+            priority=check.priority,
+        )
 
     # ------------------------------------------------------------------
     # 7c. DELETE COMMENT (soft delete)
@@ -585,7 +673,7 @@ class CommunityModel(DBModel):
         self, comment_id: str, user_id: str, is_admin: bool = False
     ) -> bool:
         comment = await self.conn.fetchrow(
-            "SELECT user_id, post_id FROM comments WHERE comment_id = $1 AND is_deleted = FALSE",
+            "SELECT user_id, post_id, moderation_status FROM comments WHERE comment_id = $1 AND is_deleted = FALSE",
             comment_id,
         )
         if not comment:
@@ -598,11 +686,12 @@ class CommunityModel(DBModel):
                 "UPDATE comments SET is_deleted = TRUE, updated_at = NOW() WHERE comment_id = $1",
                 comment_id,
             )
-            # Decrement replies_count
-            await self.conn.execute(
-                "UPDATE forum_posts SET replies_count = GREATEST(replies_count - 1, 0), updated_at = NOW() WHERE post_id = $1",
-                comment["post_id"],
-            )
+            # Decrement replies_count (only visible replies are counted)
+            if comment["moderation_status"] == "approved":
+                await self.conn.execute(
+                    "UPDATE forum_posts SET replies_count = GREATEST(replies_count - 1, 0), updated_at = NOW() WHERE post_id = $1",
+                    comment["post_id"],
+                )
         return True
 
     # ------------------------------------------------------------------
@@ -706,27 +795,24 @@ class CommunityModel(DBModel):
     # 9. REPORT CONTENT
     # ------------------------------------------------------------------
     async def create_content_report(
-        self, reporter_id: str, payload: Dict[str, Any]
+        self, reporter_id: str, payload: Dict[str, Any], community_id: Optional[str] = None
     ) -> Dict[str, Any]:
+        """Raises LookupError if the content doesn't exist and ValueError for a repeat report."""
         target_type = payload["target_type"]
         target_id = str(payload["target_id"])
         reason = payload["reason"]
         description = payload.get("description")
 
-        # Snapshot target content
-        target_content = None
-        if target_type == "post":
-            row = await self.conn.fetchrow(
-                "SELECT content FROM forum_posts WHERE post_id = $1", target_id
-            )
-            if row:
-                target_content = row["content"]
-        elif target_type == "comment":
-            row = await self.conn.fetchrow(
-                "SELECT content FROM comments WHERE comment_id = $1", target_id
-            )
-            if row:
-                target_content = row["content"]
+        # The reported post or comment must exist in this community; keep a snapshot of it
+        target = await ModerationModel(self.conn).get_target(target_type, target_id)
+        if (
+            not target
+            or target["is_deleted"]
+            or (community_id and str(target["community_id"]) != str(community_id))
+        ):
+            raise LookupError(f"{target_type.capitalize()} not found")
+        target_content = target["content"]
+        priority = "critical" if reason == "self_harm" else "normal"
 
         async with self.conn.transaction():
             # Check for existing report by this user on this target
@@ -745,11 +831,11 @@ class CommunityModel(DBModel):
             query = """
                 INSERT INTO content_reports (
                     reporter_id, target_type, target_id, target_content,
-                    reason, description, status, created_at
+                    reason, description, status, source, priority, created_at
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, 'pending', NOW())
+                VALUES ($1, $2, $3, $4, $5, $6, 'pending', 'user', $7, NOW())
                 RETURNING report_id, reporter_id, target_type, target_id,
-                          reason, status, created_at
+                          reason, status, priority, created_at
             """
             row = await self.conn.fetchrow(
                 query,
@@ -759,29 +845,11 @@ class CommunityModel(DBModel):
                 target_content,
                 reason,
                 description,
+                priority,
             )
 
-            # Auto-flag logic: count reports on same target
-            report_count = await self.conn.fetchval(
-                """
-                SELECT COUNT(*) FROM content_reports
-                WHERE target_type = $1 AND target_id = $2
-                """,
-                target_type,
-                target_id,
-            )
-
-            if report_count >= 10:
-                if target_type == "post":
-                    await self.conn.execute(
-                        "UPDATE forum_posts SET moderation_status = 'flagged' WHERE post_id = $1",
-                        target_id,
-                    )
-                elif target_type == "comment":
-                    await self.conn.execute(
-                        "UPDATE comments SET moderation_status = 'flagged' WHERE comment_id = $1",
-                        target_id,
-                    )
+            # Reports from 3 different users hide the content until a moderator reviews it
+            await ModerationModel(self.conn).flag_if_reported_enough(target_type, target_id)
 
         return self._record_to_dict(row)
 
@@ -816,6 +884,7 @@ class CommunityModel(DBModel):
                 cr.target_content, cr.reason, cr.description,
                 cr.status, cr.moderator_id, cr.resolution_notes,
                 cr.action_taken, cr.created_at, cr.resolved_at,
+                cr.source, cr.priority,
                 u.display_name AS reporter_name
             FROM content_reports cr
             LEFT JOIN users u ON cr.reporter_id = u.id

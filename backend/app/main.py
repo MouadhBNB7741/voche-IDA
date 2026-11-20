@@ -14,6 +14,7 @@ from app.api.v1.auth import router as auth_router
 from app.api.v1.users import router as users_router
 from app.api.v1.clinical import router as clinical_router
 from app.api.v1.community import router as community_router
+from app.api.v1.moderation import router as moderation_router
 from app.api.v1.doctors import router as doctor_verification_router
 from app.api.v1.clinical_observations import router as clinical_observations_router
 from app.api.v1.resources import router as resources_router
@@ -91,6 +92,7 @@ app.include_router(auth_router, prefix="/api/v1")
 app.include_router(users_router, prefix="/api/v1")
 app.include_router(clinical_router, prefix="/api/v1")
 app.include_router(community_router, prefix="/api/v1")
+app.include_router(moderation_router, prefix="/api/v1")
 app.include_router(doctor_verification_router, prefix="/api/v1")
 app.include_router(clinical_observations_router, prefix="/api/v1")
 app.include_router(resources_router, prefix="/api/v1")

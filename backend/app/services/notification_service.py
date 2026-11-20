@@ -169,6 +169,9 @@ class NotificationService:
         Check if the user wants this specific notification type.
         Fetches 'notification_preferences' and validates against schema.
         """
+        # Moderation decisions are always delivered: users can't turn off being told their post was removed
+        if notif_type == NotificationType.MODERATION_ACTION:
+            return True
         try:
             user = await self.user_model.get_by_id(user_id)
             if not user or not user.get("notification_preferences"):
@@ -258,6 +261,13 @@ class NotificationService:
             NotificationType.SYSTEM_ANNOUNCEMENT: {
                 "title": data.get("title", "System Announcement"),
                 "message": data.get("message", "A new system update is available."),
+                "link": data.get("link"),
+            },
+
+            # Moderation (the moderation service writes the wording for each decision)
+            NotificationType.MODERATION_ACTION: {
+                "title": data.get("title", "Moderation update"),
+                "message": data.get("message", "A moderator reviewed your content."),
                 "link": data.get("link"),
             },
         }

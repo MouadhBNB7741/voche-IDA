@@ -223,6 +223,16 @@ CREATE INDEX idx_content_reports_created_at ON content_reports(created_at DESC);
 COMMENT ON INDEX idx_content_reports_target IS 'Find all reports for a specific post/comment/user';
 COMMENT ON INDEX idx_content_reports_status IS 'Moderation queue (pending reports)';
 
+-- Moderation queue and post states over time
+CREATE INDEX idx_content_reports_status_created ON content_reports(status, created_at DESC);
+CREATE INDEX idx_forum_posts_moderation_created ON forum_posts(moderation_status, created_at DESC);
+
+
+-- moderation_actions table
+-- Purpose: An author's moderation history, actions taken on a report
+CREATE INDEX idx_moderation_actions_target_user ON moderation_actions(target_user_id, created_at DESC);
+CREATE INDEX idx_moderation_actions_report ON moderation_actions(report_id);
+
 
 -- ============================================================================
 -- 5. COLLABORATION (Working Groups) INDEXES

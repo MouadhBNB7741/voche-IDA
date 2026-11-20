@@ -34,6 +34,8 @@ class ReportReason(str, Enum):
     harassment = "harassment"
     spam = "spam"
     medical_advice = "medical_advice"
+    self_harm = "self_harm"
+    inappropriate_content = "inappropriate_content"
     other = "other"
 
 
@@ -87,10 +89,16 @@ class PostAuthor(BaseModel):
 class PostSummaryResponse(BaseModel):
     post_id: UUID
     community_id: UUID
+    user_id: Optional[UUID] = None
     title: str
+    content: Optional[str] = None
+    post_type: Optional[str] = None
+    tags: List[str] = []
+    moderation_status: str = "approved"
     author_display_name: Optional[str] = None
     author_name: Optional[str] = None
     author_avatar: Optional[str] = None
+    author_is_verified_hcp: bool = False
     community_name: Optional[str] = None
     created_at: Optional[datetime] = None
     likes_count: int = 0
@@ -114,6 +122,7 @@ class CommentResponse(BaseModel):
     author_display_name: Optional[str] = None
     author_name: Optional[str] = None
     author_avatar: Optional[str] = None
+    author_is_verified_hcp: bool = False
     likes_count: int = 0
     is_liked_by_me: bool = False
     moderation_status: str = "approved"
@@ -144,6 +153,7 @@ class PostDetailsResponse(BaseModel):
     author_display_name: Optional[str] = None
     author_name: Optional[str] = None
     author_avatar: Optional[str] = None
+    author_is_verified_hcp: bool = False
     community_name: Optional[str] = None
     is_liked_by_me: bool = False
 
@@ -193,6 +203,7 @@ class ReportResponse(BaseModel):
     target_id: UUID
     reason: str
     status: str
+    priority: str = "normal"
     created_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
@@ -201,8 +212,10 @@ class ReportResponse(BaseModel):
 # --- Admin Report Management ---
 class ReportDetailResponse(BaseModel):
     report_id: UUID
-    reporter_id: UUID
+    reporter_id: Optional[UUID] = None  # empty for reports raised by the automatic filter
     reporter_name: Optional[str] = None
+    source: str = "user"
+    priority: str = "normal"
     target_type: str
     target_id: UUID
     target_content: Optional[str] = None

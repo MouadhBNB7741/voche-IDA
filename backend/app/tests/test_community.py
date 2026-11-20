@@ -458,20 +458,15 @@ async def test_report_post(client: AsyncClient, setup_test_db, auth_headers):
 
 
 @pytest.mark.asyncio
-async def test_auto_flag_after_10_reports(client: AsyncClient, setup_test_db, auth_headers):
-    """Test that content is auto-flagged after 10 reports."""
+async def test_auto_flag_after_3_reports(client: AsyncClient, setup_test_db, auth_headers):
+    """Content is auto-flagged once 3 different users report it."""
     community_id = await seed_community()
 
-    # Create 10 reporter users
-    reporters = []
-    for i in range(10):
-        t = await create_user(client, f"reporter{i}@example.com")
-        reporters.append(t)
+    author = await create_user(client, "flag_author@example.com")
+    reporters = [await create_user(client, f"reporter{i}@example.com") for i in range(3)]
 
-    # Create post as reporter 0
     post_id = await create_post_in_community(
-        client, community_id, auth_headers(reporters[0]),
-        "Flaggable Post Content Here"
+        client, community_id, auth_headers(author), "Flaggable Post Content Here"
     )
 
     report_payload = {
@@ -480,21 +475,21 @@ async def test_auto_flag_after_10_reports(client: AsyncClient, setup_test_db, au
         "reason": "spam",
     }
 
-    # 10 reports from different users
-    for t in reporters:
-        await client.post(
+    async def status() -> str:
+        pool = PostgresDB.get_pool()
+        async with pool.acquire() as conn:
+            return await conn.fetchval(
+                "SELECT moderation_status FROM forum_posts WHERE post_id = $1", post_id
+            )
+
+    for i, t in enumerate(reporters):
+        res = await client.post(
             f"/api/v1/community/{community_id}/report",
             json=report_payload,
             headers=auth_headers(t),
         )
-
-    # Verify post is now flagged
-    pool = PostgresDB.get_pool()
-    async with pool.acquire() as conn:
-        row = await conn.fetchrow(
-            "SELECT moderation_status FROM forum_posts WHERE post_id = $1", post_id
-        )
-        assert row["moderation_status"] == "flagged"
+        assert res.status_code == 201
+        assert await status() == ("flagged" if i == 2 else "approved")
 
 
 @pytest.mark.asyncio

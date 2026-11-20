@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.api.dependencies.connections import get_connection
 from app.api.middleware.auth_middleware import auth_middleware, auth_middleware_optional
-from app.models.community_model import CommunityModel
+from app.models.community_model import CommunityModel, can_view_content
 from app.schemas.community import (
     CommunityListResponse,
     CommunityResponse,
@@ -30,6 +30,21 @@ router = APIRouter(prefix="/community", tags=["Community"])
 # Helper to check admin
 def _is_admin(user: dict) -> bool:
     return user.get("user_type") == "admin"
+
+
+_POST_NOT_FOUND = {
+    "success": False,
+    "error": {"code": "NOT_FOUND", "message": "Post not found"},
+}
+
+
+async def _visible_post(model: CommunityModel, post_id: UUID, current_user: Optional[dict]) -> dict:
+    """The post, if this viewer may see it (held and flagged posts only show to their author and admins)."""
+    user_id = current_user["id"] if current_user else None
+    post = await model.get_post_details(str(post_id), user_id=user_id)
+    if not post or not can_view_content(post, current_user):
+        raise HTTPException(status_code=404, detail=_POST_NOT_FOUND)
+    return post
 
 
 # ======================================================================
@@ -278,23 +293,14 @@ async def get_post(
     model = CommunityModel(conn)
 
     user_id = current_user["id"] if current_user else None
-    post = await model.get_post_details(str(post_id), user_id=user_id)
-    if not post:
-        raise HTTPException(
-            status_code=404,
-            detail={
-                "success": False,
-                "error": {
-                    "code": "NOT_FOUND",
-                    "message": "Post not found",
-                },
-            },
-        )
+    post = await _visible_post(model, post_id, current_user)
 
     # Increment views
     await model.increment_post_views(str(post_id))
 
-    comments = await model.get_post_comments(str(post_id), user_id=user_id)
+    comments = await model.get_post_comments(
+        str(post_id), user_id=user_id, is_admin=bool(current_user and _is_admin(current_user))
+    )
 
     return {"post": post, "replies": comments}
 
@@ -407,6 +413,8 @@ async def reply_to_post(
     from app.services.notification_service import NotificationService
     from app.schemas.notification import NotificationType
 
+    await _visible_post(model, post_id, current_user)
+
     try:
         comment = await model.create_comment(
             post_id=str(post_id),
@@ -417,10 +425,10 @@ async def reply_to_post(
             else None,
         )
 
-        # TRIGGER NOTIFICATION: COMMUNITY_REPLY
+        # TRIGGER NOTIFICATION: COMMUNITY_REPLY (not for a reply held for review)
         try:
             post = await model.get_post_details(str(post_id))
-            if post and post["user_id"] != current_user["id"]:
+            if comment["moderation_status"] == "approved" and post and post["user_id"] != current_user["id"]:
                 notif_service = NotificationService(conn)
                 await notif_service.notify_user(
                     user_id=post["user_id"],
@@ -535,7 +543,10 @@ async def get_post_replies(
     """Get all replies for a post. Public endpoint with optional auth."""
     model = CommunityModel(conn)
     user_id = current_user["id"] if current_user else None
-    comments = await model.get_post_comments(str(post_id), user_id=user_id)
+    await _visible_post(model, post_id, current_user)
+    comments = await model.get_post_comments(
+        str(post_id), user_id=user_id, is_admin=bool(current_user and _is_admin(current_user))
+    )
     return comments
 
 
@@ -717,8 +728,9 @@ async def report_content(
         report = await model.create_content_report(
             reporter_id=current_user["id"],
             payload=request.model_dump(),
+            community_id=str(community_id),
         )
-        
+
         # Save to redis to prevent duplicates (24 hours expiration)
         if redis:
             try:
@@ -728,6 +740,14 @@ async def report_content(
                 logging.getLogger(__name__).warning(f"Failed to cache report in Redis: {re}")
                 
         return report
+    except LookupError as e:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "success": False,
+                "error": {"code": "NOT_FOUND", "message": str(e)},
+            },
+        )
     except ValueError as e:
         raise HTTPException(
             status_code=409,
