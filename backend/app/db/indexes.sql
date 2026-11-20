@@ -136,6 +136,10 @@ COMMENT ON INDEX idx_clinical_trials_countries IS 'Filter trials by country (JSO
 CREATE INDEX idx_trial_sites_trial_id ON trial_sites(trial_id);
 CREATE INDEX idx_trial_sites_country ON trial_sites(country);
 CREATE INDEX idx_trial_sites_city ON trial_sites(city);
+
+-- trial_referrals table (Phase 2)
+CREATE INDEX IF NOT EXISTS idx_trial_referrals_hcp ON trial_referrals(hcp_user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_trial_referrals_patient ON trial_referrals(patient_user_id);
 CREATE INDEX idx_trial_sites_country_city ON trial_sites(country, city); -- Compound for location queries
 CREATE INDEX idx_trial_sites_is_recruiting ON trial_sites(trial_id, is_recruiting) WHERE is_recruiting = TRUE;
 
@@ -323,6 +327,12 @@ CREATE INDEX idx_surveys_target_audience ON surveys USING GIN (target_audience);
 
 COMMENT ON INDEX idx_surveys_active IS 'Partial index for active surveys only';
 
+-- survey_assignments table (Phase 2)
+CREATE INDEX IF NOT EXISTS idx_survey_assignments_patient ON survey_assignments(patient_user_id, status);
+-- Reminder and expiry jobs only look at open assignments.
+CREATE INDEX IF NOT EXISTS idx_survey_assignments_open_due ON survey_assignments(due_date)
+    WHERE status IN ('pending', 'in_progress');
+
 
 -- survey_questions table
 -- Purpose: Questions for a survey, ordered
@@ -397,6 +407,13 @@ CREATE INDEX IF NOT EXISTS idx_platform_feedback_rating ON platform_feedback(rat
 CREATE INDEX IF NOT EXISTS idx_platform_feedback_created_at ON platform_feedback(created_at DESC);
 
 COMMENT ON INDEX idx_platform_feedback_category IS 'Filter feedback by category (platform, bug, feature, etc.)';
+
+
+-- ============================================================================
+-- 9. AI ASSISTANT INDEXES
+-- ============================================================================
+CREATE INDEX IF NOT EXISTS idx_chat_conversations_user_updated ON chat_conversations(user_id, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_conv_created ON chat_messages(conversation_id, created_at ASC);
 
 
 -- ============================================================================

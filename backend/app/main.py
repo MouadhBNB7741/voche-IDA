@@ -23,6 +23,7 @@ from app.api.v1.events import user_events_router
 from app.api.v1.surveys import router as surveys_router
 from app.api.v1.notifications import router as notifications_router
 from app.api.v1.system import router as system_router, health_router
+from app.api.v1.chatbot import router as chatbot_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -101,6 +102,7 @@ app.include_router(surveys_router, prefix="/api/v1")
 app.include_router(notifications_router, prefix="/api/v1")
 app.include_router(system_router, prefix="/api/v1")
 app.include_router(health_router, prefix="/api/v1")
+app.include_router(chatbot_router, prefix="/api/v1")
 
 
 @app.get("/api/v1/", tags=["Status"])

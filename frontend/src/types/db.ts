@@ -26,7 +26,7 @@ export type MemberStatus = 'pending' | 'approved' | 'rejected';
 
 // Clinical Trials
 export type TrialPhase = 'Phase 1' | 'Phase 2' | 'Phase 3' | 'Phase 4' | 'Post-Market';
-export type TrialStatus = 'Recruiting' | 'Active' | 'Completed' | 'Suspended' | 'Not yet recruiting';
+export type TrialStatus = 'Draft' | 'Not yet recruiting' | 'Recruiting' | 'Active' | 'Completed' | 'Suspended' | 'Terminated';
 export type AlertFrequency = 'instant' | 'daily' | 'weekly';
 export type SeverityLevel = 'low' | 'medium' | 'high' | 'critical';
 
@@ -170,6 +170,7 @@ export interface ClinicalTrial {
   sponsor: string;
   countries: string[];
   eligibility_criteria?: string;
+  eligibility_rules?: EligibilityRules;
   start_date?: string;
   estimated_completion?: string;
   enrollment: number;
@@ -559,4 +560,30 @@ export interface AppState {
   currentUser: User | null;
   savedTrials: string[]; 
   registeredEvents: string[];
+}
+
+// Structured eligibility rules used by the pre-screener (see POST /trials/{id}/screen)
+export interface EligibilityRules {
+  min_age?: number;
+  max_age?: number;
+  gender?: 'all' | 'female' | 'male';
+  conditions?: string[];
+  inclusion_list?: string[];
+  exclusion_list?: string[];
+}
+
+export interface ScreeningAnswers {
+  age?: number;
+  gender?: string;
+  conditions?: string[];
+  inclusion_answers?: Record<string, boolean>;
+  exclusion_answers?: Record<string, boolean>;
+}
+
+export interface ScreeningResult {
+  trial_id: string;
+  result: 'eligible' | 'possibly_eligible' | 'not_eligible';
+  score: number;
+  breakdown: { criterion: string; status: 'met' | 'not_met' | 'unknown'; detail: string }[];
+  disclaimer: string;
 }

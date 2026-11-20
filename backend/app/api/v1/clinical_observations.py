@@ -3,6 +3,7 @@ from typing import List
 from uuid import UUID
 from app.api.dependencies.connections import get_connection
 from app.api.middleware.auth_middleware import auth_middleware
+from app.api.middleware.hcp_middleware import verified_hcp_required
 from app.models.clinical_model import ClinicalModel
 from app.schemas.clinical_observation import CreateObservationRequest, ObservationResponse
 
@@ -12,15 +13,8 @@ router = APIRouter(prefix="/clinical-observations", tags=["Clinical Observations
 async def create_observation(
     request: CreateObservationRequest,
     conn=Depends(get_connection),
-    current_user: dict = Depends(auth_middleware),
+    current_user: dict = Depends(verified_hcp_required),
 ):
-    # Role Check: HCP Only
-    if current_user.get("user_type") != "hcp":
-        raise HTTPException(
-            status_code=403, 
-            detail="Only verified HCPs can submit observations"
-        )
-        
     model = ClinicalModel(conn)
     
     # Verify trial exists
