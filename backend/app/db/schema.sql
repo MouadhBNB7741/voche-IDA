@@ -231,14 +231,19 @@ CREATE TABLE clinical_trials (
     
     -- Trial Status
     phase VARCHAR(50) NOT NULL,                   -- Phase 1, Phase 2, Phase 3, Phase 4, Post-Market
-    status VARCHAR(50) NOT NULL,                  -- Recruiting, Active, Completed, Suspended, Not yet recruiting
+    status VARCHAR(50) NOT NULL,                  -- Draft, Not yet recruiting, Recruiting, Active, Completed, Suspended, Terminated
     
     -- Organization
     sponsor VARCHAR(255) NOT NULL,
     countries JSONB DEFAULT '[]',                 -- Array of countries where trial runs
     
     -- Eligibility
-    eligibility_criteria TEXT,
+    eligibility_criteria TEXT,                    -- Human-readable criteria text
+    eligibility_rules JSONB NOT NULL DEFAULT '{}', -- min_age, max_age, gender, conditions, inclusion_list, exclusion_list
+
+    -- Sync
+    sync_source VARCHAR(50) NOT NULL DEFAULT 'manual', -- manual, clinicaltrials_gov
+    last_synced_at TIMESTAMPTZ,
     
     -- Timeline
     start_date DATE,
@@ -260,7 +265,7 @@ CREATE TABLE clinical_trials (
     
     -- Constraints
     CONSTRAINT check_trial_phase CHECK (phase IN ('Phase 1', 'Phase 2', 'Phase 3', 'Phase 4', 'Post-Market')),
-    CONSTRAINT check_trial_status CHECK (status IN ('Recruiting', 'Active', 'Completed', 'Suspended', 'Not yet recruiting'))
+    CONSTRAINT check_trial_status CHECK (status IN ('Draft', 'Not yet recruiting', 'Recruiting', 'Active', 'Completed', 'Suspended', 'Terminated'))
 );
 
 COMMENT ON TABLE clinical_trials IS 'Central registry of clinical trial information from various sources';
@@ -370,6 +375,37 @@ CREATE TABLE trial_alerts (
 
 COMMENT ON TABLE trial_alerts IS 'User subscriptions for trial notifications based on criteria or specific trials';
 COMMENT ON COLUMN trial_alerts.filter_criteria IS 'JSONB for flexible additional filtering (e.g., age range, gender)';
+
+-- -----------------------------------------------------------------------------
+-- trial_referrals / trial_sync_logs (Phase 2, migration 004_clinical_trials_phase2.sql)
+-- -----------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS trial_referrals (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    trial_id UUID NOT NULL REFERENCES clinical_trials(trial_id) ON DELETE CASCADE,
+    hcp_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    patient_user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    patient_email VARCHAR(255),                   -- for patients without a Voche account yet
+    clinical_notes TEXT,
+    status VARCHAR(30) NOT NULL DEFAULT 'sent',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT check_referral_status CHECK (status IN ('sent', 'viewed', 'consent_pending', 'enrolled', 'declined', 'ineligible')),
+    CONSTRAINT check_referral_patient CHECK (patient_user_id IS NOT NULL OR patient_email IS NOT NULL)
+);
+
+CREATE TABLE IF NOT EXISTS trial_sync_logs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    sync_started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    sync_completed_at TIMESTAMPTZ,
+    records_fetched INTEGER NOT NULL DEFAULT 0,
+    records_inserted INTEGER NOT NULL DEFAULT 0,
+    records_updated INTEGER NOT NULL DEFAULT 0,
+    status VARCHAR(20) NOT NULL DEFAULT 'running',
+    error_details TEXT,
+    CONSTRAINT check_sync_status CHECK (status IN ('running', 'success', 'failed'))
+);
+
 
 
 -- ============================================================================

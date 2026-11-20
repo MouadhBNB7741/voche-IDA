@@ -129,6 +129,7 @@ async def seed_db(conn):
             "status": "Recruiting", 
             "sponsor": "Global Health Pharma",
             "eligibility_criteria": "Inclusion: Female, Age 18-70, Histologically confirmed BC.\nExclusion: Prior chemotherapy within 30 days.",
+            "eligibility_rules": {"min_age": 18, "max_age": 70, "gender": "female", "conditions": ["Breast Cancer"], "inclusion_list": ["Histologically confirmed breast cancer"], "exclusion_list": ["Chemotherapy within the last 30 days"]},
             "start_date": "2024-01-01",
             "estimated_completion": "2026-12-31",
             "enrollment": 150,
@@ -145,6 +146,7 @@ async def seed_db(conn):
             "status": "Active", 
             "sponsor": "BioMed Research",
             "eligibility_criteria": "Inclusion: Type 2 Diabetes diagnosis > 1 year.\nExclusion: Type 1 Diabetes.",
+            "eligibility_rules": {"min_age": 18, "gender": "all", "conditions": ["Type 2 Diabetes"], "inclusion_list": ["Type 2 diabetes diagnosed more than 1 year ago"], "exclusion_list": ["Type 1 diabetes"]},
             "start_date": "2023-06-15",
             "estimated_completion": "2025-06-15",
             "enrollment": 80,
@@ -161,6 +163,7 @@ async def seed_db(conn):
             "status": "Recruiting", 
             "sponsor": "Oncology Institute",
             "eligibility_criteria": "Inclusion: Smokers/Ex-smokers, Age 40+.\nExclusion: Prior history of lung cancer.",
+            "eligibility_rules": {"min_age": 40, "gender": "all", "conditions": ["Lung Cancer"], "inclusion_list": ["Current or former smoker"], "exclusion_list": ["Prior history of lung cancer"]},
             "start_date": "2024-03-01",
             "estimated_completion": "2025-03-01",
             "enrollment": 20,
@@ -177,6 +180,7 @@ async def seed_db(conn):
             "status": "Completed", 
             "sponsor": "Neuro Sciences",
             "eligibility_criteria": "Inclusion: Age 60+.\nExclusion: Diagnosed dementia.",
+            "eligibility_rules": {"min_age": 60, "gender": "all", "conditions": ["Alzheimer's Disease"], "inclusion_list": [], "exclusion_list": ["Diagnosed dementia"]},
             "start_date": "2020-01-01",
             "estimated_completion": "2024-01-01",
             "enrollment": 1000,
@@ -193,6 +197,7 @@ async def seed_db(conn):
             "status": "Suspended", 
             "sponsor": "Heart Group",
             "eligibility_criteria": "Inclusion: Age 45-65, Low LDL.\nExclusion: Previous cardiac event.",
+            "eligibility_rules": {"min_age": 45, "max_age": 65, "gender": "all", "conditions": ["Cardiology"], "inclusion_list": ["Low LDL cholesterol"], "exclusion_list": ["Previous cardiac event"]},
             "start_date": "2022-09-01",
             "estimated_completion": "2026-09-01",
             "enrollment": 300,
@@ -209,16 +214,16 @@ async def seed_db(conn):
             INSERT INTO clinical_trials (
                 nct_id, title, summary, disease_area, phase, status, 
                 sponsor, countries, eligibility_criteria, start_date, 
-                estimated_completion, enrollment, max_enrollment, contact, metadata
+                estimated_completion, enrollment, max_enrollment, contact, metadata, eligibility_rules
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, '["USA", "France", "UK"]'::jsonb, $8, $9, $10, $11, $12, $13, $14)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, '["USA", "France", "UK"]'::jsonb, $8, $9, $10, $11, $12, $13, $14, $15)
             ON CONFLICT (nct_id) DO UPDATE SET status = EXCLUDED.status
             RETURNING trial_id
         """, 
         t["nct_id"], t["title"], t["summary"], t["disease_area"], t["phase"], t["status"], 
         t["sponsor"], t["eligibility_criteria"], datetime.strptime(t["start_date"], "%Y-%m-%d").date(),
         datetime.strptime(t["estimated_completion"], "%Y-%m-%d").date(), t["enrollment"], t["max_enrollment"], 
-        t["contact"], json.dumps(t["metadata"])
+        t["contact"], json.dumps(t["metadata"]), json.dumps(t["eligibility_rules"])
         )
         if tid:
             trial_ids.append(tid)
@@ -817,5 +822,15 @@ async def seed_db(conn):
             (conv_id, "assistant", "Informed consent means you are told the purpose, risks and benefits of a trial before you choose to join, and you can leave at any time. This is general information, not medical advice."),
         ])
         logger.info("✅ AI chat sample seeded.")
+
+    # ------------------------------------------------------------------
+    # 12. SEED TRIAL REFERRAL (HCP -> patient)
+    # ------------------------------------------------------------------
+    if trial_ids and user_ids.get("hcp") and user_ids.get("patient"):
+        await conn.execute("""
+            INSERT INTO trial_referrals (trial_id, hcp_user_id, patient_user_id, clinical_notes, status)
+            VALUES ($1, $2, $3, 'Patient may meet the age and diagnosis criteria. Please review.', 'sent')
+        """, trial_ids[0], user_ids["hcp"], user_ids["patient"])
+        logger.info("✅ Trial referral sample seeded.")
 
     logger.info("🌱 Database seeding complete.")
