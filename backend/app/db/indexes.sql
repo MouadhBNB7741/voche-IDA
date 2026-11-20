@@ -322,6 +322,12 @@ CREATE INDEX idx_surveys_target_audience ON surveys USING GIN (target_audience);
 
 COMMENT ON INDEX idx_surveys_active IS 'Partial index for active surveys only';
 
+-- survey_assignments table (Phase 2)
+CREATE INDEX IF NOT EXISTS idx_survey_assignments_patient ON survey_assignments(patient_user_id, status);
+-- Reminder and expiry jobs only look at open assignments.
+CREATE INDEX IF NOT EXISTS idx_survey_assignments_open_due ON survey_assignments(due_date)
+    WHERE status IN ('pending', 'in_progress');
+
 
 -- survey_questions table
 -- Purpose: Questions for a survey, ordered

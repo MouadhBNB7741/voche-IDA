@@ -1028,18 +1028,21 @@ CREATE TABLE survey_questions (
     
     -- Question Details
     question_text TEXT NOT NULL,
-    question_type VARCHAR(50) NOT NULL,           -- multiple_choice, scale, open_text, yes_no
+    question_type VARCHAR(50) NOT NULL,           -- single_choice, multiple_choice, scale, open_text, yes_no, number, date
     order_position INTEGER NOT NULL,
     required BOOLEAN DEFAULT FALSE,
     
     -- Options (for multiple choice)
     options JSONB,                                 -- Array of available options
+
+    -- Branching: which question comes next for a given answer
+    branching_rules JSONB NOT NULL DEFAULT '[]',   -- [{"condition": "equals", "value": "yes", "next_question_id": "<uuid>"}]
     
     -- Timestamps
     created_at TIMESTAMPTZ DEFAULT NOW(),
     
     -- Constraints
-    CONSTRAINT check_question_type CHECK (question_type IN ('multiple_choice', 'scale', 'open_text', 'yes_no'))
+    CONSTRAINT check_question_type CHECK (question_type IN ('single_choice', 'multiple_choice', 'scale', 'open_text', 'yes_no', 'number', 'date'))
 );
 
 COMMENT ON TABLE survey_questions IS 'Individual questions within surveys with ordering';
@@ -1096,6 +1099,27 @@ CREATE TABLE survey_responses (
 
 COMMENT ON TABLE survey_responses IS 'User responses to survey questions with anonymity support';
 COMMENT ON COLUMN survey_responses.answer IS 'JSONB flexible format to handle various answer types';
+
+-- -----------------------------------------------------------------------------
+-- survey_assignments (Phase 2, migration 005_surveys_phase2.sql)
+-- -----------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS survey_assignments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    survey_id UUID NOT NULL REFERENCES surveys(survey_id) ON DELETE CASCADE,
+    patient_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    assigned_by_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    trial_id UUID REFERENCES clinical_trials(trial_id) ON DELETE SET NULL,
+    due_date TIMESTAMPTZ,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    draft_answers JSONB NOT NULL DEFAULT '{}',    -- {"<question_id>": <answer>} saved while in progress
+    completed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT check_assignment_status CHECK (status IN ('pending', 'in_progress', 'completed', 'expired')),
+    CONSTRAINT unique_survey_assignment UNIQUE (survey_id, patient_user_id)
+);
+
 
 CREATE INDEX idx_survey_responses_completion ON survey_responses(completion_id);
 

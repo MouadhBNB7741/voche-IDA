@@ -709,11 +709,29 @@ async def seed_db(conn):
         ("Which departments did you visit?", "multiple_choice", 4, True, json.dumps(["Oncology", "Cardiology", "ER", "General Medicine"]))
     ]
 
+    q_ids = []
     for q_text, q_type, pos, req, opts in questions:
-        await conn.execute("""
+        q_ids.append(await conn.fetchval("""
             INSERT INTO survey_questions (question_id, survey_id, question_text, question_type, order_position, required, options)
             VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6)
-        """, survey_id, q_text, q_type, pos, req, opts)
+            RETURNING question_id
+        """, survey_id, q_text, q_type, pos, req, opts))
+
+    # Branching example: "no" on the recommend question asks what could be better, "yes" skips it.
+    await conn.execute(
+        "UPDATE survey_questions SET branching_rules = $2::jsonb WHERE question_id = $1",
+        q_ids[1], json.dumps([
+            {"condition": "equals", "value": "no", "next_question_id": str(q_ids[2])},
+            {"condition": "equals", "value": "yes", "next_question_id": str(q_ids[3])},
+        ]),
+    )
+
+    # Assignment example: Dr. Smith asks the demo patient to complete the survey within a week.
+    if user_ids.get("patient"):
+        await conn.execute("""
+            INSERT INTO survey_assignments (survey_id, patient_user_id, assigned_by_id, due_date)
+            VALUES ($1, $2, $3, NOW() + INTERVAL '7 days')
+        """, survey_id, user_ids["patient"], user_ids.get("hcp"))
 
     logger.info("✅ Surveys seeded.")
 
