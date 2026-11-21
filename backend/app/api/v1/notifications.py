@@ -90,10 +90,13 @@ async def notifications_socket(websocket: WebSocket):
             if remaining <= 0:
                 await _close(websocket, CLOSE_UNAUTHORIZED, "Session expired")
                 break
+            # Wait for the next message, but no longer than the login is valid. Which limit was
+            # used decides the close reason: re-reading the clock can land a few ms early.
+            waiting_for_expiry = remaining <= IDLE_TIMEOUT_SECONDS
             try:
                 message = await asyncio.wait_for(websocket.receive(), timeout=min(IDLE_TIMEOUT_SECONDS, remaining))
             except asyncio.TimeoutError:
-                if time.time() >= expires_at:
+                if waiting_for_expiry:
                     await _close(websocket, CLOSE_UNAUTHORIZED, "Session expired")
                 else:
                     await _close(websocket, CLOSE_IDLE, "No ping received")
