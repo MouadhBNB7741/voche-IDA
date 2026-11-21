@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
@@ -14,7 +15,14 @@ from app.schemas.surveys import (
     SurveyStatus,
     CompletedSurveyListResponse,
     CompletedSurveyDetailResponse,
+    SurveyDraftRequest,
+    SurveyDraftResponse,
+    SurveyAssignRequest,
+    SurveyAssignResponse,
+    SurveyAnalyticsResponse,
 )
+from app.schemas.notification import NotificationType
+from app.services.notification_service import NotificationService
 
 router = APIRouter(prefix="/surveys", tags=["Surveys"])
 
@@ -83,7 +91,7 @@ async def get_survey_questions(
     Get full survey details including questions.
     """
     model = SurveyModel(conn)
-    survey = await model.get_survey_questions(str(survey_id))
+    survey = await model.get_survey_questions(str(survey_id), current_user["id"] if current_user else None)
     
     if not survey:
         raise HTTPException(status_code=404, detail="Survey not found")
@@ -123,3 +131,74 @@ async def submit_survey_response(
             raise HTTPException(status_code=400, detail=error_msg)
 
 
+# ── Phase 2 ──────────────────────────────────────────────────────────────────
+
+async def survey_manager_required(
+    current_user: dict = Depends(auth_middleware),
+    conn=Depends(get_connection),
+) -> dict:
+    """Admins, organization members and verified HCPs can assign surveys and see analytics."""
+    user_type = current_user.get("user_type")
+    if user_type in ("admin", "org_member"):
+        return current_user
+    if user_type == "hcp" and await conn.fetchval("SELECT is_verified FROM users WHERE id = $1", current_user["id"]):
+        return current_user
+    raise HTTPException(status_code=403, detail="Only admins, organizations and verified HCPs can manage surveys")
+
+
+@router.patch("/{survey_id}/draft", response_model=SurveyDraftResponse)
+async def save_survey_draft(
+    survey_id: UUID,
+    payload: SurveyDraftRequest,
+    conn=Depends(get_connection),
+    current_user: dict = Depends(auth_middleware),
+):
+    """Save answers so far and resume later. GET /surveys/{id} returns them as draft_answers."""
+    try:
+        return await SurveyModel(conn).save_draft(str(survey_id), current_user["id"], payload.answers)
+    except PermissionError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=404 if "not found" in str(e).lower() else 400, detail=str(e))
+
+
+@router.post("/{survey_id}/assign", response_model=SurveyAssignResponse)
+async def assign_survey(
+    survey_id: UUID,
+    payload: SurveyAssignRequest,
+    conn=Depends(get_connection),
+    manager: dict = Depends(survey_manager_required),
+):
+    """Assign a survey to patients by email. Each newly assigned patient gets an in-app notification."""
+    if payload.due_date and payload.due_date.replace(tzinfo=payload.due_date.tzinfo or timezone.utc) <= datetime.now(timezone.utc):
+        raise HTTPException(status_code=400, detail="Due date must be in the future")
+    try:
+        result = await SurveyModel(conn).assign(
+            str(survey_id), payload.patient_emails, manager["id"],
+            str(payload.trial_id) if payload.trial_id else None, payload.due_date,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404 if "not found" in str(e).lower() else 400, detail=str(e))
+
+    notifications = NotificationService(conn)
+    data = {"survey_id": str(survey_id), "survey_title": result["survey"]["title"]}
+    for a in result["assigned"]:
+        await notifications.notify_user(str(a["user_id"]), NotificationType.SURVEY_AVAILABLE, data)
+    return {
+        "assigned": [a["email"] for a in result["assigned"]],
+        "already_assigned": result["already_assigned"],
+        "not_found": result["not_found"],
+    }
+
+
+@router.get("/{survey_id}/analytics", response_model=SurveyAnalyticsResponse)
+async def survey_analytics(
+    survey_id: UUID,
+    conn=Depends(get_connection),
+    manager: dict = Depends(survey_manager_required),
+):
+    """Completion rate, average time to complete and answer distribution per question."""
+    result = await SurveyModel(conn).analytics(str(survey_id))
+    if not result:
+        raise HTTPException(status_code=404, detail="Survey not found")
+    return result

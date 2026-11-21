@@ -11,6 +11,7 @@ interface TrialFilters {
   page?: number;
   limit?: number;
   sort_by?: string;
+  eligibleForMe?: boolean;
 }
 
 export function useTrials(filters: TrialFilters = {}) {

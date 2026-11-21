@@ -256,14 +256,19 @@ CREATE TABLE clinical_trials (
     
     -- Trial Status
     phase VARCHAR(50) NOT NULL,                   -- Phase 1, Phase 2, Phase 3, Phase 4, Post-Market
-    status VARCHAR(50) NOT NULL,                  -- Recruiting, Active, Completed, Suspended, Not yet recruiting
+    status VARCHAR(50) NOT NULL,                  -- Draft, Not yet recruiting, Recruiting, Active, Completed, Suspended, Terminated
     
     -- Organization
     sponsor VARCHAR(255) NOT NULL,
     countries JSONB DEFAULT '[]',                 -- Array of countries where trial runs
     
     -- Eligibility
-    eligibility_criteria TEXT,
+    eligibility_criteria TEXT,                    -- Human-readable criteria text
+    eligibility_rules JSONB NOT NULL DEFAULT '{}', -- min_age, max_age, gender, conditions, inclusion_list, exclusion_list
+
+    -- Sync
+    sync_source VARCHAR(50) NOT NULL DEFAULT 'manual', -- manual, clinicaltrials_gov
+    last_synced_at TIMESTAMPTZ,
     
     -- Timeline
     start_date DATE,
@@ -285,7 +290,7 @@ CREATE TABLE clinical_trials (
     
     -- Constraints
     CONSTRAINT check_trial_phase CHECK (phase IN ('Phase 1', 'Phase 2', 'Phase 3', 'Phase 4', 'Post-Market')),
-    CONSTRAINT check_trial_status CHECK (status IN ('Recruiting', 'Active', 'Completed', 'Suspended', 'Not yet recruiting'))
+    CONSTRAINT check_trial_status CHECK (status IN ('Draft', 'Not yet recruiting', 'Recruiting', 'Active', 'Completed', 'Suspended', 'Terminated'))
 );
 
 COMMENT ON TABLE clinical_trials IS 'Central registry of clinical trial information from various sources';
@@ -395,6 +400,37 @@ CREATE TABLE trial_alerts (
 
 COMMENT ON TABLE trial_alerts IS 'User subscriptions for trial notifications based on criteria or specific trials';
 COMMENT ON COLUMN trial_alerts.filter_criteria IS 'JSONB for flexible additional filtering (e.g., age range, gender)';
+
+-- -----------------------------------------------------------------------------
+-- trial_referrals / trial_sync_logs (Phase 2, migration 004_clinical_trials_phase2.sql)
+-- -----------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS trial_referrals (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    trial_id UUID NOT NULL REFERENCES clinical_trials(trial_id) ON DELETE CASCADE,
+    hcp_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    patient_user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    patient_email VARCHAR(255),                   -- for patients without a Voche account yet
+    clinical_notes TEXT,
+    status VARCHAR(30) NOT NULL DEFAULT 'sent',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT check_referral_status CHECK (status IN ('sent', 'viewed', 'consent_pending', 'enrolled', 'declined', 'ineligible')),
+    CONSTRAINT check_referral_patient CHECK (patient_user_id IS NOT NULL OR patient_email IS NOT NULL)
+);
+
+CREATE TABLE IF NOT EXISTS trial_sync_logs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    sync_started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    sync_completed_at TIMESTAMPTZ,
+    records_fetched INTEGER NOT NULL DEFAULT 0,
+    records_inserted INTEGER NOT NULL DEFAULT 0,
+    records_updated INTEGER NOT NULL DEFAULT 0,
+    status VARCHAR(20) NOT NULL DEFAULT 'running',
+    error_details TEXT,
+    CONSTRAINT check_sync_status CHECK (status IN ('running', 'success', 'failed'))
+);
+
 
 
 -- ============================================================================
@@ -1080,18 +1116,21 @@ CREATE TABLE survey_questions (
     
     -- Question Details
     question_text TEXT NOT NULL,
-    question_type VARCHAR(50) NOT NULL,           -- multiple_choice, scale, open_text, yes_no
+    question_type VARCHAR(50) NOT NULL,           -- single_choice, multiple_choice, scale, open_text, yes_no, number, date
     order_position INTEGER NOT NULL,
     required BOOLEAN DEFAULT FALSE,
     
     -- Options (for multiple choice)
     options JSONB,                                 -- Array of available options
+
+    -- Branching: which question comes next for a given answer
+    branching_rules JSONB NOT NULL DEFAULT '[]',   -- [{"condition": "equals", "value": "yes", "next_question_id": "<uuid>"}]
     
     -- Timestamps
     created_at TIMESTAMPTZ DEFAULT NOW(),
     
     -- Constraints
-    CONSTRAINT check_question_type CHECK (question_type IN ('multiple_choice', 'scale', 'open_text', 'yes_no'))
+    CONSTRAINT check_question_type CHECK (question_type IN ('single_choice', 'multiple_choice', 'scale', 'open_text', 'yes_no', 'number', 'date'))
 );
 
 COMMENT ON TABLE survey_questions IS 'Individual questions within surveys with ordering';
@@ -1148,6 +1187,27 @@ CREATE TABLE survey_responses (
 
 COMMENT ON TABLE survey_responses IS 'User responses to survey questions with anonymity support';
 COMMENT ON COLUMN survey_responses.answer IS 'JSONB flexible format to handle various answer types';
+
+-- -----------------------------------------------------------------------------
+-- survey_assignments (Phase 2, migration 005_surveys_phase2.sql)
+-- -----------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS survey_assignments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    survey_id UUID NOT NULL REFERENCES surveys(survey_id) ON DELETE CASCADE,
+    patient_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    assigned_by_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    trial_id UUID REFERENCES clinical_trials(trial_id) ON DELETE SET NULL,
+    due_date TIMESTAMPTZ,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    draft_answers JSONB NOT NULL DEFAULT '{}',    -- {"<question_id>": <answer>} saved while in progress
+    completed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT check_assignment_status CHECK (status IN ('pending', 'in_progress', 'completed', 'expired')),
+    CONSTRAINT unique_survey_assignment UNIQUE (survey_id, patient_user_id)
+);
+
 
 CREATE INDEX idx_survey_responses_completion ON survey_responses(completion_id);
 
@@ -1307,6 +1367,46 @@ CREATE TABLE IF NOT EXISTS platform_feedback (
 
 COMMENT ON TABLE platform_feedback IS 'User feedback with star ratings and categorization';
 COMMENT ON COLUMN platform_feedback.rating IS 'Star rating from 1 (poor) to 5 (excellent)';
+
+
+-- ============================================================================
+-- 9. AI ASSISTANT (Phase 2, migration 003_ai_chatbot.sql)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS chat_conversations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(255),
+    context_type VARCHAR(50) NOT NULL DEFAULT 'general',
+    context_reference_id UUID,                    -- trial or resource id, depending on context_type
+    is_archived BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT check_chat_context_type CHECK (context_type IN ('general', 'trial_inquiry', 'symptom_guidance', 'resource_qa'))
+);
+
+CREATE TABLE IF NOT EXISTS chat_messages (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    conversation_id UUID NOT NULL REFERENCES chat_conversations(id) ON DELETE CASCADE,
+    sender_role VARCHAR(20) NOT NULL,
+    content TEXT NOT NULL,
+    citations JSONB NOT NULL DEFAULT '[]',        -- [{"type": "trial"|"resource", "id": "<uuid>", "title": "..."}]
+    token_count INTEGER,
+    safety_flagged BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT check_chat_sender_role CHECK (sender_role IN ('user', 'assistant', 'system'))
+);
+
+CREATE TABLE IF NOT EXISTS chat_feedback (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    message_id UUID NOT NULL REFERENCES chat_messages(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    rating SMALLINT NOT NULL,
+    comment TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT check_chat_feedback_rating CHECK (rating IN (-1, 1)),
+    CONSTRAINT unique_chat_feedback_per_user UNIQUE (message_id, user_id)
+);
 
 
 -- ============================================================================

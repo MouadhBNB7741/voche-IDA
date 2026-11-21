@@ -31,6 +31,15 @@ class Settings(BaseSettings):
     s3_access_key_id: str = ""
     s3_secret_access_key: str = ""
 
+    # AI Assistant (empty key = offline answers that list matching trials/resources)
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-3-flash-preview"
+
+    # ClinicalTrials.gov sync (off by default so local runs and tests never call the API)
+    trial_sync_enabled: bool = False
+    trial_sync_conditions: str = "HIV,Tuberculosis,Malaria"
+    trial_sync_max_per_condition: int = 100
+
     model_config = SettingsConfigDict(
         env_file=".env",
         extra="ignore",

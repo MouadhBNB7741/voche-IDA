@@ -2,7 +2,7 @@ from datetime import date, datetime
 from typing import List, Optional, Dict, Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
 
 
 # ----------------------------------------------------------------------
@@ -37,6 +37,7 @@ class TrialSite(BaseModel):
 class TrialSummary(BaseModel):
     """Lightweight trial info for search results"""
     id: UUID = Field(..., alias="trial_id")
+    countries: List[str] = []
     title: str
     phase: Optional[str]
     status: Optional[str]
@@ -60,6 +61,7 @@ class TrialDetail(BaseModel):
     sponsor: str
     countries: List[str] = []
     eligibility_criteria: Optional[str] = None
+    eligibility_rules: Dict[str, Any] = {}
     enrollment: int = Field(0, alias="enrollment_count")
     max_enrollment: Optional[int] = None
     start_date: Optional[date] = None
@@ -151,3 +153,67 @@ class InterestResponse(BaseModel):
 class TrialSaveResponse(BaseModel):
     message: str
     trial_id: UUID
+
+
+# ----------------------------------------------------------------------
+# Phase 2: lifecycle, eligibility screening, referrals
+# ----------------------------------------------------------------------
+TrialStatus = Literal['Draft', 'Not yet recruiting', 'Recruiting', 'Active', 'Completed', 'Suspended', 'Terminated']
+
+
+class TrialStatusUpdate(BaseModel):
+    status: TrialStatus
+
+
+class TrialStatusResponse(BaseModel):
+    trial_id: UUID
+    previous_status: str
+    status: str
+
+
+class ScreeningRequest(BaseModel):
+    """Patient answers for the eligibility pre-screener. Every field is optional; nothing is stored."""
+    age: Optional[int] = Field(None, ge=0, le=120)
+    gender: Optional[Literal['male', 'female', 'other']] = None
+    conditions: List[str] = Field(default_factory=list, max_length=20)
+    inclusion_answers: Dict[str, bool] = {}
+    exclusion_answers: Dict[str, bool] = {}
+
+
+class ScreeningCheck(BaseModel):
+    criterion: str
+    status: Literal['met', 'not_met', 'unknown']
+    detail: str
+
+
+class ScreeningResponse(BaseModel):
+    trial_id: UUID
+    result: Literal['eligible', 'possibly_eligible', 'not_eligible']
+    score: int
+    breakdown: List[ScreeningCheck]
+    disclaimer: str = "This is a pre-screen only. The trial team decides final eligibility."
+
+
+class ReferralCreate(BaseModel):
+    patient_email: EmailStr
+    clinical_notes: Optional[str] = Field(None, max_length=2000)
+
+
+class ReferralRespond(BaseModel):
+    action: Literal['accept', 'decline']
+
+
+class ReferralResponse(BaseModel):
+    id: UUID
+    trial_id: UUID
+    trial_title: str
+    trial_status: str
+    hcp_user_id: UUID
+    hcp_name: str
+    patient_user_id: Optional[UUID] = None
+    patient_name: Optional[str] = None
+    patient_email: Optional[str] = None
+    clinical_notes: Optional[str] = None
+    status: Literal['sent', 'viewed', 'consent_pending', 'enrolled', 'declined', 'ineligible']
+    created_at: datetime
+    updated_at: datetime

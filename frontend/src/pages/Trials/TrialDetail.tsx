@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Card } from "../../components/ui/card";
 import { Skeleton } from "../../components/ui/skeleton";
@@ -12,23 +12,16 @@ import {
   Building,
   Clock,
   CheckCircle2,
-  XCircle,
   HelpCircle,
   ChevronRight,
   ShieldCheck,
   Activity,
   FlaskConical,
-  ClipboardList,
 } from "lucide-react";
 import { trialService } from "../../services/trialService";
 import { useTrialById } from "../../hooks/useTrialById";
 import { useTrials } from "../../hooks/useTrials";
-import {
-  useSurveys,
-  useSurveyById,
-  useSubmitSurvey,
-  useCompletedSurveys,
-} from "../../hooks/useSurvey";
+import { EligibilityScreenerModal } from "../../components/trials/EligibilityScreenerModal";
 
 import { useSaveTrial } from "../../hooks/useSaveTrial";
 import { toast } from "sonner";
@@ -46,28 +39,8 @@ export default function TrialDetail() {
   const { toggleSave, isSaved: getIsSaved } = useSaveTrial();
   const isSaved = getIsSaved(id ?? "");
 
-const { data: surveysData } = useSurveys();
-const surveysList = Array.isArray(surveysData) ? surveysData : [];
-
-const { data: completedSurveys } = useCompletedSurveys();
-const completedSurveysList = Array.isArray(completedSurveys) ? completedSurveys : [];
-
- const trialSurvey = surveysList.find((s) => s.trial_id === id) ?? surveysList[0] ?? null;
-  const { data: surveyDetail, isLoading: isSurveyLoading } = useSurveyById(
-    trialSurvey?.survey_id,
-  );
-  const submitSurvey = useSubmitSurvey();
-
   const [isConnected, setIsConnected] = useState(false);
-  const [showQuiz, setShowQuiz] = useState(false);
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, string | number>>({});
-  const [quizComplete, setQuizComplete] = useState(false);
-  const [isEligible, setIsEligible] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    if (id) setIsConnected(trialService.isTrialConnected(id));
-  }, [id]);
+  const [isConnecting, setIsConnecting] = useState(false);
 
   const handleConnect = () => {
     if (!isAuthenticated) {
@@ -81,58 +54,23 @@ const completedSurveysList = Array.isArray(completedSurveys) ? completedSurveys 
         });
         return;
       }
-      trialService.connectTrial(id);
-      setIsConnected(true);
-      toast.success("Connection Request Sent", {
-        description:
-          "A trial coordinator will review your profile and contact you shortly.",
-      });
+      setIsConnecting(true);
+      trialService
+        .expressInterest(id)
+        .then(() => {
+          setIsConnected(true);
+          toast.success("Connection Request Sent", {
+            description:
+              "A trial coordinator will review your profile and contact you shortly.",
+          });
+        })
+        .catch((err) => toast.error("Could not send request", { description: err.message }))
+        .finally(() => setIsConnecting(false));
     }
   };
 
-  const questions = surveyDetail?.questions ?? [];
-
-  const handleAnswer = (questionId: string, answer: string | number) => {
-    const updatedAnswers = { ...answers, [questionId]: answer };
-    setAnswers(updatedAnswers);
-    if (currentQuestion < questions.length - 1) {
-      setCurrentQuestion((prev) => prev + 1);
-    } else {
-      const yesCount = Object.values(updatedAnswers).filter(
-        (a) => a === "yes" || a === "Yes" || a === "No medications",
-      ).length;
-      setIsEligible(yesCount >= Math.ceil(questions.length / 2));
-      setQuizComplete(true);
-    }
-  };
-
-  const handleSubmitSurvey = async () => {
-    if (!surveyDetail) return;
-    const payload = {
-      consent_given: true,
-      anonymous: false,
-      responses: Object.entries(answers).map(([question_id, answer]) => ({
-        question_id,
-        answer,
-      })),
-    };
-    await submitSurvey.mutateAsync({
-      surveyId: surveyDetail.survey_id,
-      payload,
-    });
-  };
-
-  const resetQuiz = () => {
-    setCurrentQuestion(0);
-    setAnswers({});
-    setQuizComplete(false);
-    setShowQuiz(false);
-    setIsEligible(null);
-  };
-
-  const alreadyCompleted = completedSurveysList.some(
-    (c) => c.survey_id === trialSurvey?.survey_id,
-  );
+  const rules = trial?.eligibility_rules ?? {};
+  const hasRules = Object.values(rules).some((v) => (Array.isArray(v) ? v.length > 0 : v != null && v !== "all"));
 
   if (isLoading) {
     return (
@@ -213,7 +151,7 @@ const completedSurveysList = Array.isArray(completedSurveys) ? completedSurveys 
                   : "bg-white text-primary-color hover:bg-white/90 cursor-pointer"
               }`}
               onClick={handleConnect}
-              disabled={isConnected}
+              disabled={isConnected || isConnecting}
             >
               {isConnected ? (
                 <><CheckCircle2 size={18} className="mr-2" /> Request Pending</>
@@ -334,214 +272,37 @@ const completedSurveysList = Array.isArray(completedSurveys) ? completedSurveys 
             </Card>
           )}
 
-          {/* Eligibility Quiz */}
+          {/* Eligibility Check */}
           <Card className="p-6 md:p-8 border-l-4 border-l-primary shadow-lg overflow-hidden relative">
             <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
               <FlaskConical size={140} />
             </div>
-            <h2 className="text-xl font-bold mb-6">Eligibility Quiz</h2>
-
-            {alreadyCompleted && !showQuiz && (
-              <div className="flex items-center gap-3 p-4 bg-success/10 rounded-xl border border-success/20 mb-6">
-                <CheckCircle2 className="text-success-color shrink-0" size={20} />
-                <div>
-                  <div className="font-semibold text-sm">Already Completed</div>
-                  <div className="text-xs text-muted-foreground">You have previously submitted this eligibility quiz.</div>
-                </div>
-              </div>
-            )}
-
-            {isSurveyLoading && (
-              <div className="text-center py-8">
-                <div className="h-6 w-48 bg-muted rounded animate-pulse mx-auto mb-3" />
-                <div className="h-4 w-64 bg-muted rounded animate-pulse mx-auto" />
-              </div>
-            )}
-
-            {!isSurveyLoading && !surveyDetail && (
-              <div className="text-center py-8 text-muted-foreground">
-                <HelpCircle className="mx-auto mb-3 opacity-40" size={32} />
-                <p className="text-sm">No eligibility quiz available for this trial.</p>
-              </div>
-            )}
-
-            {!isSurveyLoading && surveyDetail && !showQuiz && !quizComplete && (
+            <h2 className="text-xl font-bold mb-6">Eligibility Check</h2>
+            {hasRules ? (
               <div className="text-center py-8">
                 <div className="w-16 h-16 bg-primary-color/10 rounded-full flex items-center justify-center mx-auto mb-6 ring-4 ring-primary/5">
                   <HelpCircle className="text-primary-color" size={32} />
                 </div>
-                <h3 className="font-bold text-lg mb-2">{surveyDetail.title}</h3>
-                <p className="text-muted-foreground mb-2 max-w-md mx-auto">
-                  {surveyDetail.description ?? "Take a quick quiz to see if you might be a good fit for this clinical trial."}
+                <p className="text-muted-foreground mb-8 max-w-md mx-auto">
+                  Answer a few questions to see if you might be a good fit for this clinical trial.
                 </p>
-                <p className="text-xs text-muted-foreground mb-8">{questions.length} questions</p>
-                <Button
-                  style={{ backgroundColor: "hsl(var(--primary))", color: "white" }}
-                  onClick={() => {
-                    if (!isAuthenticated) {
-                      openAuthModal("Sign in to your Voche account to take eligibility quizzes.");
-                      return;
-                    }
-                    setShowQuiz(true);
-                  }}
-                  size="lg"
-                  className="shadow-md rounded-xl px-8 cursor-pointer"
-                >
-                  Start Eligibility Check
-                </Button>
+                <EligibilityScreenerModal trialId={trial.trial_id ?? id!} rules={rules} onConnect={handleConnect}>
+                  <Button
+                    style={{ backgroundColor: "hsl(var(--primary))", color: "white" }}
+                    size="lg"
+                    className="shadow-md rounded-xl px-8 cursor-pointer"
+                  >
+                    Check Eligibility
+                  </Button>
+                </EligibilityScreenerModal>
               </div>
-            )}
-
-            {showQuiz && !quizComplete && questions.length > 0 && (
-              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    <span>Quiz Progress</span>
-                    <span>{Math.round(((currentQuestion + 1) / questions.length) * 100)}%</span>
-                  </div>
-                  <div className="flex gap-1.5">
-                    {questions.map((_, idx) => (
-                      <div
-                        key={idx}
-                        className={`h-2 flex-1 rounded-full transition-colors duration-300 ${idx <= currentQuestion ? "bg-primary-color" : "bg-muted"}`}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                <div className="py-2">
-                  <div className="text-sm font-bold text-primary-color mb-2 uppercase tracking-wide">
-                    Question {currentQuestion + 1} of {questions.length}
-                  </div>
-                  <h3 className="text-2xl font-bold mb-8 leading-tight">
-                    {questions[currentQuestion].text}
-                  </h3>
-
-                  <div className="space-y-3">
-                    {questions[currentQuestion].type === "yes_no" && (
-                      <div className="grid grid-cols-2 gap-4">
-                        <Button variant="outline" className="h-16 text-lg font-medium hover:bg-primary-color hover:text-primary-foreground hover:border-primary transition-all rounded-xl cursor-pointer"
-                          onClick={() => handleAnswer(questions[currentQuestion].question_id, "yes")}>Yes</Button>
-                        <Button variant="outline" className="h-16 text-lg font-medium hover:bg-primary-color hover:text-primary-foreground hover:border-primary transition-all rounded-xl cursor-pointer"
-                          onClick={() => handleAnswer(questions[currentQuestion].question_id, "no")}>No</Button>
-                      </div>
-                    )}
-                    {questions[currentQuestion].type === "multiple_choice" && (
-                      <div className="space-y-3">
-                        {questions[currentQuestion].options?.map((option, idx) => (
-                          <Button key={option} variant="outline"
-                            className="w-full justify-start h-14 text-base px-6 hover:bg-primary-color hover:text-primary-foreground hover:border-primary transition-all rounded-xl cursor-pointer"
-                            onClick={() => handleAnswer(questions[currentQuestion].question_id, idx)}>
-                            {option}
-                          </Button>
-                        ))}
-                      </div>
-                    )}
-                    {questions[currentQuestion].type === "scale" && (
-                      <div className="flex gap-3 justify-center flex-wrap">
-                        {[1, 2, 3, 4, 5].map((n) => (
-                          <Button key={n} variant="outline"
-                            className="w-14 h-14 text-lg font-bold hover:bg-primary-color hover:text-primary-foreground rounded-xl cursor-pointer"
-                            onClick={() => handleAnswer(questions[currentQuestion].question_id, n)}>
-                            {n}
-                          </Button>
-                        ))}
-                      </div>
-                    )}
-                    {questions[currentQuestion].type === "text" && (
-                      <div className="space-y-3">
-                        <textarea
-                          className="w-full p-4 rounded-xl border bg-muted/30 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
-                          rows={3}
-                          placeholder="Type your answer..."
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && !e.shiftKey) {
-                              e.preventDefault();
-                              handleAnswer(questions[currentQuestion].question_id, (e.target as HTMLTextAreaElement).value);
-                            }
-                          }}
-                        />
-                        <Button className="w-full h-12 rounded-xl cursor-pointer"
-                          onClick={(e) => {
-                            const ta = e.currentTarget.previousElementSibling as HTMLTextAreaElement;
-                            handleAnswer(questions[currentQuestion].question_id, ta.value);
-                          }}>
-                          Next
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {quizComplete && (
-              <div className="text-center py-8 animate-in zoom-in duration-300">
-                {isEligible ? (
-                  <>
-                    <div className="w-20 h-20 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-6 ring-4 ring-success/5">
-                      <CheckCircle2 className="text-success" size={40} />
-                    </div>
-                    <h3 className="text-2xl font-bold text-success mb-3">You May Be Eligible!</h3>
-                    <p className="text-muted-foreground mb-8 max-w-md mx-auto text-lg leading-relaxed">
-                      Based on your answers, you appear to be a good candidate for this trial.
-                    </p>
-                    <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                      <Button onClick={handleSubmitSurvey} size="lg" className="shadow-lg h-12 px-8 rounded-xl cursor-pointer" disabled={submitSurvey.isPending}>
-                        {submitSurvey.isPending ? "Submitting..." : "Submit & Connect"}
-                      </Button>
-                      <Button variant="outline" onClick={resetQuiz} className="h-12 rounded-xl cursor-pointer">Retake Quiz</Button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="w-20 h-20 bg-warning/10 rounded-full flex items-center justify-center mx-auto mb-6 ring-4 ring-warning/5">
-                      <XCircle className="text-warning" size={40} />
-                    </div>
-                    <h3 className="text-2xl font-bold text-foreground mb-3">Eligibility Uncertain</h3>
-                    <p className="text-muted-foreground mb-8 max-w-md mx-auto leading-relaxed">
-                      Based on your answers, you might not meet all criteria. We still recommend submitting and consulting with a healthcare provider.
-                    </p>
-                    <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                      <Button onClick={handleSubmitSurvey} size="lg" variant="outline" className="h-12 px-8 rounded-xl cursor-pointer" disabled={submitSurvey.isPending}>
-                        {submitSurvey.isPending ? "Submitting..." : "Submit Anyway"}
-                      </Button>
-                      <Button variant="outline" onClick={resetQuiz} className="h-12 rounded-xl cursor-pointer">Retake Quiz</Button>
-                      <Button variant="default" asChild className="h-12 rounded-xl cursor-pointer">
-                        <Link to="/trials">Browse Other Trials</Link>
-                      </Button>
-                    </div>
-                  </>
-                )}
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <HelpCircle className="mx-auto mb-3 opacity-40" size={32} />
+                <p className="text-sm">No automated eligibility check for this trial yet. Read the criteria above or contact the trial team.</p>
               </div>
             )}
           </Card>
-
-          {/* Completed Surveys */}
-          {completedSurveysList.length > 0 && (
-            <Card className="p-6 md:p-8 border-border/60 shadow-sm">
-              <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-                <ClipboardList size={20} className="text-primary-color" />
-                Completed Surveys
-              </h2>
-              <div className="space-y-3">
-                {completedSurveysList.map((completed) => (
-                  <div key={completed.completion_id}
-                    className="flex items-center justify-between p-4 bg-muted/20 rounded-xl border hover:border-primary/20 transition-colors">
-                    <div>
-                      <div className="font-semibold text-sm">{completed.survey_title}</div>
-                      <div className="text-xs text-muted-foreground mt-0.5">
-                        Completed {new Date(completed.completed_at).toLocaleDateString()}
-                      </div>
-                    </div>
-                    <Badge className="bg-success/10 text-success-color border-success/20" variant="outline">
-                      <CheckCircle2 size={12} className="mr-1" /> Done
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
 
           {/* Trial Locations */}
           <Card className="p-6 md:p-8 border-border/60 shadow-sm">

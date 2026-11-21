@@ -8,6 +8,10 @@ import { Card } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Badge } from "../../components/ui/badge";
+import { Label } from "../../components/ui/label";
+import { Switch } from "../../components/ui/switch";
+import { TrialAlertModal } from "../../components/trials/TrialAlertModal";
+import { useAuthContext } from "../../contexts/AuthContext";
 
 import {
   Select,
@@ -31,6 +35,7 @@ import {
   Heart,
   FlaskConical,
   Clock,
+  BellPlus,
 } from "lucide-react";
 
 const DISEASE_OPTIONS = [
@@ -43,12 +48,14 @@ const PHASE_OPTIONS = [
 ];
 
 const STATUS_OPTIONS = [
-  "all", "Recruiting", "Active", "Completed", "Suspended", "Terminated"
+  "all", "Not yet recruiting", "Recruiting", "Active", "Completed", "Suspended", "Terminated"
 ];
 
 export default function Trials() {
   const navigate = useNavigate();
   const { toggleSave, isSaved } = useSaveTrial();
+  const { isAuthenticated, openAuthModal } = useAuthContext();
+  const [eligibleForMe, setEligibleForMe] = useState(false);
   const { savedTrialIds: savedTrials } = useSavedTrials();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -97,7 +104,11 @@ export default function Trials() {
     status: selectedStatus,
     location: debouncedLocationQuery,
     sponsor: debouncedSponsorQuery,
+    eligibleForMe: isAuthenticated && eligibleForMe,
+    // shortcut: one request of up to 100 trials, paged in the browser; switch to server paging when lists grow past that
+    limit: 100,
   });
+  const countryCount = new Set(trials.flatMap((t) => t.countries ?? [])).size;
 
   const totalPages = Math.ceil(trials.length / itemsPerPage);
   const paginatedTrials = trials.slice(
@@ -241,6 +252,43 @@ export default function Trials() {
               </div>
             </div>
           )}
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
+            {isAuthenticated ? (
+              <div className="flex items-center gap-3">
+                <Switch
+                  id="eligible-for-me"
+                  checked={eligibleForMe}
+                  onCheckedChange={(checked) => {
+                    setEligibleForMe(checked);
+                    setCurrentPage(1);
+                  }}
+                />
+                <Label htmlFor="eligible-for-me" className="text-sm cursor-pointer">
+                  Only trials matching my profile
+                </Label>
+              </div>
+            ) : (
+              <div />
+            )}
+            {isAuthenticated ? (
+              <TrialAlertModal>
+                <Button variant="outline" className="h-11 gap-2 cursor-pointer">
+                  <BellPlus size={16} />
+                  Create Trial Alert
+                </Button>
+              </TrialAlertModal>
+            ) : (
+              <Button
+                variant="outline"
+                className="h-11 gap-2 cursor-pointer"
+                onClick={() => openAuthModal("Sign in to your Voche account to create trial alerts.")}
+              >
+                <BellPlus size={16} />
+                Create Trial Alert
+              </Button>
+            )}
+          </div>
         </div>
       </Card>
 
@@ -249,7 +297,7 @@ export default function Trials() {
         {[
           { label: "Total Trials", value: trials.length, color: "text-[hsl(var(--primary))]" },
           { label: "Disease Areas", value: DISEASE_OPTIONS.length - 1, color: "text-[hsl(var(--teal))]" },
-          { label: "Countries", value: 12, color: "text-[hsl(var(--lime))]" },
+          { label: "Countries", value: countryCount, color: "text-[hsl(var(--lime))]" },
           { label: "Saved Trials", value: savedTrials.length, color: "text-[hsl(var(--blue))]" },
         ].map((stat, i) => (
           <Card key={i} className="p-5 text-center rounded-xl border-0">
@@ -293,10 +341,21 @@ export default function Trials() {
             <FileText size={30} className="text-red-400" />
           </div>
           <h3 className="text-xl font-semibold mb-2">Failed to load trials</h3>
-          <p className="text-muted-foreground text-sm">Something went wrong. Please try again.</p>
-          <Button variant="outline" className="mt-6 border-0 cursor-pointer" onClick={() => window.location.reload()}>
-            Retry
-          </Button>
+          <p className="text-muted-foreground text-sm">
+            {/* e.g. "Add your condition or country to your profile to use this filter" */}
+            {eligibleForMe && (error as { message?: string }).message
+              ? (error as { message?: string }).message
+              : "Something went wrong. Please try again."}
+          </p>
+          {eligibleForMe ? (
+            <Button variant="outline" className="mt-6 border-0 cursor-pointer" onClick={() => setEligibleForMe(false)}>
+              Show all trials
+            </Button>
+          ) : (
+            <Button variant="outline" className="mt-6 border-0 cursor-pointer" onClick={() => window.location.reload()}>
+              Retry
+            </Button>
+          )}
         </Card>
       ) : (
         <div className="space-y-4">
