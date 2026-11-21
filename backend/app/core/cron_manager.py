@@ -156,11 +156,8 @@ cron_manager = CronManager()
 
 # Register cron tasks here
 cron_manager.add_job("purge_deleted_accounts", purge_deleted_accounts, interval_seconds=3600)
-<<<<<<< HEAD
 cron_manager.add_job("lift_expired_suspensions", lift_expired_suspensions, interval_seconds=3600)
-=======
 
 from app.services.trial_sync_service import scheduled_sync  # noqa: E402  (imported here to keep cron jobs in one place)
 cron_manager.add_job("trial_sync", scheduled_sync, interval_seconds=24 * 3600)
 cron_manager.add_job("survey_reminders", survey_reminders, interval_seconds=24 * 3600)
->>>>>>> origin/feature/phase2-ai-chatbot-trials-surveys
