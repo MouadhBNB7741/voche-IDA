@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Optional
+from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -20,6 +20,10 @@ from app.schemas.surveys import (
     SurveyAssignRequest,
     SurveyAssignResponse,
     SurveyAnalyticsResponse,
+    AssignedSurveyItem,
+    ManagedSurveyItem,
+    SurveyCreateRequest,
+    SurveyStatusUpdate,
 )
 from app.schemas.notification import NotificationType
 from app.services.notification_service import NotificationService
@@ -81,6 +85,68 @@ async def get_completed_survey_details(
         
     return details
 
+async def survey_manager_required(
+    current_user: dict = Depends(auth_middleware),
+    conn=Depends(get_connection),
+) -> dict:
+    """Admins, organization members and verified HCPs can assign surveys and see analytics."""
+    user_type = current_user.get("user_type")
+    if user_type in ("admin", "org_member"):
+        return current_user
+    if user_type == "hcp" and await conn.fetchval("SELECT is_verified FROM users WHERE id = $1", current_user["id"]):
+        return current_user
+    raise HTTPException(status_code=403, detail="Only admins, organizations and verified HCPs can manage surveys")
+
+
+@router.get("/assigned", response_model=List[AssignedSurveyItem])
+async def list_assigned_surveys(
+    conn=Depends(get_connection),
+    current_user: dict = Depends(auth_middleware),
+):
+    """Surveys assigned to the current user, open ones first, soonest due first."""
+    return await SurveyModel(conn).list_assigned(current_user["id"])
+
+
+@router.get("/manage", response_model=List[ManagedSurveyItem])
+async def list_managed_surveys(
+    conn=Depends(get_connection),
+    manager: dict = Depends(survey_manager_required),
+):
+    """Every survey, including drafts, with question, response and assignment counts."""
+    return await SurveyModel(conn).list_managed()
+
+
+@router.post("/", status_code=201)
+async def create_survey(
+    payload: SurveyCreateRequest,
+    conn=Depends(get_connection),
+    manager: dict = Depends(survey_manager_required),
+):
+    """Create a survey with its questions and branching (branches refer to later questions by index)."""
+    try:
+        survey_id = await SurveyModel(conn).create_survey(payload.model_dump(mode="json"))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"survey_id": survey_id}
+
+
+@router.patch("/{survey_id}/status")
+async def change_survey_status(
+    survey_id: UUID,
+    payload: SurveyStatusUpdate,
+    conn=Depends(get_connection),
+    manager: dict = Depends(survey_manager_required),
+):
+    """Publish a draft (draft -> active) or close a survey (active -> closed)."""
+    try:
+        previous = await SurveyModel(conn).change_status(str(survey_id), payload.status.value)
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    if previous is None:
+        raise HTTPException(status_code=404, detail="Survey not found")
+    return {"survey_id": survey_id, "previous_status": previous, "status": payload.status.value}
+
+
 @router.get("/{survey_id}", response_model=SurveyDetailResponse)
 async def get_survey_questions(
     survey_id: UUID,
@@ -132,19 +198,6 @@ async def submit_survey_response(
 
 
 # ── Phase 2 ──────────────────────────────────────────────────────────────────
-
-async def survey_manager_required(
-    current_user: dict = Depends(auth_middleware),
-    conn=Depends(get_connection),
-) -> dict:
-    """Admins, organization members and verified HCPs can assign surveys and see analytics."""
-    user_type = current_user.get("user_type")
-    if user_type in ("admin", "org_member"):
-        return current_user
-    if user_type == "hcp" and await conn.fetchval("SELECT is_verified FROM users WHERE id = $1", current_user["id"]):
-        return current_user
-    raise HTTPException(status_code=403, detail="Only admins, organizations and verified HCPs can manage surveys")
-
 
 @router.patch("/{survey_id}/draft", response_model=SurveyDraftResponse)
 async def save_survey_draft(

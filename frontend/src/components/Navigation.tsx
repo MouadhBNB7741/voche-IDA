@@ -16,7 +16,8 @@ import {
   BellRing,
   ChevronDown,
   ShieldCheck,
-  BellDot
+  BellDot,
+  ClipboardList
 } from "lucide-react";
 
 import { useTheme } from "../contexts/ThemeContext";
@@ -221,6 +222,12 @@ export default function Navigation() {
                 >
                   <UserIcon className="h-4 w-4 opacity-70" />
                   <span className="font-bold text-xs">Profile</span>
+                </DropdownMenuItem>
+
+                <DropdownMenuItem onClick={() => navigate("/surveys")}
+                  className="px-4 py-2.5 rounded-xl focus:bg-primary-color/10 focus:text-primary-color cursor-pointer transition-colors gap-3">
+                  <ClipboardList className="h-4 w-4 opacity-70" />
+                  <span className="font-bold text-xs">Surveys</span>
                 </DropdownMenuItem>
 
                 <DropdownMenuItem onClick={() => navigate("/notifications")}

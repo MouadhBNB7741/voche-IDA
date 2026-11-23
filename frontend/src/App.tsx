@@ -16,6 +16,9 @@ import Assistant from './pages/Assistant';
 import PatientDashboard from './pages/PatientDashboard/PatientDashboard';
 import HCPDashboard from './pages/HCPDashboard/HCPDashboard';
 import Notifications from './pages/Notifications';
+import Surveys from './pages/Surveys/Surveys';
+import SurveyRunner from './pages/Surveys/SurveyRunner';
+import SurveyBuilder from './pages/Surveys/SurveyBuilder';
 import Login from './pages/Auth/Login';
 import Signup from './pages/Auth/Signup';
 import ForgotPassword from "./pages/Auth/ForgotPassword";
@@ -49,6 +52,9 @@ export default function App() {
         <Route path="/patientdashboard" element={<PatientDashboard />} />
         <Route path="/hcpdashboard" element={<HCPDashboard />} />
         <Route path="/notifications" element={<Notifications />} />
+        <Route path="/surveys" element={<Surveys />} />
+        <Route path="/surveys/manage" element={<SurveyBuilder />} />
+        <Route path="/surveys/:id/take" element={<SurveyRunner />} />
         <Route path="/403" element={<Forbidden />} />
         <Route path="/404" element={<NotFound />} />
       </Route>

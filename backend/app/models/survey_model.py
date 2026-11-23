@@ -542,3 +542,95 @@ class SurveyModel(DBModel):
             "avg_completion_hours": round(float(counts["avg_seconds"]) / 3600, 1) if counts["avg_seconds"] is not None else None,
             "questions": per_question,
         }
+
+    # ------------------------------------------------------------------
+    # Patient hub & builder
+    # ------------------------------------------------------------------
+    async def list_assigned(self, user_id: str) -> List[Dict[str, Any]]:
+        rows = await self.conn.fetch(
+            """
+            SELECT s.survey_id, s.title, s.description, s.estimated_time, a.status, a.due_date,
+                   a.draft_answers <> '{}'::jsonb AS has_draft, t.title AS trial_title, a.created_at AS assigned_at
+            FROM survey_assignments a
+            JOIN surveys s ON s.survey_id = a.survey_id
+            LEFT JOIN clinical_trials t ON t.trial_id = a.trial_id
+            WHERE a.patient_user_id = $1
+            ORDER BY (a.status IN ('pending', 'in_progress')) DESC, a.due_date ASC NULLS LAST, a.created_at DESC
+            """,
+            self._to_uuid(user_id),
+        )
+        return self._records_to_list(rows)
+
+    async def list_managed(self) -> List[Dict[str, Any]]:
+        rows = await self.conn.fetch(
+            """
+            SELECT s.survey_id, s.title, s.status, s.created_at, s.closing_date,
+                   (SELECT count(*) FROM survey_questions q WHERE q.survey_id = s.survey_id) AS question_count,
+                   (SELECT count(*) FROM survey_completions c WHERE c.survey_id = s.survey_id) AS responses,
+                   (SELECT count(*) FROM survey_assignments a WHERE a.survey_id = s.survey_id) AS assigned
+            FROM surveys s
+            ORDER BY s.created_at DESC
+            """
+        )
+        return self._records_to_list(rows)
+
+    async def create_survey(self, data: Dict[str, Any]) -> str:
+        """Questions refer to branch targets by index; they become question ids once inserted."""
+        questions = data["questions"]
+        for i, q in enumerate(questions):
+            if q["type"] in ("single_choice", "multiple_choice") and len(q.get("options") or []) < 2:
+                raise ValueError(f"Question {i + 1} needs at least two options")
+            if q["branching"] and q["type"] not in ("yes_no", "single_choice", "multiple_choice"):
+                raise ValueError(f"Question {i + 1}: only yes/no and choice questions can branch")
+            for b in q["branching"]:
+                if not i < b["next"] < len(questions):
+                    raise ValueError(f"Question {i + 1}: a branch must jump to a later question")
+                allowed = ["yes", "no"] if q["type"] == "yes_no" else q.get("options") or []
+                if b["value"] not in allowed:
+                    raise ValueError(f"Question {i + 1}: '{b['value']}' is not one of its answers")
+
+        async with self.conn.transaction():
+            survey_id = await self.conn.fetchval(
+                """
+                INSERT INTO surveys (title, description, consent_text, estimated_time, target_audience,
+                                     closing_date, status, published_date)
+                VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7::varchar, CASE WHEN $7::varchar = 'active' THEN CURRENT_DATE END)
+                RETURNING survey_id
+                """,
+                data["title"], data["description"], data.get("consent_text"), data.get("estimated_time"),
+                json.dumps(data.get("target_audience") or []), data.get("closing_date"), data["status"],
+            )
+            ids = []
+            for pos, q in enumerate(questions, start=1):
+                ids.append(await self.conn.fetchval(
+                    """
+                    INSERT INTO survey_questions (survey_id, question_text, question_type, order_position, required, options)
+                    VALUES ($1, $2, $3, $4, $5, $6::jsonb) RETURNING question_id
+                    """,
+                    survey_id, q["text"], q["type"], pos, q["required"],
+                    json.dumps(q["options"]) if q.get("options") else None,
+                ))
+            for q_id, q in zip(ids, questions):
+                if q["branching"]:
+                    rules = [{"condition": "equals", "value": b["value"], "next_question_id": str(ids[b["next"]])}
+                             for b in q["branching"]]
+                    await self.conn.execute(
+                        "UPDATE survey_questions SET branching_rules = $2::jsonb WHERE question_id = $1", q_id, json.dumps(rules))
+        return str(survey_id)
+
+    STATUS_TRANSITIONS = {"draft": {"active"}, "active": {"closed"}, "closed": set()}
+
+    async def change_status(self, survey_id: str, new_status: str) -> Optional[str]:
+        """Returns the previous status, or None when the survey does not exist. Raises on a disallowed move."""
+        current = await self.conn.fetchval("SELECT status FROM surveys WHERE survey_id = $1", self._to_uuid(survey_id))
+        if current is None:
+            return None
+        if new_status not in self.STATUS_TRANSITIONS[current]:
+            raise ValueError(f"Cannot change a {current} survey to {new_status}")
+        await self.conn.execute(
+            "UPDATE surveys SET status = $2::varchar, updated_at = NOW(), "
+            "published_date = COALESCE(published_date, CASE WHEN $2::varchar = 'active' THEN CURRENT_DATE END) "
+            "WHERE survey_id = $1 AND status = $3::varchar",
+            self._to_uuid(survey_id), new_status, current,
+        )
+        return current

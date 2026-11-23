@@ -51,6 +51,13 @@ export const SURVEYS = {
   SUBMIT: (id: string) => `${API_BASE}/surveys/${id}/responses`,
   COMPLETED: `${API_BASE}/surveys/completed`,
   COMPLETED_BY_ID: (id: string) => `${API_BASE}/surveys/completed/${id}`,
+  ASSIGNED: `${API_BASE}/surveys/assigned`,
+  MANAGE: `${API_BASE}/surveys/manage`,
+  CREATE: `${API_BASE}/surveys/`,
+  STATUS: (id: string) => `${API_BASE}/surveys/${id}/status`,
+  DRAFT: (id: string) => `${API_BASE}/surveys/${id}/draft`,
+  ASSIGN: (id: string) => `${API_BASE}/surveys/${id}/assign`,
+  ANALYTICS: (id: string) => `${API_BASE}/surveys/${id}/analytics`,
 };
 
 export const COMMUNITY = {
