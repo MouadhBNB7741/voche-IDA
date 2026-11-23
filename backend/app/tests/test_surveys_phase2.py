@@ -284,3 +284,6 @@ async def test_assigned_list_shows_status_and_draft(client):
     await client.patch(f"/api/v1/surveys/{sid}/draft", json={"answers": {q[0]: "yes"}}, headers=patient)
     item = (await client.get("/api/v1/surveys/assigned", headers=patient)).json()[0]
     assert (item["status"], item["has_draft"]) == ("in_progress", True)
+    async with PostgresDB.get_pool().acquire() as conn:
+        await conn.execute("UPDATE surveys SET status = 'closed' WHERE survey_id = $1", uuid.UUID(sid))
+    assert (await client.get("/api/v1/surveys/assigned", headers=patient)).json() == []

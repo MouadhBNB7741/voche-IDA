@@ -4,6 +4,10 @@ import type {
   AlertFrequency,
   ClinicalTrial,
   ConsentForm,
+  ManagedTrial,
+  RecentObservation,
+  SeverityLevel,
+  TrialStatus,
   Referral,
   PaginatedResponse,
   ScreeningAnswers,
@@ -90,6 +94,26 @@ export const trialService = {
       signed_name: signedName,
       agreed: true,
     })).data;
+  },
+
+  async selfEnroll(trialId: string): Promise<Referral> {
+    return (await apiClient.post<Referral>(CLINICAL.ENROLL(trialId))).data;
+  },
+
+  async getManagedTrials(): Promise<ManagedTrial[]> {
+    return (await apiClient.get<ManagedTrial[]>(CLINICAL.MANAGED_TRIALS)).data;
+  },
+
+  async changeTrialStatus(trialId: string, status: TrialStatus): Promise<void> {
+    await apiClient.patch(CLINICAL.TRIAL_STATUS(trialId), { status });
+  },
+
+  async getRecentObservations(): Promise<RecentObservation[]> {
+    return (await apiClient.get<RecentObservation[]>(CLINICAL.RECENT_OBSERVATIONS)).data;
+  },
+
+  async createObservation(trialId: string, summary: string, severity: SeverityLevel): Promise<void> {
+    await apiClient.post(CLINICAL.OBSERVATIONS, { trial_id: trialId, summary, severity_level: severity });
   },
 
   async createAlert(alert: {

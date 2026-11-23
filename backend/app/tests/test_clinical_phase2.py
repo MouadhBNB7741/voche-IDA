@@ -270,3 +270,92 @@ async def test_consent_signs_once_after_accepting_and_enrolls(client, sent_email
     assert row["user_id"] == patient_id and row["consent_version"] == "v1" and row["consent_text"] == form["text"]
     sent = (await client.get("/api/v1/referrals/sent", headers=hcp)).json()
     assert sent[0]["status"] == "enrolled"
+
+
+# ---------------------------------------------------------------- trial managers
+
+async def test_admin_assigns_manager_who_can_change_status(client):
+    trial_id = await trial("Managed Trial")
+    admin, _ = await user(client, "mgr_admin@example.com", "admin")
+    doc, _ = await user(client, "mgr_doc@example.com", "hcp", verified=True)
+    other_doc, _ = await user(client, "mgr_other@example.com", "hcp", verified=True)
+    await user(client, "mgr_unverified@example.com", "hcp")
+
+    url = f"/api/v1/trials/{trial_id}/manager"
+    assert (await client.patch(url, json={"hcp_email": "mgr_doc@example.com"}, headers=doc)).status_code == 403
+    assert (await client.patch(url, json={"hcp_email": "mgr_unverified@example.com"}, headers=admin)).status_code == 400
+    assert (await client.patch(f"/api/v1/trials/{uuid.uuid4()}/manager", json={"hcp_email": None}, headers=admin)).status_code == 404
+    assert (await client.patch(url, json={"hcp_email": "mgr_doc@example.com"}, headers=admin)).status_code == 200
+
+    managed = (await client.get("/api/v1/trials/managed", headers=doc)).json()
+    assert [m["trial_id"] for m in managed] == [trial_id]
+    assert managed[0]["next_statuses"] == ["Active", "Completed", "Suspended", "Terminated"]
+    assert (await client.get("/api/v1/trials/managed", headers=other_doc)).json() == []
+
+    status_url = f"/api/v1/trials/{trial_id}/status"
+    assert (await client.patch(status_url, json={"status": "Suspended"}, headers=other_doc)).status_code == 403
+    res = await client.patch(status_url, json={"status": "Suspended"}, headers=doc)
+    assert res.status_code == 200 and res.json()["previous_status"] == "Recruiting"
+    async with PostgresDB.get_pool().acquire() as conn:
+        assert await conn.fetchval(
+            "SELECT count(*) FROM audit_logs WHERE action = 'trial_status_changed' AND target_id = $1", trial_id) == 1
+
+    # Removing the manager takes the control away
+    await client.patch(url, json={"hcp_email": None}, headers=admin)
+    assert (await client.patch(status_url, json={"status": "Recruiting"}, headers=doc)).status_code == 403
+    assert (await client.patch(status_url, json={"status": "Recruiting"}, headers=admin)).status_code == 200
+
+
+async def test_recent_observations_cover_own_and_managed_trials(client):
+    managed_id = await trial("Obs Managed Trial")
+    other_id = await trial("Obs Other Trial")
+    admin, _ = await user(client, "obs_admin@example.com", "admin")
+    doc, _ = await user(client, "obs_doc@example.com", "hcp", verified=True)
+    colleague, _ = await user(client, "obs_colleague@example.com", "hcp", verified=True)
+    await client.patch(f"/api/v1/trials/{managed_id}/manager", json={"hcp_email": "obs_doc@example.com"}, headers=admin)
+
+    def obs(tid, text):
+        return {"trial_id": tid, "summary": text, "severity_level": "low"}
+    await client.post("/api/v1/clinical-observations/", json=obs(managed_id, "Colleague note on managed trial"), headers=colleague)
+    await client.post("/api/v1/clinical-observations/", json=obs(other_id, "Colleague note elsewhere here"), headers=colleague)
+    await client.post("/api/v1/clinical-observations/", json=obs(other_id, "My own note on other trial"), headers=doc)
+
+    recent = (await client.get("/api/v1/clinical-observations/recent", headers=doc)).json()
+    assert {o["summary"] for o in recent} == {"Colleague note on managed trial", "My own note on other trial"}
+    assert all(o["trial_title"] and o["doctor_name"] for o in recent)
+    patient, _ = await user(client, "obs_patient@example.com")
+    assert (await client.get("/api/v1/clinical-observations/recent", headers=patient)).status_code == 403
+
+
+# ---------------------------------------------------------------- self-enrollment
+
+async def test_patient_self_enrolls_through_consent(client, sent_emails):
+    trial_id = await trial("Self Enroll Trial")
+    closed_id = await trial("Closed Enroll Trial", status="Completed")
+    patient, patient_id = await user(client, "self_pat@example.com")
+    doc, _ = await user(client, "self_doc@example.com", "hcp", verified=True)
+
+    assert (await client.post(f"/api/v1/trials/{trial_id}/enroll", headers=doc)).status_code == 403
+    assert (await client.post(f"/api/v1/trials/{closed_id}/enroll", headers=patient)).status_code == 409
+    assert (await client.post(f"/api/v1/trials/{uuid.uuid4()}/enroll", headers=patient)).status_code == 404
+
+    ref = (await client.post(f"/api/v1/trials/{trial_id}/enroll", headers=patient)).json()
+    assert (ref["status"], ref["hcp_user_id"], ref["hcp_name"]) == ("consent_pending", None, None)
+    again = (await client.post(f"/api/v1/trials/{trial_id}/enroll", headers=patient)).json()
+    assert again["id"] == ref["id"]  # no duplicate referral
+
+    body = {"version": "v1", "signed_name": "Self Pat", "agreed": True}
+    res = await client.post(f"/api/v1/referrals/{ref['id']}/consent", json=body, headers=patient)
+    assert res.status_code == 200 and res.json()["status"] == "enrolled"
+    assert (await client.post(f"/api/v1/trials/{trial_id}/enroll", headers=patient)).status_code == 409
+    received = (await client.get("/api/v1/referrals/received", headers=patient)).json()
+    assert [r["status"] for r in received] == ["enrolled"]
+
+
+async def test_self_enroll_reuses_open_doctor_referral(client, sent_emails):
+    trial_id = await trial("Reuse Referral Trial")
+    patient, _ = await user(client, "reuse_pat@example.com")
+    doc, _ = await user(client, "reuse_doc@example.com", "hcp", verified=True)
+    ref = (await client.post(f"/api/v1/trials/{trial_id}/refer", json={"patient_email": "reuse_pat@example.com"}, headers=doc)).json()
+    enrolled = (await client.post(f"/api/v1/trials/{trial_id}/enroll", headers=patient)).json()
+    assert (enrolled["id"], enrolled["status"], enrolled["hcp_name"]) == (ref["id"], "consent_pending", ref["hcp_name"])

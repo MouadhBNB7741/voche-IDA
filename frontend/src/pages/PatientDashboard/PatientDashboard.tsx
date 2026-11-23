@@ -22,10 +22,13 @@ import {
   Loader2,
   X,
   FlaskConical,
-  Stethoscope
+  Stethoscope,
+  ClipboardList,
+  Clock
 } from 'lucide-react';
 import { DigitalConsentModal } from '../../components/trials/DigitalConsentModal';
-import { ReferralStatusBadge } from '../../components/trials/ReferralStatusBadge';
+import { ReferralProgress, ReferralStatusBadge } from '../../components/trials/ReferralStatusBadge';
+import { useAssignedSurveys } from '../../hooks/useSurvey';
 import { trialService } from '../../services/trialService';
 import { formatMessageDate } from '../../utils/date';
 import { DesignSettings } from '../../components/profile/DesignSettings';
@@ -243,11 +246,15 @@ export default function PatientDashboard() {
     }
   }, [isLoading, isAuthenticated, isProfileComplete, navigate]);
 
+  const { data: assignedSurveys = [], isLoading: surveysLoading } = useAssignedSurveys(isAuthenticated && activeTab === 'surveys');
+  const pendingSurveys = assignedSurveys.filter(a => a.status === 'pending' || a.status === 'in_progress');
+
   const tabs = [
     { id: 'profile', label: 'Profile Settings', icon: User },
     { id: 'design', label: 'Design & Appearance', icon: Palette },
     { id: 'mytrials', label: 'My Trials', icon: FlaskConical },
     { id: 'saved', label: 'Saved Trials', icon: Heart },
+    { id: 'surveys', label: 'My Surveys', icon: ClipboardList },
     { id: 'privacy', label: 'Privacy & Security', icon: Shield },
     { id: 'danger', label: 'Danger Zone', icon: Lock, variant: 'destructive' }
   ];
@@ -513,10 +520,11 @@ export default function PatientDashboard() {
                           <div className="flex-1 min-w-0">
                             <div className="flex flex-wrap items-center gap-2 mb-3">
                               <ReferralStatusBadge status={r.status} />
-                              <span className="text-xs text-muted-foreground">from {r.hcp_name} · {formatMessageDate(r.created_at)}</span>
+                              <span className="text-xs text-muted-foreground">{r.hcp_name ? `from ${r.hcp_name}` : 'You started this enrolment'} · {formatMessageDate(r.created_at)}</span>
                             </div>
                             <h4 className="font-bold text-lg mb-2 group-hover:text-primary-color transition-colors cursor-pointer" onClick={() => navigate(`/trials/${r.trial_id}`)}>{r.trial_title}</h4>
                             {r.clinical_notes && <p className="text-muted-foreground line-clamp-3 text-sm">“{r.clinical_notes}”</p>}
+                            <ReferralProgress status={r.status} selfEnrolled={!r.hcp_user_id} />
                           </div>
                           <div className="flex sm:flex-col gap-2 shrink-0">
                             <Button size="sm" variant="outline" onClick={() => navigate(`/trials/${r.trial_id}`)}>View</Button>
@@ -541,6 +549,47 @@ export default function PatientDashboard() {
                       </Card>
                     );
                   })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Surveys Tab */}
+          {activeTab === 'surveys' && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="flex justify-between items-center bg-card p-4 rounded-xl border shadow-sm mb-2">
+                <div>
+                  <h2 className="text-lg font-bold">Surveys to Complete</h2>
+                  <p className="text-sm text-muted-foreground">Surveys your care team assigned to you. Your progress is saved as you go.</p>
+                </div>
+                <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => navigate('/surveys')}>All Surveys</Button>
+              </div>
+              {surveysLoading ? (
+                <div className="py-16 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary-color" /></div>
+              ) : pendingSurveys.length === 0 ? (
+                <Card className="p-16 text-center border-dashed bg-muted/20">
+                  <ClipboardList className="mx-auto mb-4 text-muted-foreground/30" size={48} />
+                  <h4 className="font-bold text-lg mb-2">Nothing to Complete</h4>
+                  <p className="text-muted-foreground max-w-sm mx-auto">Surveys assigned to you will appear here.</p>
+                </Card>
+              ) : (
+                <div className="grid gap-4">
+                  {pendingSurveys.map((a) => (
+                    <Card key={a.survey_id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="min-w-0 space-y-1">
+                        <h4 className="font-bold">{a.title}</h4>
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                          {a.status === 'in_progress' && <Badge className="bg-amber-100 text-amber-700 border-0">In progress</Badge>}
+                          {a.trial_title && <span>{a.trial_title}</span>}
+                          {a.estimated_time && <span className="flex items-center gap-1"><Clock size={12} /> {a.estimated_time}</span>}
+                          {a.due_date && <span>Due {new Date(a.due_date).toLocaleDateString()}</span>}
+                        </div>
+                      </div>
+                      <Button className="cursor-pointer shrink-0" onClick={() => navigate(`/surveys/${a.survey_id}/take`)}>
+                        {a.has_draft ? 'Continue' : 'Start'}
+                      </Button>
+                    </Card>
+                  ))}
                 </div>
               )}
             </div>

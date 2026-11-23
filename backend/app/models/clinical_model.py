@@ -486,6 +486,55 @@ class ClinicalModel(DBModel):
         "Terminated": set(),
     }
 
+    async def get_trial_manager(self, trial_id) -> Optional[Any]:
+        return await self.conn.fetchval("SELECT managed_by_id FROM clinical_trials WHERE trial_id = $1", trial_id)
+
+    async def set_trial_manager(self, trial_id, hcp_user_id) -> bool:
+        result = await self.conn.execute(
+            "UPDATE clinical_trials SET managed_by_id = $2, last_updated = NOW() WHERE trial_id = $1", trial_id, hcp_user_id)
+        return result.endswith(" 1")
+
+    async def list_managed_trials(self, hcp_user_id) -> List[Dict[str, Any]]:
+        rows = await self.conn.fetch(
+            """
+            SELECT t.trial_id, t.title, t.status, t.phase, t.disease_area, t.enrollment, t.max_enrollment,
+                   count(r.id) AS referrals, count(r.id) FILTER (WHERE r.status = 'enrolled') AS enrolled
+            FROM clinical_trials t
+            LEFT JOIN trial_referrals r ON r.trial_id = t.trial_id
+            WHERE t.managed_by_id = $1
+            GROUP BY t.trial_id
+            ORDER BY t.last_updated DESC NULLS LAST
+            """,
+            hcp_user_id,
+        )
+        trials = self._records_to_list(rows)
+        for t in trials:
+            t["next_statuses"] = sorted(self.STATUS_TRANSITIONS.get(t["status"], set()))
+        return trials
+
+    async def recent_observations(self, hcp_user_id, limit: int = 20) -> List[Dict[str, Any]]:
+        """Observations the doctor wrote, plus any on trials they manage."""
+        rows = await self.conn.fetch(
+            """
+            SELECT o.observation_id, o.trial_id, o.doctor_id, o.summary, o.feedback_data, o.severity_level,
+                   o.flagged, o.created_at, t.title AS trial_title, d.display_name AS doctor_name
+            FROM clinical_observations o
+            JOIN clinical_trials t ON t.trial_id = o.trial_id
+            LEFT JOIN users d ON d.id = o.doctor_id
+            WHERE o.doctor_id = $1 OR t.managed_by_id = $1
+            ORDER BY o.created_at DESC
+            LIMIT $2
+            """,
+            hcp_user_id, limit,
+        )
+        results = []
+        for r in rows:
+            d = dict(r)
+            if isinstance(d.get("feedback_data"), str):
+                d["feedback_data"] = json.loads(d["feedback_data"] or "{}")
+            results.append(d)
+        return results
+
     async def get_trial_status(self, trial_id: str) -> Optional[str]:
         return await self.conn.fetchval("SELECT status FROM clinical_trials WHERE trial_id = $1", trial_id)
 
@@ -536,7 +585,7 @@ class ClinicalModel(DBModel):
     REFERRAL_JOINS = """
         FROM trial_referrals r
         JOIN clinical_trials t ON t.trial_id = r.trial_id
-        JOIN users hcp ON hcp.id = r.hcp_user_id
+        LEFT JOIN users hcp ON hcp.id = r.hcp_user_id
         LEFT JOIN users pat ON pat.id = r.patient_user_id
     """
 
@@ -595,6 +644,34 @@ class ClinicalModel(DBModel):
             referral_id, user_id, email, new_status,
         )
         return await self.get_referral(row["id"]) if row else None
+
+    async def self_enroll(self, trial_id, user_id, email: str) -> Dict[str, Any]:
+        """
+        Start enrolment without a doctor: returns a consent_pending referral for the consent form.
+        An open doctor referral for the same trial is reused (accepting it), so a patient never has two.
+        """
+        async with self.conn.transaction():
+            existing = await self.conn.fetchrow(
+                "SELECT id, status FROM trial_referrals WHERE trial_id = $1 "
+                "AND (patient_user_id = $2 OR lower(patient_email) = lower($3)) "
+                "AND status NOT IN ('declined', 'ineligible') ORDER BY created_at DESC LIMIT 1 FOR UPDATE",
+                trial_id, user_id, email,
+            )
+            if existing and existing["status"] == "enrolled":
+                raise ValueError("You are already enrolled in this trial")
+            if existing:
+                await self.conn.execute(
+                    "UPDATE trial_referrals SET status = 'consent_pending', patient_user_id = $2, updated_at = NOW() WHERE id = $1",
+                    existing["id"], user_id,
+                )
+                referral_id = existing["id"]
+            else:
+                referral_id = await self.conn.fetchval(
+                    "INSERT INTO trial_referrals (trial_id, hcp_user_id, patient_user_id, patient_email, status) "
+                    "VALUES ($1, NULL, $2, $3, 'consent_pending') RETURNING id",
+                    trial_id, user_id, email,
+                )
+        return await self.get_referral(referral_id)
 
     async def referral_exists_for_patient(self, referral_id, user_id, email: str) -> bool:
         return bool(await self.conn.fetchval(

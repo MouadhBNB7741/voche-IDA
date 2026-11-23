@@ -18,10 +18,14 @@ import {
   Stethoscope,
   UserPlus,
   Send,
-  Loader2
+  Loader2,
+  FlaskConical,
+  NotebookPen
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { ReferPatientModal } from '../../components/trials/ReferPatientModal';
+import { ManagedTrialsPanel } from '../../components/trials/ManagedTrialsPanel';
+import { ObservationsPanel } from '../../components/trials/ObservationsPanel';
 import { ReferralStatusBadge } from '../../components/trials/ReferralStatusBadge';
 import { trialService } from '../../services/trialService';
 import { formatMessageDate } from '../../utils/date';
@@ -131,11 +135,22 @@ export default function HCPDashboard() {
     enabled: isVerifiedDoctor && activeTab === 'referrals',
   });
 
+  const verificationRequired = (what: string) => (
+    <Card className="p-16 text-center border-dashed bg-muted/20">
+      <Shield className="mx-auto mb-4 text-muted-foreground/30" size={48} />
+      <h4 className="font-bold text-lg mb-2">Verification Required</h4>
+      <p className="text-muted-foreground mb-6 max-w-sm mx-auto">{what} is available once your medical license is verified.</p>
+      <Button onClick={() => setActiveTab('doctor')} className="cursor-pointer">Go to License Verification</Button>
+    </Card>
+  );
+
   const tabs = [
     { id: 'profile', label: 'Profile Settings', icon: User },
     { id: 'design', label: 'Design & Appearance', icon: Palette },
     ...(isDoctor ? [{ id: 'doctor', label: 'Doctor Tools', icon: Stethoscope }] : []),
+    ...(isDoctor ? [{ id: 'mytrials', label: 'My Trials', icon: FlaskConical }] : []),
     ...(isDoctor ? [{ id: 'referrals', label: 'Patient Referrals', icon: Send }] : []),
+    ...(isDoctor ? [{ id: 'observations', label: 'Observations', icon: NotebookPen }] : []),
     { id: 'privacy', label: 'Privacy & Security', icon: Shield },
     { id: 'danger', label: 'Danger Zone', icon: Lock, variant: 'destructive' }
   ];
@@ -454,6 +469,26 @@ export default function HCPDashboard() {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {activeTab === 'mytrials' && isDoctor && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="bg-card p-4 rounded-xl border shadow-sm">
+                <h2 className="text-lg font-bold">My Trials</h2>
+                <p className="text-sm text-muted-foreground">Trials an administrator assigned to you. Move each one through its lifecycle.</p>
+              </div>
+              {isVerifiedDoctor ? <ManagedTrialsPanel /> : verificationRequired('Managing trials')}
+            </div>
+          )}
+
+          {activeTab === 'observations' && isDoctor && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="bg-card p-4 rounded-xl border shadow-sm">
+                <h2 className="text-lg font-bold">Clinical Observations</h2>
+                <p className="text-sm text-muted-foreground">Log observations on your trials and see recent ones from your team.</p>
+              </div>
+              {isVerifiedDoctor ? <ObservationsPanel /> : verificationRequired('Logging observations')}
             </div>
           )}
 

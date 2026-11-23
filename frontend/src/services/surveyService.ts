@@ -131,6 +131,8 @@ export interface SurveyAnalytics {
   total_responses: number;
   assigned: number;
   completed_assignments: number;
+  completion_rate?: number | null;       // % of assignments completed
+  avg_completion_hours?: number | null;  // from assignment to submission
   questions: QuestionAnalytics[];
 }
 

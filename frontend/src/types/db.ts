@@ -592,8 +592,8 @@ export interface Referral {
   trial_id: string;
   trial_title: string;
   trial_status: TrialStatus;
-  hcp_user_id: string;
-  hcp_name: string;
+  hcp_user_id: string | null;   // null when the patient enrolled themselves
+  hcp_name: string | null;
   patient_user_id?: string | null;
   patient_name?: string | null;
   patient_email?: string | null;
@@ -609,4 +609,29 @@ export interface ConsentForm {
   text: string;
   signed_name?: string | null;
   signed_at?: string | null;
+}
+
+export interface ManagedTrial {
+  trial_id: string;
+  title: string;
+  status: TrialStatus;
+  phase?: string | null;
+  disease_area?: string | null;
+  enrollment?: number | null;
+  max_enrollment?: number | null;
+  referrals: number;
+  enrolled: number;
+  next_statuses: TrialStatus[];
+}
+
+export interface RecentObservation {
+  observation_id: string;
+  trial_id: string;
+  trial_title: string;
+  doctor_id: string;
+  doctor_name?: string | null;
+  summary: string;
+  severity_level: SeverityLevel;
+  flagged: boolean;
+  created_at: string;
 }

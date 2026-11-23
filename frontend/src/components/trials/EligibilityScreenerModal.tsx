@@ -28,6 +28,7 @@ interface EligibilityScreenerModalProps {
     trialId: string;
     rules: EligibilityRules;
     onConnect: () => void;
+    onEnroll?: () => void;   // given for recruiting trials: eligible patients go straight to digital consent
     children: React.ReactNode;
 }
 
@@ -65,7 +66,7 @@ function YesNo({ id, value, onChange }: { id: string; value: boolean | undefined
     );
 }
 
-export function EligibilityScreenerModal({ trialId, rules, onConnect, children }: EligibilityScreenerModalProps) {
+export function EligibilityScreenerModal({ trialId, rules, onConnect, onEnroll, children }: EligibilityScreenerModalProps) {
     const [open, setOpen] = useState(false);
     const { theme } = useTheme();
     const isDark = theme === 'dark';
@@ -131,7 +132,7 @@ export function EligibilityScreenerModal({ trialId, rules, onConnect, children }
                     : 'bg-zinc-900 text-white border-zinc-800'
             }`}>
                 <DialogHeader>
-                    <div className="mx-auto bg-primary/10 p-3 rounded-full mb-2 text-primary">
+                    <div className="mx-auto bg-[hsl(var(--primary)/0.1)] p-3 rounded-full mb-2 text-primary-color">
                         <ShieldCheck size={28} />
                     </div>
                     <DialogTitle className={`text-center text-xl font-bold ${!isDark ? 'text-zinc-950' : 'text-white'}`}>
@@ -166,8 +167,8 @@ export function EligibilityScreenerModal({ trialId, rules, onConnect, children }
                                 Change answers
                             </Button>
                             {result.result !== 'not_eligible' && (
-                                <Button type="button" className="gap-2 shadow-md cursor-pointer" onClick={() => { setOpen(false); reset(); onConnect(); }}>
-                                    Connect with Trial
+                                <Button type="button" className="gap-2 shadow-md cursor-pointer" onClick={() => { setOpen(false); reset(); (onEnroll ?? onConnect)(); }}>
+                                    {onEnroll ? 'Start Enrollment' : 'Connect with Trial'}
                                 </Button>
                             )}
                         </DialogFooter>

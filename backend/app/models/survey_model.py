@@ -555,6 +555,7 @@ class SurveyModel(DBModel):
             JOIN surveys s ON s.survey_id = a.survey_id
             LEFT JOIN clinical_trials t ON t.trial_id = a.trial_id
             WHERE a.patient_user_id = $1
+              AND (s.status = 'active' OR a.status = 'completed')  -- a closed survey can no longer be taken
             ORDER BY (a.status IN ('pending', 'in_progress')) DESC, a.due_date ASC NULLS LAST, a.created_at DESC
             """,
             self._to_uuid(user_id),

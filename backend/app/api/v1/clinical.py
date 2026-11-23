@@ -23,6 +23,8 @@ from app.schemas.clinical import (
     TrialSaveResponse,
     TrialStatusUpdate,
     TrialStatusResponse,
+    TrialManagerUpdate,
+    ManagedTrial,
     ScreeningRequest,
     ScreeningResponse,
     ReferralCreate,
@@ -93,6 +95,15 @@ async def search_trials(
         match_country=match["country"],
     )
     return results
+
+
+@router.get("/trials/managed", response_model=List[ManagedTrial])
+async def list_managed_trials(
+    conn=Depends(get_connection),
+    hcp: dict = Depends(verified_hcp_required),
+):
+    """Trials an admin assigned to this verified HCP, with referral counts and the statuses they can move to."""
+    return await ClinicalModel(conn).list_managed_trials(hcp["id"])
 
 
 @router.get("/trials/{trial_id}", response_model=TrialDetail)
@@ -272,13 +283,21 @@ async def change_trial_status(
     trial_id: UUID,
     request: TrialStatusUpdate,
     conn=Depends(get_connection),
-    admin: dict = Depends(admin_required),
+    current_user: dict = Depends(auth_middleware),
 ):
-    """Move a trial to its next lifecycle state. Completed and Terminated are final."""
+    """Move a trial to its next lifecycle state. Admins, or the verified HCP managing the trial. Completed and Terminated are final."""
     model = ClinicalModel(conn)
     current = await model.get_trial_status(str(trial_id))
     if current is None:
         raise HTTPException(status_code=404, detail="Trial not found")
+    if current_user.get("user_type") != "admin":
+        is_manager = (
+            current_user.get("user_type") == "hcp"
+            and str(await model.get_trial_manager(trial_id)) == str(current_user["id"])
+            and await conn.fetchval("SELECT is_verified FROM users WHERE id = $1", current_user["id"])
+        )
+        if not is_manager:
+            raise HTTPException(status_code=403, detail="Only an admin or the trial's manager can change its status")
     if request.status not in model.STATUS_TRANSITIONS.get(current, set()):
         allowed = sorted(model.STATUS_TRANSITIONS.get(current, set()))
         raise HTTPException(
@@ -289,12 +308,37 @@ async def change_trial_status(
         raise HTTPException(status_code=409, detail="Trial status changed in the meantime. Please reload and try again.")
 
     await AuditService(conn).log_action(
-        user_id=admin["id"], action="trial_status_changed", target_type="trial", target_id=str(trial_id),
+        user_id=current_user["id"], action="trial_status_changed", target_type="trial", target_id=str(trial_id),
         metadata={"from": current, "to": request.status},
     )
     if request.status == "Recruiting":
         await trial_sync_service.notify_matches(conn, trial_id)
     return {"trial_id": trial_id, "previous_status": current, "status": request.status}
+
+
+@router.patch("/trials/{trial_id}/manager")
+async def set_trial_manager(
+    trial_id: UUID,
+    request: TrialManagerUpdate,
+    conn=Depends(get_connection),
+    admin: dict = Depends(admin_required),
+):
+    """Assign the verified HCP who runs this trial (or remove them with hcp_email = null)."""
+    hcp_id = None
+    if request.hcp_email:
+        hcp_id = await conn.fetchval(
+            "SELECT id FROM users WHERE lower(email) = lower($1) AND user_type = 'hcp' AND is_verified",
+            request.hcp_email,
+        )
+        if not hcp_id:
+            raise HTTPException(status_code=400, detail="No verified HCP with that email")
+    if not await ClinicalModel(conn).set_trial_manager(trial_id, hcp_id):
+        raise HTTPException(status_code=404, detail="Trial not found")
+    await AuditService(conn).log_action(
+        user_id=admin["id"], action="trial_manager_changed", target_type="trial", target_id=str(trial_id),
+        metadata={"hcp_email": request.hcp_email},
+    )
+    return {"trial_id": trial_id, "managed_by_id": hcp_id}
 
 
 # ----------------------------------------------------------------------
@@ -397,6 +441,35 @@ async def respond_to_referral(
     if await model.referral_exists_for_patient(referral_id, current_user["id"], current_user["email"]):
         raise HTTPException(status_code=409, detail="This referral has already been answered")
     raise HTTPException(status_code=404, detail="Referral not found")
+
+
+@router.post("/trials/{trial_id}/enroll", response_model=ReferralResponse)
+async def self_enroll(
+    trial_id: UUID,
+    conn=Depends(get_connection),
+    current_user: dict = Depends(auth_middleware),
+):
+    """
+    After the eligibility screener, a patient starts enrolment without a doctor's referral.
+    Returns a consent_pending referral; signing its consent form completes enrolment.
+    """
+    if current_user.get("user_type") != "patient":
+        raise HTTPException(status_code=403, detail="Only patients can enroll in a trial")
+    model = ClinicalModel(conn)
+    trial_status = await model.get_trial_status(str(trial_id))
+    if trial_status is None:
+        raise HTTPException(status_code=404, detail="Trial not found")
+    if trial_status != "Recruiting":
+        raise HTTPException(status_code=409, detail="This trial is not recruiting")
+    try:
+        referral = await model.self_enroll(trial_id, current_user["id"], current_user["email"])
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    await AuditService(conn).log_action(
+        user_id=current_user["id"], action="trial_self_enroll_started", target_type="trial", target_id=str(trial_id),
+        metadata={"referral_id": str(referral["id"])},
+    )
+    return referral
 
 
 # ----------------------------------------------------------------------

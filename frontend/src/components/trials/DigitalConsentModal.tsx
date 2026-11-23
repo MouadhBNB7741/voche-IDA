@@ -20,11 +20,15 @@ import { trialService } from '../../services/trialService';
 
 interface DigitalConsentModalProps {
     referralId: string;
-    children: React.ReactNode;
+    children?: React.ReactNode;
+    open?: boolean;                        // pass open/onOpenChange to open it without a trigger
+    onOpenChange?: (open: boolean) => void;
 }
 
-export function DigitalConsentModal({ referralId, children }: DigitalConsentModalProps) {
-    const [open, setOpen] = useState(false);
+export function DigitalConsentModal({ referralId, children, open: openProp, onOpenChange }: DigitalConsentModalProps) {
+    const [innerOpen, setInnerOpen] = useState(false);
+    const open = openProp ?? innerOpen;
+    const setOpen = onOpenChange ?? setInnerOpen;
     const { theme } = useTheme();
     const isDark = theme === 'dark';
     const queryClient = useQueryClient();
@@ -68,14 +72,14 @@ export function DigitalConsentModal({ referralId, children }: DigitalConsentModa
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>{children}</DialogTrigger>
+            {children && <DialogTrigger asChild>{children}</DialogTrigger>}
             <DialogContent className={`sm:max-w-[560px] max-h-[90vh] overflow-y-auto border shadow-xl ${
                 !isDark
                     ? 'bg-white text-zinc-950 border-zinc-200'
                     : 'bg-zinc-900 text-white border-zinc-800'
             }`}>
                 <DialogHeader>
-                    <div className="mx-auto bg-primary/10 p-3 rounded-full mb-2 text-primary">
+                    <div className="mx-auto bg-[hsl(var(--primary)/0.1)] p-3 rounded-full mb-2 text-primary-color">
                         <FileSignature size={28} />
                     </div>
                     <DialogTitle className={`text-center text-xl font-bold ${!isDark ? 'text-zinc-950' : 'text-white'}`}>Digital Consent</DialogTitle>

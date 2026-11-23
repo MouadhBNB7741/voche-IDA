@@ -23,6 +23,7 @@ import { useTrialById } from "../../hooks/useTrialById";
 import { useTrials } from "../../hooks/useTrials";
 import { EligibilityScreenerModal } from "../../components/trials/EligibilityScreenerModal";
 import { ReferPatientModal } from "../../components/trials/ReferPatientModal";
+import { DigitalConsentModal } from "../../components/trials/DigitalConsentModal";
 
 import { useSaveTrial } from "../../hooks/useSaveTrial";
 import { toast } from "sonner";
@@ -43,6 +44,19 @@ export default function TrialDetail() {
 
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [consentReferralId, setConsentReferralId] = useState<string | null>(null);
+
+  const handleEnroll = () => {
+    if (!isAuthenticated) {
+      openAuthModal("Sign in to your Voche account to enroll in clinical trials.");
+      return;
+    }
+    if (!id) return;
+    trialService
+      .selfEnroll(id)
+      .then((referral) => setConsentReferralId(referral.id))
+      .catch((err) => toast.error("Could not start enrollment", { description: err.message }));
+  };
 
   const handleConnect = () => {
     if (!isAuthenticated) {
@@ -295,7 +309,8 @@ export default function TrialDetail() {
                 <p className="text-muted-foreground mb-8 max-w-md mx-auto">
                   Answer a few questions to see if you might be a good fit for this clinical trial.
                 </p>
-                <EligibilityScreenerModal trialId={trial.trial_id ?? id!} rules={rules} onConnect={handleConnect}>
+                <EligibilityScreenerModal trialId={trial.trial_id ?? id!} rules={rules} onConnect={handleConnect}
+                  onEnroll={trial.status === "Recruiting" && (!user || user.user_type === "patient") ? handleEnroll : undefined}>
                   <Button
                     style={{ backgroundColor: "hsl(var(--primary))", color: "white" }}
                     size="lg"
@@ -304,6 +319,9 @@ export default function TrialDetail() {
                     Check Eligibility
                   </Button>
                 </EligibilityScreenerModal>
+                {consentReferralId && (
+                  <DigitalConsentModal referralId={consentReferralId} open onOpenChange={(o) => !o && setConsentReferralId(null)} />
+                )}
               </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">

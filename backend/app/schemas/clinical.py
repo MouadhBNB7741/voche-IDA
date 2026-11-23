@@ -171,6 +171,23 @@ class TrialStatusResponse(BaseModel):
     status: str
 
 
+class TrialManagerUpdate(BaseModel):
+    hcp_email: Optional[EmailStr] = None   # None removes the manager
+
+
+class ManagedTrial(BaseModel):
+    trial_id: UUID
+    title: str
+    status: str
+    phase: Optional[str] = None
+    disease_area: Optional[str] = None
+    enrollment: Optional[int] = None
+    max_enrollment: Optional[int] = None
+    referrals: int
+    enrolled: int
+    next_statuses: List[str]
+
+
 class ScreeningRequest(BaseModel):
     """Patient answers for the eligibility pre-screener. Every field is optional; nothing is stored."""
     age: Optional[int] = Field(None, ge=0, le=120)
@@ -208,8 +225,8 @@ class ReferralResponse(BaseModel):
     trial_id: UUID
     trial_title: str
     trial_status: str
-    hcp_user_id: UUID
-    hcp_name: str
+    hcp_user_id: Optional[UUID] = None    # None = the patient enrolled themselves
+    hcp_name: Optional[str] = None
     patient_user_id: Optional[UUID] = None
     patient_name: Optional[str] = None
     patient_email: Optional[str] = None

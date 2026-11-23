@@ -244,6 +244,7 @@ CREATE TABLE clinical_trials (
     -- Sync
     sync_source VARCHAR(50) NOT NULL DEFAULT 'manual', -- manual, clinicaltrials_gov
     last_synced_at TIMESTAMPTZ,
+    managed_by_id UUID REFERENCES users(id) ON DELETE SET NULL, -- verified HCP who runs the trial (migration 007)
     
     -- Timeline
     start_date DATE,
@@ -383,7 +384,7 @@ COMMENT ON COLUMN trial_alerts.filter_criteria IS 'JSONB for flexible additional
 CREATE TABLE IF NOT EXISTS trial_referrals (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     trial_id UUID NOT NULL REFERENCES clinical_trials(trial_id) ON DELETE CASCADE,
-    hcp_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    hcp_user_id UUID REFERENCES users(id) ON DELETE CASCADE, -- NULL = patient self-enrolled (migration 007)
     patient_user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     patient_email VARCHAR(255),                   -- for patients without a Voche account yet
     clinical_notes TEXT,

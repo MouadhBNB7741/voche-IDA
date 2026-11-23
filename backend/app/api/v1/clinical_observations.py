@@ -5,7 +5,7 @@ from app.api.dependencies.connections import get_connection
 from app.api.middleware.auth_middleware import auth_middleware
 from app.api.middleware.hcp_middleware import verified_hcp_required
 from app.models.clinical_model import ClinicalModel
-from app.schemas.clinical_observation import CreateObservationRequest, ObservationResponse
+from app.schemas.clinical_observation import CreateObservationRequest, ObservationResponse, RecentObservation
 
 router = APIRouter(prefix="/clinical-observations", tags=["Clinical Observations"])
 
@@ -28,6 +28,15 @@ async def create_observation(
         request.model_dump()
     )
     return result
+
+@router.get("/recent", response_model=List[RecentObservation])
+async def recent_observations(
+    conn=Depends(get_connection),
+    current_user: dict = Depends(verified_hcp_required),
+):
+    """The latest observations this doctor wrote or that were written on trials they manage."""
+    return await ClinicalModel(conn).recent_observations(current_user["id"])
+
 
 @router.get("/trial/{trial_id}", response_model=List[ObservationResponse])
 async def get_trial_observations(

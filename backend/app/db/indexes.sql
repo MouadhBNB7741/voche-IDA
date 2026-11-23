@@ -118,6 +118,7 @@ CREATE INDEX idx_clinical_trials_summary_search ON clinical_trials USING GIN (su
 
 -- JSONB index for countries array
 CREATE INDEX idx_clinical_trials_countries ON clinical_trials USING GIN (countries);
+CREATE INDEX idx_clinical_trials_managed_by ON clinical_trials(managed_by_id);
 
 COMMENT ON INDEX idx_clinical_trials_nct_id IS 'Fast lookup by ClinicalTrials.gov NCT identifier';
 COMMENT ON INDEX idx_clinical_trials_disease_area IS 'Filter trials by disease/condition';

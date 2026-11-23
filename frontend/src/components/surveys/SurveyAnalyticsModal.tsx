@@ -43,6 +43,19 @@ export function SurveyAnalyticsModal({ surveyId, onClose }: { surveyId: string |
           </DialogDescription>
         </DialogHeader>
 
+        {data && (
+          <div className="grid grid-cols-2 gap-3 pt-2">
+            <div className="rounded-xl border border-[hsl(var(--border))] p-3 text-center">
+              <p className="text-2xl font-bold">{data.completion_rate != null ? `${data.completion_rate}%` : '—'}</p>
+              <p className="text-xs text-muted-foreground">Completion rate</p>
+            </div>
+            <div className="rounded-xl border border-[hsl(var(--border))] p-3 text-center">
+              <p className="text-2xl font-bold">{data.avg_completion_hours != null ? `${data.avg_completion_hours} h` : '—'}</p>
+              <p className="text-xs text-muted-foreground">Average time to complete</p>
+            </div>
+          </div>
+        )}
+
         {isLoading ? (
           <div className="space-y-3 py-4">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}</div>
         ) : isError || !data ? (
