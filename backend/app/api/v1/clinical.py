@@ -28,6 +28,8 @@ from app.schemas.clinical import (
     ReferralCreate,
     ReferralRespond,
     ReferralResponse,
+    ConsentForm,
+    ConsentSign,
 )
 from app.schemas.notification import NotificationType
 from app.db.postgres import PostgresDB
@@ -438,3 +440,71 @@ async def list_trial_sync_logs(
     """The 20 most recent sync runs, newest first."""
     rows = await conn.fetch("SELECT * FROM trial_sync_logs ORDER BY sync_started_at DESC LIMIT 20")
     return [dict(r) for r in rows]
+
+
+# ----------------------------------------------------------------------
+# DIGITAL CONSENT (referred patients)
+# ----------------------------------------------------------------------
+# Change CONSENT_VERSION whenever CONSENT_TEXT changes: every signature stores the text it agreed to.
+CONSENT_VERSION = "v1"
+CONSENT_TEXT = """By signing, I confirm that:
+1. I have read the trial information and had the chance to ask questions.
+2. Taking part is my choice, and I can withdraw at any time without it affecting my care.
+3. Voche may share my name and contact details with this trial's team so they can contact me about enrolment.
+4. The trial team will confirm my eligibility and explain the study fully before any procedure.
+5. This consent is to be contacted and screened for this trial only; it is not medical advice."""
+
+
+@router.get("/referrals/{referral_id}/consent", response_model=ConsentForm)
+async def get_consent_form(
+    referral_id: UUID,
+    conn=Depends(get_connection),
+    current_user: dict = Depends(auth_middleware),
+):
+    """The consent text a referred patient signs, and the signature if already given."""
+    model = ClinicalModel(conn)
+    referral = await model.get_referral(referral_id)
+    if not referral or str(referral["patient_user_id"]) != str(current_user["id"]):
+        raise HTTPException(status_code=404, detail="Referral not found")
+    signed = await conn.fetchrow(
+        "SELECT consent_version, consent_text, signed_name, signed_at FROM trial_consents WHERE referral_id = $1",
+        referral_id,
+    )
+    if signed:
+        return {"trial_title": referral["trial_title"], "version": signed["consent_version"], "text": signed["consent_text"],
+                "signed_name": signed["signed_name"], "signed_at": signed["signed_at"]}
+    return {"trial_title": referral["trial_title"], "version": CONSENT_VERSION, "text": CONSENT_TEXT}
+
+
+@router.post("/referrals/{referral_id}/consent", response_model=ReferralResponse)
+async def sign_consent(
+    referral_id: UUID,
+    request: ConsentSign,
+    conn=Depends(get_connection),
+    current_user: dict = Depends(auth_middleware),
+):
+    """Sign consent for an accepted referral. Moves it from consent_pending to enrolled."""
+    if request.version != CONSENT_VERSION:
+        raise HTTPException(status_code=409, detail="The consent text has changed. Please read it again.")
+    model = ClinicalModel(conn)
+    async with conn.transaction():
+        row = await conn.fetchrow(
+            "UPDATE trial_referrals SET status = 'enrolled', updated_at = NOW() "
+            "WHERE id = $1 AND patient_user_id = $2 AND status = 'consent_pending' RETURNING trial_id",
+            referral_id, current_user["id"],
+        )
+        if not row:
+            referral = await model.get_referral(referral_id)
+            if not referral or str(referral["patient_user_id"]) != str(current_user["id"]):
+                raise HTTPException(status_code=404, detail="Referral not found")
+            raise HTTPException(status_code=409, detail="Accept the referral before signing, or it is already signed")
+        await conn.execute(
+            "INSERT INTO trial_consents (referral_id, trial_id, user_id, consent_version, consent_text, signed_name) "
+            "VALUES ($1, $2, $3, $4, $5, $6)",
+            referral_id, row["trial_id"], current_user["id"], CONSENT_VERSION, CONSENT_TEXT, request.signed_name.strip(),
+        )
+        await AuditService(conn).log_action(
+            user_id=current_user["id"], action="trial_consent_signed", target_type="referral",
+            target_id=str(referral_id), metadata={"version": CONSENT_VERSION},
+        )
+    return await model.get_referral(referral_id)

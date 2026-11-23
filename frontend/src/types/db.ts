@@ -584,3 +584,29 @@ export interface ScreeningResult {
   breakdown: { criterion: string; status: 'met' | 'not_met' | 'unknown'; detail: string }[];
   disclaimer: string;
 }
+
+export type ReferralStatus = 'sent' | 'viewed' | 'consent_pending' | 'enrolled' | 'declined' | 'ineligible';
+
+export interface Referral {
+  id: string;
+  trial_id: string;
+  trial_title: string;
+  trial_status: TrialStatus;
+  hcp_user_id: string;
+  hcp_name: string;
+  patient_user_id?: string | null;
+  patient_name?: string | null;
+  patient_email?: string | null;
+  clinical_notes?: string | null;
+  status: ReferralStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConsentForm {
+  trial_title: string;
+  version: string;
+  text: string;
+  signed_name?: string | null;
+  signed_at?: string | null;
+}

@@ -15,8 +15,16 @@ import {
   Upload,
   ChevronRight,
   Palette,
-  Stethoscope
+  Stethoscope,
+  UserPlus,
+  Send,
+  Loader2
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { ReferPatientModal } from '../../components/trials/ReferPatientModal';
+import { ReferralStatusBadge } from '../../components/trials/ReferralStatusBadge';
+import { trialService } from '../../services/trialService';
+import { formatMessageDate } from '../../utils/date';
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'sonner';
 import {
@@ -115,11 +123,19 @@ export default function HCPDashboard() {
   };
 
   const isDoctor = user?.user_type === 'hcp';
+  const isVerifiedDoctor = isDoctor && !!user?.is_verified;
+
+  const { data: referrals = [], isLoading: referralsLoading } = useQuery({
+    queryKey: ['referrals', 'sent'],
+    queryFn: trialService.getSentReferrals,
+    enabled: isVerifiedDoctor && activeTab === 'referrals',
+  });
 
   const tabs = [
     { id: 'profile', label: 'Profile Settings', icon: User },
     { id: 'design', label: 'Design & Appearance', icon: Palette },
     ...(isDoctor ? [{ id: 'doctor', label: 'Doctor Tools', icon: Stethoscope }] : []),
+    ...(isDoctor ? [{ id: 'referrals', label: 'Patient Referrals', icon: Send }] : []),
     { id: 'privacy', label: 'Privacy & Security', icon: Shield },
     { id: 'danger', label: 'Danger Zone', icon: Lock, variant: 'destructive' }
   ];
@@ -377,6 +393,70 @@ export default function HCPDashboard() {
               </Card>
             </div>
           )}
+          {/* Referrals Tab */}
+          {activeTab === 'referrals' && isDoctor && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="flex justify-between items-center gap-4 bg-card p-4 rounded-xl border shadow-sm">
+                <div>
+                  <h2 className="text-lg font-bold">Patient Referrals</h2>
+                  <p className="text-sm text-muted-foreground">Patients you referred to trials, and where each one stands.</p>
+                </div>
+                {isVerifiedDoctor && (
+                  <ReferPatientModal>
+                    <Button size="sm" className="gap-2 cursor-pointer">
+                      <UserPlus size={16} />
+                      Refer a Patient
+                    </Button>
+                  </ReferPatientModal>
+                )}
+              </div>
+
+              {!isVerifiedDoctor ? (
+                <Card className="p-16 text-center border-dashed bg-muted/20">
+                  <Shield className="mx-auto mb-4 text-muted-foreground/30" size={48} />
+                  <h4 className="font-bold text-lg mb-2">Verification Required</h4>
+                  <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+                    Referring patients is available once your medical license is verified.
+                  </p>
+                  <Button onClick={() => setActiveTab('doctor')} className="cursor-pointer">Go to License Verification</Button>
+                </Card>
+              ) : referralsLoading ? (
+                <div className="py-16 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary-color" /></div>
+              ) : referrals.length === 0 ? (
+                <Card className="p-16 text-center border-dashed bg-muted/20">
+                  <Send className="mx-auto mb-4 text-muted-foreground/30" size={48} />
+                  <h4 className="font-bold text-lg mb-2">No Referrals Yet</h4>
+                  <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+                    Refer a patient to a recruiting trial and follow their progress here.
+                  </p>
+                </Card>
+              ) : (
+                <div className="grid gap-4">
+                  {referrals.map((r) => (
+                    <Card key={r.id} className="p-5 hover:border-primary-color/50 hover:shadow-md transition-all">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <h4
+                            className="font-bold mb-1 hover:text-primary-color transition-colors cursor-pointer"
+                            onClick={() => navigate(`/trials/${r.trial_id}`)}
+                          >
+                            {r.trial_title}
+                          </h4>
+                          <p className="text-sm text-muted-foreground break-words">
+                            {r.patient_name}{r.patient_name !== r.patient_email && r.patient_email ? ` · ${r.patient_email}` : ''}
+                          </p>
+                          {r.clinical_notes && <p className="text-sm mt-2 line-clamp-2">{r.clinical_notes}</p>}
+                          <p className="text-xs text-muted-foreground mt-2">Sent {formatMessageDate(r.created_at)}</p>
+                        </div>
+                        <ReferralStatusBadge status={r.status} />
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Design Tab */}
           {activeTab === 'design' && (
             <DesignSettings />

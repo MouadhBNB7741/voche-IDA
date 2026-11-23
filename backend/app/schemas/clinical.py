@@ -217,3 +217,17 @@ class ReferralResponse(BaseModel):
     status: Literal['sent', 'viewed', 'consent_pending', 'enrolled', 'declined', 'ineligible']
     created_at: datetime
     updated_at: datetime
+
+
+class ConsentForm(BaseModel):
+    trial_title: str
+    version: str
+    text: str
+    signed_name: Optional[str] = None
+    signed_at: Optional[datetime] = None
+
+
+class ConsentSign(BaseModel):
+    version: str
+    signed_name: str = Field(..., min_length=2, max_length=200)
+    agreed: Literal[True]

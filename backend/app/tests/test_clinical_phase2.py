@@ -234,3 +234,39 @@ async def test_unverified_hcp_cannot_submit_observations(client):
         "trial_id": trial_id, "summary": "Observed improvement in symptoms", "feedback_data": {}, "severity": "low",
     })
     assert res.status_code == 403
+
+
+# ---------------------------------------------------------------- consent
+
+async def test_consent_signs_once_after_accepting_and_enrolls(client, sent_emails):
+    trial_id = await trial("Consent Trial")
+    hcp, _ = await user(client, "doc_consent@example.com", "hcp", verified=True)
+    patient, patient_id = await user(client, "pat_consent@example.com")
+    other, _ = await user(client, "pat_consent_other@example.com")
+    ref = (await client.post(f"/api/v1/trials/{trial_id}/refer",
+                             json={"patient_email": "pat_consent@example.com"}, headers=hcp)).json()
+    url = f"/api/v1/referrals/{ref['id']}/consent"
+
+    form = (await client.get(url, headers=patient)).json()
+    assert form["version"] == "v1" and "withdraw" in form["text"] and form["signed_at"] is None
+    assert (await client.get(url, headers=other)).status_code == 404
+
+    body = {"version": "v1", "signed_name": "Pat Consent", "agreed": True}
+    assert (await client.post(url, json=body, headers=patient)).status_code == 409  # not accepted yet
+    await client.patch(f"/api/v1/referrals/{ref['id']}/respond", json={"action": "accept"}, headers=patient)
+
+    assert (await client.post(url, json={**body, "agreed": False}, headers=patient)).status_code == 422
+    assert (await client.post(url, json={**body, "version": "v0"}, headers=patient)).status_code == 409
+    assert (await client.post(url, json=body, headers=other)).status_code == 404
+    res = await client.post(url, json=body, headers=patient)
+    assert res.status_code == 200 and res.json()["status"] == "enrolled"
+    assert (await client.post(url, json=body, headers=patient)).status_code == 409  # already signed
+
+    signed = (await client.get(url, headers=patient)).json()
+    assert signed["signed_name"] == "Pat Consent" and signed["signed_at"]
+    async with PostgresDB.get_pool().acquire() as conn:
+        row = await conn.fetchrow("SELECT user_id, consent_version, consent_text FROM trial_consents WHERE referral_id = $1",
+                                  uuid.UUID(ref["id"]))
+    assert row["user_id"] == patient_id and row["consent_version"] == "v1" and row["consent_text"] == form["text"]
+    sent = (await client.get("/api/v1/referrals/sent", headers=hcp)).json()
+    assert sent[0]["status"] == "enrolled"

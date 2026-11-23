@@ -20,8 +20,14 @@ import {
   Trash2,
   Palette,
   Loader2,
-  X
+  X,
+  FlaskConical,
+  Stethoscope
 } from 'lucide-react';
+import { DigitalConsentModal } from '../../components/trials/DigitalConsentModal';
+import { ReferralStatusBadge } from '../../components/trials/ReferralStatusBadge';
+import { trialService } from '../../services/trialService';
+import { formatMessageDate } from '../../utils/date';
 import { DesignSettings } from '../../components/profile/DesignSettings';
 import { useAuth } from '../../contexts/AuthContext';
 import { useData } from '../../contexts/DataContext';
@@ -45,7 +51,7 @@ import { useSavedTrials } from "../../hooks/useSavedTrials";
 import { useTrials } from "../../hooks/useTrials";
 import { useSaveTrial } from "../../hooks/useSaveTrial";
 
-import { useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 
 const languages = [
@@ -63,7 +69,8 @@ export default function PatientDashboard() {
   const { state } = useData();
 
   useSavedTrials();
-  const { data: allTrials = [] } = useTrials();
+  // shortcut: saved trials are matched against the first 100 trials; use the saved-trials endpoint's details when lists grow past that
+  const { data: allTrials = [] } = useTrials({ limit: 100 });
   const { toggleSave } = useSaveTrial();
 
   const queryClient = useQueryClient();
@@ -120,6 +127,23 @@ export default function PatientDashboard() {
       setProfileImage(null);
     }
   }, [user]);
+
+  const { data: referrals = [], isLoading: referralsLoading } = useQuery({
+    queryKey: ['referrals', 'received'],
+    queryFn: trialService.getReceivedReferrals,
+    enabled: isAuthenticated && activeTab === 'mytrials',
+  });
+  const respondMutation = useMutation({
+    mutationFn: ({ id, action }: { id: string; action: 'accept' | 'decline' }) => trialService.respondToReferral(id, action),
+    onSuccess: (referral) => {
+      queryClient.invalidateQueries({ queryKey: ['referrals', 'received'] });
+      toast.success(referral.status === 'declined' ? 'Referral Declined' : 'Referral Accepted', {
+        description: referral.status === 'declined'
+          ? 'Your doctor will see that you declined.'
+          : 'Sign the digital consent to finish enrolling.',
+      });
+    },
+  });
 
   // Derived state for saved trials
   const savedTrials = allTrials.filter(trial => state.savedTrials.includes(trial.trial_id));
@@ -222,6 +246,7 @@ export default function PatientDashboard() {
   const tabs = [
     { id: 'profile', label: 'Profile Settings', icon: User },
     { id: 'design', label: 'Design & Appearance', icon: Palette },
+    { id: 'mytrials', label: 'My Trials', icon: FlaskConical },
     { id: 'saved', label: 'Saved Trials', icon: Heart },
     { id: 'privacy', label: 'Privacy & Security', icon: Shield },
     { id: 'danger', label: 'Danger Zone', icon: Lock, variant: 'destructive' }
@@ -452,6 +477,72 @@ export default function PatientDashboard() {
                   isEditing={isEditing}
                 />
               </Card>
+            </div>
+          )}
+
+          {/* My Trials Tab */}
+          {activeTab === 'mytrials' && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="flex justify-between items-center bg-card p-4 rounded-xl border shadow-sm mb-2">
+                <div>
+                  <h2 className="text-lg font-bold">Referred by Your Doctor</h2>
+                  <p className="text-sm text-muted-foreground">Trials your doctors suggested for you, and your enrolments.</p>
+                </div>
+                <Badge variant="secondary" className="text-white">{referrals.length} Referrals</Badge>
+              </div>
+
+              {referralsLoading ? (
+                <div className="py-16 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary-color" /></div>
+              ) : referrals.length === 0 ? (
+                <Card className="p-16 text-center border-dashed bg-muted/20">
+                  <Stethoscope className="mx-auto mb-4 text-muted-foreground/30" size={48} />
+                  <h4 className="font-bold text-lg mb-2">No Referrals Yet</h4>
+                  <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+                    When a doctor refers you to a clinical trial, it will appear here.
+                  </p>
+                  <Button onClick={() => navigate('/trials')}>Browse Trials</Button>
+                </Card>
+              ) : (
+                <div className="grid gap-4">
+                  {referrals.map((r) => {
+                    const isOpen = r.status === 'sent' || r.status === 'viewed';
+                    const busy = respondMutation.isPending && respondMutation.variables?.id === r.id;
+                    return (
+                      <Card key={r.id} className="p-5 group hover:border-primary-color/50 hover:shadow-md transition-all">
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2 mb-3">
+                              <ReferralStatusBadge status={r.status} />
+                              <span className="text-xs text-muted-foreground">from {r.hcp_name} · {formatMessageDate(r.created_at)}</span>
+                            </div>
+                            <h4 className="font-bold text-lg mb-2 group-hover:text-primary-color transition-colors cursor-pointer" onClick={() => navigate(`/trials/${r.trial_id}`)}>{r.trial_title}</h4>
+                            {r.clinical_notes && <p className="text-muted-foreground line-clamp-3 text-sm">“{r.clinical_notes}”</p>}
+                          </div>
+                          <div className="flex sm:flex-col gap-2 shrink-0">
+                            <Button size="sm" variant="outline" onClick={() => navigate(`/trials/${r.trial_id}`)}>View</Button>
+                            {isOpen && (
+                              <>
+                                <Button size="sm" disabled={busy} onClick={() => respondMutation.mutate({ id: r.id, action: 'accept' })} className="cursor-pointer">Accept</Button>
+                                <Button size="sm" variant="ghost" disabled={busy} onClick={() => respondMutation.mutate({ id: r.id, action: 'decline' })} className="text-destructive hover:bg-destructive/10 hover:text-destructive cursor-pointer">Decline</Button>
+                              </>
+                            )}
+                            {r.status === 'consent_pending' && (
+                              <DigitalConsentModal referralId={r.id}>
+                                <Button size="sm" className="cursor-pointer">Sign Consent</Button>
+                              </DigitalConsentModal>
+                            )}
+                            {r.status === 'enrolled' && (
+                              <DigitalConsentModal referralId={r.id}>
+                                <Button size="sm" variant="ghost" className="cursor-pointer">View Consent</Button>
+                              </DigitalConsentModal>
+                            )}
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 

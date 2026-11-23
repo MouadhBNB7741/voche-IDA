@@ -3,6 +3,8 @@ import { CLINICAL } from '../lib/api';
 import type {
   AlertFrequency,
   ClinicalTrial,
+  ConsentForm,
+  Referral,
   PaginatedResponse,
   ScreeningAnswers,
   ScreeningResult,
@@ -56,6 +58,38 @@ export const trialService = {
 
   async expressInterest(trialId: string, message?: string): Promise<void> {
     await apiClient.post(CLINICAL.INTEREST(trialId), { message });
+  },
+
+  async referPatient(trialId: string, patientEmail: string, clinicalNotes?: string): Promise<Referral> {
+    const response = await apiClient.post<Referral>(CLINICAL.REFER(trialId), {
+      patient_email: patientEmail,
+      clinical_notes: clinicalNotes || undefined,
+    });
+    return response.data;
+  },
+
+  async getSentReferrals(): Promise<Referral[]> {
+    return (await apiClient.get<Referral[]>(CLINICAL.REFERRALS_SENT)).data;
+  },
+
+  async getReceivedReferrals(): Promise<Referral[]> {
+    return (await apiClient.get<Referral[]>(CLINICAL.REFERRALS_RECEIVED)).data;
+  },
+
+  async respondToReferral(referralId: string, action: 'accept' | 'decline'): Promise<Referral> {
+    return (await apiClient.patch<Referral>(CLINICAL.REFERRAL_RESPOND(referralId), { action })).data;
+  },
+
+  async getConsentForm(referralId: string): Promise<ConsentForm> {
+    return (await apiClient.get<ConsentForm>(CLINICAL.REFERRAL_CONSENT(referralId))).data;
+  },
+
+  async signConsent(referralId: string, version: string, signedName: string): Promise<Referral> {
+    return (await apiClient.post<Referral>(CLINICAL.REFERRAL_CONSENT(referralId), {
+      version,
+      signed_name: signedName,
+      agreed: true,
+    })).data;
   },
 
   async createAlert(alert: {

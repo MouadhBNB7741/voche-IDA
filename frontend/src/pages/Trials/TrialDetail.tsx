@@ -22,6 +22,7 @@ import { trialService } from "../../services/trialService";
 import { useTrialById } from "../../hooks/useTrialById";
 import { useTrials } from "../../hooks/useTrials";
 import { EligibilityScreenerModal } from "../../components/trials/EligibilityScreenerModal";
+import { ReferPatientModal } from "../../components/trials/ReferPatientModal";
 
 import { useSaveTrial } from "../../hooks/useSaveTrial";
 import { toast } from "sonner";
@@ -31,7 +32,8 @@ import { useAuthContext } from "../../contexts/AuthContext";
 export default function TrialDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isAuthenticated, openAuthModal } = useAuthContext();
+  const { isAuthenticated, openAuthModal, user } = useAuthContext();
+  const isVerifiedHcp = user?.user_type === "hcp" && user.is_verified;
 
   const { data: trial, isLoading, error } = useTrialById(id);
   const { data: allTrials = [] } = useTrials();
@@ -144,6 +146,13 @@ export default function TrialDetail() {
         className="mb-8"
         action={
           <div className="flex flex-col sm:flex-row gap-3 min-w-[200px] justify-center sm:justify-end">
+            {isVerifiedHcp && ["Recruiting", "Not yet recruiting"].includes(trial.status) && (
+              <ReferPatientModal trialId={trial.trial_id ?? id!}>
+                <Button className="font-bold shadow-lg h-12 px-6 rounded-xl transition-all hover:scale-105 bg-white text-primary-color hover:bg-white/90 cursor-pointer">
+                  Refer a Patient
+                </Button>
+              </ReferPatientModal>
+            )}
             <Button
               className={`font-bold shadow-lg h-12 px-6 rounded-xl transition-all hover:scale-105 ${
                 isConnected

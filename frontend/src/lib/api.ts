@@ -29,6 +29,11 @@ export const CLINICAL = {
   SAVE_TRIAL: (id: string) => `${API_BASE}/trials/${id}/save`,
   INTEREST: (id: string) => `${API_BASE}/trials/${id}/interest`,
   SCREEN: (id: string) => `${API_BASE}/trials/${id}/screen`,
+  REFER: (id: string) => `${API_BASE}/trials/${id}/refer`,
+  REFERRALS_SENT: `${API_BASE}/referrals/sent`,
+  REFERRALS_RECEIVED: `${API_BASE}/referrals/received`,
+  REFERRAL_RESPOND: (id: string) => `${API_BASE}/referrals/${id}/respond`,
+  REFERRAL_CONSENT: (id: string) => `${API_BASE}/referrals/${id}/consent`,
   ALERTS: `${API_BASE}/alerts/trials`,
   ALERT_BY_ID: (id: string) => `${API_BASE}/alerts/trials/${id}`,
 };
