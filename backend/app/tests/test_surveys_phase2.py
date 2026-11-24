@@ -211,3 +211,79 @@ async def test_analytics(client):
     wrong = by_text["What went wrong?"]
     assert wrong["answered"] == 1 and wrong["distribution"] is None  # free text is counted, not exposed
     assert (await client.get(f"/api/v1/surveys/{uuid.uuid4()}/analytics", headers=admin)).status_code == 404
+
+
+# ---------------------------------------------------------------- builder & hub
+
+def builder_body(**overrides):
+    body = {
+        "title": "Side effects check", "description": "Two-minute check-in", "status": "draft",
+        "questions": [
+            {"text": "Any side effects?", "type": "yes_no", "required": True,
+             "branching": [{"value": "no", "next": 2}]},
+            {"text": "Which ones?", "type": "multiple_choice", "required": True, "options": ["Fever", "Nausea"]},
+            {"text": "Rate your week", "type": "scale", "required": True},
+        ],
+    }
+    return {**body, **overrides}
+
+
+async def test_create_publish_take_and_close_a_survey(client):
+    admin, _ = await account(client, "builder_admin@example.com", "admin")
+    patient, _ = await account(client, "builder_patient@example.com")
+
+    assert (await client.post("/api/v1/surveys/", json=builder_body(), headers=patient)).status_code == 403
+    res = await client.post("/api/v1/surveys/", json=builder_body(), headers=admin)
+    assert res.status_code == 201, res.text
+    sid = res.json()["survey_id"]
+
+    managed = (await client.get("/api/v1/surveys/manage", headers=admin)).json()
+    mine = next(m for m in managed if m["survey_id"] == sid)
+    assert (mine["status"], mine["question_count"], mine["responses"]) == ("draft", 3, 0)
+    assert (await client.get("/api/v1/surveys/manage", headers=patient)).status_code == 403
+
+    detail = (await client.get(f"/api/v1/surveys/{sid}")).json()
+    q = [x["question_id"] for x in detail["questions"]]
+    assert detail["questions"][0]["branching_rules"] == [{"condition": "equals", "value": "no", "next_question_id": q[2]}]
+
+    # Drafts cannot be answered; publishing opens it
+    assert (await client.post(f"/api/v1/surveys/{sid}/responses", json=answers(**{q[0]: "no", q[2]: 3}), headers=patient)).status_code == 400
+    res = await client.patch(f"/api/v1/surveys/{sid}/status", json={"status": "active"}, headers=admin)
+    assert res.json()["previous_status"] == "draft"
+    assert (await client.post(f"/api/v1/surveys/{sid}/responses", json=answers(**{q[0]: "no", q[2]: 3}), headers=patient)).status_code == 200
+
+    assert (await client.patch(f"/api/v1/surveys/{sid}/status", json={"status": "draft"}, headers=admin)).status_code == 409
+    assert (await client.patch(f"/api/v1/surveys/{sid}/status", json={"status": "closed"}, headers=admin)).status_code == 200
+    assert (await client.patch(f"/api/v1/surveys/{uuid.uuid4()}/status", json={"status": "closed"}, headers=admin)).status_code == 404
+
+
+async def test_builder_rejects_bad_questions(client):
+    admin, _ = await account(client, "builder_admin2@example.com", "admin")
+    q = builder_body()["questions"]
+    bad = [
+        [{**q[0], "branching": [{"value": "no", "next": 0}]}, q[1], q[2]],            # jumps backwards
+        [{**q[0], "branching": [{"value": "maybe", "next": 2}]}, q[1], q[2]],         # not an answer
+        [q[0], {**q[1], "options": ["Only one"]}, q[2]],                              # too few options
+        [q[0], q[1], {**q[2], "branching": [{"value": "3", "next": 2}]}],             # scale cannot branch
+    ]
+    for questions in bad:
+        res = await client.post("/api/v1/surveys/", json=builder_body(questions=questions), headers=admin)
+        assert res.status_code == 400, questions
+    assert (await client.post("/api/v1/surveys/", json=builder_body(questions=[]), headers=admin)).status_code == 422
+
+
+async def test_assigned_list_shows_status_and_draft(client):
+    sid, q = await branching_survey()
+    patient, uid = await account(client, "hub_patient@example.com")
+    assert (await client.get("/api/v1/surveys/assigned", headers=patient)).json() == []
+    async with PostgresDB.get_pool().acquire() as conn:
+        await conn.execute("INSERT INTO survey_assignments (survey_id, patient_user_id, due_date) VALUES ($1, $2, NOW() + INTERVAL '3 days')",
+                           uuid.UUID(sid), uid)
+    item = (await client.get("/api/v1/surveys/assigned", headers=patient)).json()[0]
+    assert (item["survey_id"], item["status"], item["has_draft"]) == (sid, "pending", False)
+    await client.patch(f"/api/v1/surveys/{sid}/draft", json={"answers": {q[0]: "yes"}}, headers=patient)
+    item = (await client.get("/api/v1/surveys/assigned", headers=patient)).json()[0]
+    assert (item["status"], item["has_draft"]) == ("in_progress", True)
+    async with PostgresDB.get_pool().acquire() as conn:
+        await conn.execute("UPDATE surveys SET status = 'closed' WHERE survey_id = $1", uuid.UUID(sid))
+    assert (await client.get("/api/v1/surveys/assigned", headers=patient)).json() == []

@@ -269,6 +269,7 @@ CREATE TABLE clinical_trials (
     -- Sync
     sync_source VARCHAR(50) NOT NULL DEFAULT 'manual', -- manual, clinicaltrials_gov
     last_synced_at TIMESTAMPTZ,
+    managed_by_id UUID REFERENCES users(id) ON DELETE SET NULL, -- verified HCP who runs the trial (migration 007)
     
     -- Timeline
     start_date DATE,
@@ -408,7 +409,7 @@ COMMENT ON COLUMN trial_alerts.filter_criteria IS 'JSONB for flexible additional
 CREATE TABLE IF NOT EXISTS trial_referrals (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     trial_id UUID NOT NULL REFERENCES clinical_trials(trial_id) ON DELETE CASCADE,
-    hcp_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    hcp_user_id UUID REFERENCES users(id) ON DELETE CASCADE, -- NULL = patient self-enrolled (migration 007)
     patient_user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     patient_email VARCHAR(255),                   -- for patients without a Voche account yet
     clinical_notes TEXT,
@@ -430,6 +431,19 @@ CREATE TABLE IF NOT EXISTS trial_sync_logs (
     error_details TEXT,
     CONSTRAINT check_sync_status CHECK (status IN ('running', 'success', 'failed'))
 );
+
+-- trial_consents (Phase 2, migration 006_trial_consents.sql)
+CREATE TABLE IF NOT EXISTS trial_consents (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    referral_id UUID NOT NULL UNIQUE REFERENCES trial_referrals(id) ON DELETE CASCADE,
+    trial_id UUID NOT NULL REFERENCES clinical_trials(trial_id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    consent_version VARCHAR(20) NOT NULL,
+    consent_text TEXT NOT NULL,                    -- exact text the patient agreed to
+    signed_name VARCHAR(200) NOT NULL,
+    signed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 
 
 

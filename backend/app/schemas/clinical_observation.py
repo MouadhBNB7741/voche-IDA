@@ -27,3 +27,8 @@ class ObservationResponse(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class RecentObservation(ObservationResponse):
+    trial_title: str
+    doctor_name: Optional[str] = None

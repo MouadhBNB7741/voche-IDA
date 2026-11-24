@@ -123,6 +123,7 @@ CREATE INDEX idx_clinical_trials_summary_search ON clinical_trials USING GIN (su
 
 -- JSONB index for countries array
 CREATE INDEX idx_clinical_trials_countries ON clinical_trials USING GIN (countries);
+CREATE INDEX idx_clinical_trials_managed_by ON clinical_trials(managed_by_id);
 
 COMMENT ON INDEX idx_clinical_trials_nct_id IS 'Fast lookup by ClinicalTrials.gov NCT identifier';
 COMMENT ON INDEX idx_clinical_trials_disease_area IS 'Filter trials by disease/condition';
@@ -140,6 +141,7 @@ CREATE INDEX idx_trial_sites_city ON trial_sites(city);
 -- trial_referrals table (Phase 2)
 CREATE INDEX IF NOT EXISTS idx_trial_referrals_hcp ON trial_referrals(hcp_user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_trial_referrals_patient ON trial_referrals(patient_user_id);
+CREATE INDEX IF NOT EXISTS idx_trial_consents_user ON trial_consents(user_id);
 CREATE INDEX idx_trial_sites_country_city ON trial_sites(country, city); -- Compound for location queries
 CREATE INDEX idx_trial_sites_is_recruiting ON trial_sites(trial_id, is_recruiting) WHERE is_recruiting = TRUE;
 

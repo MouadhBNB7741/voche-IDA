@@ -136,3 +136,56 @@ class SurveyAnalyticsResponse(BaseModel):
     completion_rate: Optional[float] = None       # % of assignments completed
     avg_completion_hours: Optional[float] = None  # from assignment to submission
     questions: List[QuestionAnalytics]
+
+
+# ── Patient hub & builder ────────────────────────────────────────────────────
+
+class AssignedSurveyItem(BaseModel):
+    survey_id: UUID
+    title: str
+    description: str
+    estimated_time: Optional[str] = None
+    status: str                       # pending, in_progress, completed, expired
+    due_date: Optional[datetime] = None
+    has_draft: bool
+    trial_title: Optional[str] = None
+    assigned_at: datetime
+
+
+class ManagedSurveyItem(BaseModel):
+    survey_id: UUID
+    title: str
+    status: SurveyStatus
+    created_at: datetime
+    closing_date: Optional[date] = None
+    question_count: int
+    responses: int
+    assigned: int
+
+
+class BranchInput(BaseModel):
+    value: str = Field(..., min_length=1, max_length=200)
+    next: int = Field(..., ge=0, description="Index of the question to jump to; must come later")
+
+
+class QuestionInput(BaseModel):
+    text: str = Field(..., min_length=3, max_length=1000)
+    type: QuestionType
+    required: bool = False
+    options: Optional[List[str]] = None
+    branching: List[BranchInput] = []
+
+
+class SurveyCreateRequest(BaseModel):
+    title: str = Field(..., min_length=3, max_length=500)
+    description: str = Field(..., min_length=3, max_length=5000)
+    consent_text: Optional[str] = Field(None, max_length=5000)
+    estimated_time: Optional[str] = Field(None, max_length=50)
+    target_audience: List[str] = []   # user types; empty = everyone
+    closing_date: Optional[date] = None
+    status: SurveyStatus = SurveyStatus.draft
+    questions: List[QuestionInput] = Field(..., min_length=1, max_length=100)
+
+
+class SurveyStatusUpdate(BaseModel):
+    status: SurveyStatus

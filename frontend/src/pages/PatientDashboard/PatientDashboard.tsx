@@ -21,10 +21,19 @@ import {
   Palette,
   Loader2,
   X,
-  Bell
+  FlaskConical,
+  Stethoscope,
+  ClipboardList,
+  Clock
 } from 'lucide-react';
+import { DigitalConsentModal } from '../../components/trials/DigitalConsentModal';
+import { ReferralProgress, ReferralStatusBadge } from '../../components/trials/ReferralStatusBadge';
+import { useAssignedSurveys } from '../../hooks/useSurvey';
+import { trialService } from '../../services/trialService';
+import { formatMessageDate } from '../../utils/date';
 import { DesignSettings } from '../../components/profile/DesignSettings';
 import { useAuth } from '../../contexts/AuthContext';
+import { useData } from '../../contexts/DataContext';
 import { toast } from 'sonner';
 import {
   Select,
@@ -38,33 +47,41 @@ import { InterestSelector } from '../../components/profile/InterestSelector';
 import { PrivacySettings } from '../../components/profile/PrivacySettings';
 import { DangerZone } from '../../components/profile/DangerZone';
 import { PageHeader } from '../../components/ui/PageHeader';
-import { NotificationSettings } from '../../components/profile/NotificationSettings';
-import { useAvatarUpload } from '../../hooks/useAvatarUpload';
-import { languages, toLanguageCode } from '../../utils/languages';
-import { roleLabelFor } from '../../utils/dashboard';
+import { compressImage } from '../../utils/imageUtils';
 
 import userService from '../../services/userService';
 import { useSavedTrials } from "../../hooks/useSavedTrials";
 import { useTrials } from "../../hooks/useTrials";
 import { useSaveTrial } from "../../hooks/useSaveTrial";
 
-import { useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+
+
+const languages = [
+  { code: 'en', name: 'English' },
+  { code: 'pt', name: 'Português' },
+  { code: 'es', name: 'Español' },
+  { code: 'fr', name: 'Français' },
+  { code: 'ar', name: 'العربية' },
+];
 
 
 export default function PatientDashboard() {
   const navigate = useNavigate();
   const { user, isAuthenticated, isLoading, isProfileComplete } = useAuth();
+  const { state } = useData();
 
-  const { savedTrialIds } = useSavedTrials();
-  const { data: allTrials = [] } = useTrials();
+  useSavedTrials();
+  // shortcut: saved trials are matched against the first 100 trials; use the saved-trials endpoint's details when lists grow past that
+  const { data: allTrials = [] } = useTrials({ limit: 100 });
   const { toggleSave } = useSaveTrial();
 
   const queryClient = useQueryClient();
-  const { isAvatarLoading, handleAvatarUpload, handleAvatarDelete } = useAvatarUpload();
 
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [isAvatarLoading, setIsAvatarLoading] = useState(false);
 
   // Form states
   const [formData, setFormData] = useState({
@@ -75,7 +92,7 @@ export default function PatientDashboard() {
     role: user?.user_type || 'patient',
     organization: '',
     location: user?.location || 'Not specified',
-    language: toLanguageCode(user?.language_preference),
+    language: user?.language_preference || 'English',
     bio: user?.bio || 'Passionate about advancing health equity and improving access to clinical trials in underserved communities.',
     interests: (user?.interests as string[]) || []
   });
@@ -91,7 +108,7 @@ export default function PatientDashboard() {
         role: user.user_type || 'patient',
         organization: '',
         location: user.location || 'Not specified',
-        language: toLanguageCode(user.language_preference),
+        language: user.language_preference || 'English',
         bio: user.bio || '',
         interests: (user.interests as string[]) || []
       });
@@ -114,8 +131,25 @@ export default function PatientDashboard() {
     }
   }, [user]);
 
+  const { data: referrals = [], isLoading: referralsLoading } = useQuery({
+    queryKey: ['referrals', 'received'],
+    queryFn: trialService.getReceivedReferrals,
+    enabled: isAuthenticated && activeTab === 'mytrials',
+  });
+  const respondMutation = useMutation({
+    mutationFn: ({ id, action }: { id: string; action: 'accept' | 'decline' }) => trialService.respondToReferral(id, action),
+    onSuccess: (referral) => {
+      queryClient.invalidateQueries({ queryKey: ['referrals', 'received'] });
+      toast.success(referral.status === 'declined' ? 'Referral Declined' : 'Referral Accepted', {
+        description: referral.status === 'declined'
+          ? 'Your doctor will see that you declined.'
+          : 'Sign the digital consent to finish enrolling.',
+      });
+    },
+  });
+
   // Derived state for saved trials
-  const savedTrials = allTrials.filter(trial => savedTrialIds.includes(trial.trial_id));
+  const savedTrials = allTrials.filter(trial => state.savedTrials.includes(trial.trial_id));
 
   const handleSave = async () => {
     try {
@@ -147,6 +181,62 @@ export default function PatientDashboard() {
     toggleSave(trialId);
   };
 
+  const handleProfileImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        toast.error('Invalid file type', { description: 'Please upload an image file.' });
+        return;
+      }
+      
+      const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        toast.error('Invalid format', { description: 'Allowed formats: PNG, JPEG, JPG, WEBP.' });
+        return;
+      }
+      
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error('File too large', { description: 'File size must be less than 2MB.' });
+        return;
+      }
+
+      try {
+        setIsAvatarLoading(true);
+        let finalFile = file;
+        try {
+          finalFile = await compressImage(file);
+        } catch (e) {
+          console.error("Silent compression failure:", e);
+        }
+        const response = await userService.uploadAvatar(finalFile);
+        queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
+        toast.success('Profile Photo Updated', {
+          description: response.message || 'Your new profile photo has been uploaded successfully.'
+        });
+      } catch (error: any) {
+        toast.error('Upload Failed', { 
+          description: error?.message || 'Could not upload avatar. Please try again.' 
+        });
+      } finally {
+        setIsAvatarLoading(false);
+      }
+    }
+  };
+
+  const handleDeleteAvatar = async () => {
+    try {
+      const response = await userService.deleteAvatar();
+      queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
+      toast.success('Profile Photo Deleted', {
+        description: response.message || 'Your profile photo has been deleted.'
+      });
+    } catch (error: any) {
+      toast.error('Delete Failed', { 
+        description: error?.message || 'Could not delete avatar. Please try again.' 
+      });
+    }
+  };
+
   /**
    * Redirect incomplete users
    */
@@ -156,11 +246,15 @@ export default function PatientDashboard() {
     }
   }, [isLoading, isAuthenticated, isProfileComplete, navigate]);
 
+  const { data: assignedSurveys = [], isLoading: surveysLoading } = useAssignedSurveys(isAuthenticated && activeTab === 'surveys');
+  const pendingSurveys = assignedSurveys.filter(a => a.status === 'pending' || a.status === 'in_progress');
+
   const tabs = [
     { id: 'profile', label: 'Profile Settings', icon: User },
     { id: 'design', label: 'Design & Appearance', icon: Palette },
+    { id: 'mytrials', label: 'My Trials', icon: FlaskConical },
     { id: 'saved', label: 'Saved Trials', icon: Heart },
-    { id: 'notifications', label: 'Notifications', icon: Bell },
+    { id: 'surveys', label: 'My Surveys', icon: ClipboardList },
     { id: 'privacy', label: 'Privacy & Security', icon: Shield },
     { id: 'danger', label: 'Danger Zone', icon: Lock, variant: 'destructive' }
   ];
@@ -201,7 +295,7 @@ export default function PatientDashboard() {
       <PageHeader
         title={formData.first_name && formData.last_name ? `${formData.first_name} ${formData.last_name}` : formData.display_name || 'Guest User'}
         description={formData.bio}
-        badgeText={roleLabelFor(user?.user_type)}
+        badgeText={user?.user_type === 'hcp' ? 'Healthcare Professional' : 'Patient Advocate'}
         variant="green"
         className="mb-0"
         action={
@@ -216,7 +310,7 @@ export default function PatientDashboard() {
             
             {profileImage && (
               <button
-                onClick={handleAvatarDelete}
+                onClick={handleDeleteAvatar}
                 className="absolute -top-1 -right-1 p-1.5 bg-destructive hover:bg-destructive/90 text-red-500 rounded-full cursor-pointer transition-all shadow-xl border-2 border-background z-20 hover:scale-110 flex items-center justify-center"
                 title="Delete Photo"
               >
@@ -232,7 +326,7 @@ export default function PatientDashboard() {
                   type="file"
                   className="hidden"
                   accept="image/*"
-                  onChange={handleAvatarUpload}
+                  onChange={handleProfileImageUpload}
                 />
               </label>
             </div>
@@ -356,7 +450,7 @@ export default function PatientDashboard() {
                       </SelectTrigger>
                       <SelectContent>
                         {languages.map(lang => (
-                          <SelectItem key={lang.code} value={lang.code}>
+                          <SelectItem key={lang.code} value={lang.name}>
                             {lang.name}
                           </SelectItem>
                         ))}
@@ -390,6 +484,114 @@ export default function PatientDashboard() {
                   isEditing={isEditing}
                 />
               </Card>
+            </div>
+          )}
+
+          {/* My Trials Tab */}
+          {activeTab === 'mytrials' && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="flex justify-between items-center bg-card p-4 rounded-xl border shadow-sm mb-2">
+                <div>
+                  <h2 className="text-lg font-bold">Referred by Your Doctor</h2>
+                  <p className="text-sm text-muted-foreground">Trials your doctors suggested for you, and your enrolments.</p>
+                </div>
+                <Badge variant="secondary" className="text-white">{referrals.length} Referrals</Badge>
+              </div>
+
+              {referralsLoading ? (
+                <div className="py-16 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary-color" /></div>
+              ) : referrals.length === 0 ? (
+                <Card className="p-16 text-center border-dashed bg-muted/20">
+                  <Stethoscope className="mx-auto mb-4 text-muted-foreground/30" size={48} />
+                  <h4 className="font-bold text-lg mb-2">No Referrals Yet</h4>
+                  <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+                    When a doctor refers you to a clinical trial, it will appear here.
+                  </p>
+                  <Button onClick={() => navigate('/trials')}>Browse Trials</Button>
+                </Card>
+              ) : (
+                <div className="grid gap-4">
+                  {referrals.map((r) => {
+                    const isOpen = r.status === 'sent' || r.status === 'viewed';
+                    const busy = respondMutation.isPending && respondMutation.variables?.id === r.id;
+                    return (
+                      <Card key={r.id} className="p-5 group hover:border-primary-color/50 hover:shadow-md transition-all">
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2 mb-3">
+                              <ReferralStatusBadge status={r.status} />
+                              <span className="text-xs text-muted-foreground">{r.hcp_name ? `from ${r.hcp_name}` : 'You started this enrolment'} · {formatMessageDate(r.created_at)}</span>
+                            </div>
+                            <h4 className="font-bold text-lg mb-2 group-hover:text-primary-color transition-colors cursor-pointer" onClick={() => navigate(`/trials/${r.trial_id}`)}>{r.trial_title}</h4>
+                            {r.clinical_notes && <p className="text-muted-foreground line-clamp-3 text-sm">“{r.clinical_notes}”</p>}
+                            <ReferralProgress status={r.status} selfEnrolled={!r.hcp_user_id} />
+                          </div>
+                          <div className="flex sm:flex-col gap-2 shrink-0">
+                            <Button size="sm" variant="outline" onClick={() => navigate(`/trials/${r.trial_id}`)}>View</Button>
+                            {isOpen && (
+                              <>
+                                <Button size="sm" disabled={busy} onClick={() => respondMutation.mutate({ id: r.id, action: 'accept' })} className="cursor-pointer">Accept</Button>
+                                <Button size="sm" variant="ghost" disabled={busy} onClick={() => respondMutation.mutate({ id: r.id, action: 'decline' })} className="text-destructive hover:bg-destructive/10 hover:text-destructive cursor-pointer">Decline</Button>
+                              </>
+                            )}
+                            {r.status === 'consent_pending' && (
+                              <DigitalConsentModal referralId={r.id}>
+                                <Button size="sm" className="cursor-pointer">Sign Consent</Button>
+                              </DigitalConsentModal>
+                            )}
+                            {r.status === 'enrolled' && (
+                              <DigitalConsentModal referralId={r.id}>
+                                <Button size="sm" variant="ghost" className="cursor-pointer">View Consent</Button>
+                              </DigitalConsentModal>
+                            )}
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Surveys Tab */}
+          {activeTab === 'surveys' && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="flex justify-between items-center bg-card p-4 rounded-xl border shadow-sm mb-2">
+                <div>
+                  <h2 className="text-lg font-bold">Surveys to Complete</h2>
+                  <p className="text-sm text-muted-foreground">Surveys your care team assigned to you. Your progress is saved as you go.</p>
+                </div>
+                <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => navigate('/surveys')}>All Surveys</Button>
+              </div>
+              {surveysLoading ? (
+                <div className="py-16 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary-color" /></div>
+              ) : pendingSurveys.length === 0 ? (
+                <Card className="p-16 text-center border-dashed bg-muted/20">
+                  <ClipboardList className="mx-auto mb-4 text-muted-foreground/30" size={48} />
+                  <h4 className="font-bold text-lg mb-2">Nothing to Complete</h4>
+                  <p className="text-muted-foreground max-w-sm mx-auto">Surveys assigned to you will appear here.</p>
+                </Card>
+              ) : (
+                <div className="grid gap-4">
+                  {pendingSurveys.map((a) => (
+                    <Card key={a.survey_id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="min-w-0 space-y-1">
+                        <h4 className="font-bold">{a.title}</h4>
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                          {a.status === 'in_progress' && <Badge className="bg-amber-100 text-amber-700 border-0">In progress</Badge>}
+                          {a.trial_title && <span>{a.trial_title}</span>}
+                          {a.estimated_time && <span className="flex items-center gap-1"><Clock size={12} /> {a.estimated_time}</span>}
+                          {a.due_date && <span>Due {new Date(a.due_date).toLocaleDateString()}</span>}
+                        </div>
+                      </div>
+                      <Button className="cursor-pointer shrink-0" onClick={() => navigate(`/surveys/${a.survey_id}/take`)}>
+                        {a.has_draft ? 'Continue' : 'Start'}
+                      </Button>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -466,10 +668,6 @@ export default function PatientDashboard() {
           )}
 
 
-
-          {activeTab === 'notifications' && (
-            <NotificationSettings />
-          )}
 
           {activeTab === 'privacy' && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">

@@ -14,10 +14,11 @@ interface TrialFilters {
   eligibleForMe?: boolean;
 }
 
-export function useTrials(filters: TrialFilters = {}) {
+export function useTrials(filters: TrialFilters = {}, enabled = true) {
   return useQuery({
     queryKey: ['trials', filters], 
     queryFn: () => trialService.getTrials(filters),
+    enabled,
     retry: false
   });
 }

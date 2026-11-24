@@ -47,6 +47,16 @@ export const CLINICAL = {
   SAVE_TRIAL: (id: string) => `${API_BASE}/trials/${id}/save`,
   INTEREST: (id: string) => `${API_BASE}/trials/${id}/interest`,
   SCREEN: (id: string) => `${API_BASE}/trials/${id}/screen`,
+  REFER: (id: string) => `${API_BASE}/trials/${id}/refer`,
+  REFERRALS_SENT: `${API_BASE}/referrals/sent`,
+  REFERRALS_RECEIVED: `${API_BASE}/referrals/received`,
+  REFERRAL_RESPOND: (id: string) => `${API_BASE}/referrals/${id}/respond`,
+  REFERRAL_CONSENT: (id: string) => `${API_BASE}/referrals/${id}/consent`,
+  ENROLL: (id: string) => `${API_BASE}/trials/${id}/enroll`,
+  MANAGED_TRIALS: `${API_BASE}/trials/managed`,
+  TRIAL_STATUS: (id: string) => `${API_BASE}/trials/${id}/status`,
+  OBSERVATIONS: `${API_BASE}/clinical-observations/`,
+  RECENT_OBSERVATIONS: `${API_BASE}/clinical-observations/recent`,
   ALERTS: `${API_BASE}/alerts/trials`,
   ALERT_BY_ID: (id: string) => `${API_BASE}/alerts/trials/${id}`,
 };
@@ -64,6 +74,13 @@ export const SURVEYS = {
   SUBMIT: (id: string) => `${API_BASE}/surveys/${id}/responses`,
   COMPLETED: `${API_BASE}/surveys/completed`,
   COMPLETED_BY_ID: (id: string) => `${API_BASE}/surveys/completed/${id}`,
+  ASSIGNED: `${API_BASE}/surveys/assigned`,
+  MANAGE: `${API_BASE}/surveys/manage`,
+  CREATE: `${API_BASE}/surveys/`,
+  STATUS: (id: string) => `${API_BASE}/surveys/${id}/status`,
+  DRAFT: (id: string) => `${API_BASE}/surveys/${id}/draft`,
+  ASSIGN: (id: string) => `${API_BASE}/surveys/${id}/assign`,
+  ANALYTICS: (id: string) => `${API_BASE}/surveys/${id}/analytics`,
 };
 
 export const COMMUNITY = {

@@ -16,14 +16,16 @@ import {
   BellRing,
   ChevronDown,
   ShieldCheck,
-  ShieldAlert,
-  BellDot
+  BellDot,
+  ClipboardList
 } from "lucide-react";
 
 import { useTheme } from "../contexts/ThemeContext";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "sonner";
-import { useNotificationFeed } from "../hooks/useNotifications";
+import { useData } from "../contexts/DataContext";
+import { useQuery } from "@tanstack/react-query";
+import { notificationService } from "../services/notificationService";
 
 import {
   DropdownMenu,
@@ -49,6 +51,7 @@ export default function Navigation() {
   const navigate = useNavigate();
   const { isAuthenticated, user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { state } = useData();
 
   const handleLogout = () => {
     logout();
@@ -76,8 +79,14 @@ export default function Navigation() {
     return `${cleanBaseUrl}${cleanAvatarPath}`;
   };
 
-  const { data: notifData } = useNotificationFeed();
-  const unreadCount = isAuthenticated ? notifData?.unread_count ?? 0 : 0;
+  const { data: notifData } = useQuery({
+    queryKey: ['notifications'],
+    queryFn: () => notificationService.getNotifications({ limit: 20 }),
+    enabled: isAuthenticated,
+    refetchInterval: 10000,
+  });
+
+  const unreadCount = notifData?.unread_count ?? notifData?.data?.filter((n: any) => !n.read).length ?? state.notifications.filter((n) => !n.read).length;
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     `flex items-center gap-2.5 px-6 py-2.5 rounded-full text-[11px] font-black uppercase tracking-[0.1em] transition-all duration-500 cursor-pointer
@@ -215,15 +224,11 @@ export default function Navigation() {
                   <span className="font-bold text-xs">Profile</span>
                 </DropdownMenuItem>
 
-                {user.user_type === 'admin' && (
-                  <DropdownMenuItem
-                    onClick={() => navigate("/admin")}
-                    className="px-4 py-2.5 rounded-xl focus:bg-primary-color/10 focus:text-primary-color cursor-pointer transition-colors gap-3"
-                  >
-                    <ShieldAlert className="h-4 w-4 opacity-70" />
-                    <span className="font-bold text-xs">Admin portal</span>
-                  </DropdownMenuItem>
-                )}
+                <DropdownMenuItem onClick={() => navigate("/surveys")}
+                  className="px-4 py-2.5 rounded-xl focus:bg-primary-color/10 focus:text-primary-color cursor-pointer transition-colors gap-3">
+                  <ClipboardList className="h-4 w-4 opacity-70" />
+                  <span className="font-bold text-xs">Surveys</span>
+                </DropdownMenuItem>
 
                 <DropdownMenuItem onClick={() => navigate("/notifications")}
                   className="px-4 py-2.5 rounded-xl focus:bg-primary-color/10 focus:text-primary-color cursor-pointer transition-colors gap-3">

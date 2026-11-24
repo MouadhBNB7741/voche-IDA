@@ -86,7 +86,7 @@ export function TrialAlertModal({ children }: { children: React.ReactNode }) {
                     : 'bg-zinc-900 text-white border-zinc-800'
             }`}>
                 <DialogHeader>
-                    <div className="mx-auto bg-primary/10 p-3 rounded-full mb-2 text-primary">
+                    <div className="mx-auto bg-[hsl(var(--primary)/0.1)] p-3 rounded-full mb-2 text-primary-color">
                         <BellPlus size={28} />
                     </div>
                     <DialogTitle className={`text-center text-xl font-bold ${!isDark ? 'text-zinc-950' : 'text-white'}`}>Create Trial Alert</DialogTitle>

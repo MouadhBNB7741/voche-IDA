@@ -248,6 +248,13 @@ async def seed_db(conn):
         if tid:
             trial_ids.append(tid)
 
+    # The demo doctor manages the first two trials (lifecycle controls on the HCP dashboard)
+    if user_ids.get("hcp") and trial_ids:
+        await conn.execute(
+            "UPDATE clinical_trials SET managed_by_id = $1 WHERE trial_id = ANY($2::uuid[])",
+            user_ids["hcp"], trial_ids[:2],
+        )
+
     logger.info("✅ Clinical Trials seeded.")
 
     # ------------------------------------------------------------------
