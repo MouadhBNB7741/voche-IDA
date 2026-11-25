@@ -21,6 +21,7 @@ import {
   Palette,
   Loader2,
   X,
+  Bell,
   FlaskConical,
   Stethoscope,
   ClipboardList,
@@ -46,7 +47,10 @@ import { InterestSelector } from '../../components/profile/InterestSelector';
 import { PrivacySettings } from '../../components/profile/PrivacySettings';
 import { DangerZone } from '../../components/profile/DangerZone';
 import { PageHeader } from '../../components/ui/PageHeader';
-import { compressImage } from '../../utils/imageUtils';
+import { NotificationSettings } from '../../components/profile/NotificationSettings';
+import { useAvatarUpload } from '../../hooks/useAvatarUpload';
+import { languages, toLanguageCode } from '../../utils/languages';
+import { roleLabelFor } from '../../utils/dashboard';
 
 import userService from '../../services/userService';
 import { useSavedTrials } from "../../hooks/useSavedTrials";
@@ -54,15 +58,6 @@ import { useTrials } from "../../hooks/useTrials";
 import { useSaveTrial } from "../../hooks/useSaveTrial";
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-
-
-const languages = [
-  { code: 'en', name: 'English' },
-  { code: 'pt', name: 'Português' },
-  { code: 'es', name: 'Español' },
-  { code: 'fr', name: 'Français' },
-  { code: 'ar', name: 'العربية' },
-];
 
 
 export default function PatientDashboard() {
@@ -75,11 +70,11 @@ export default function PatientDashboard() {
   const { toggleSave } = useSaveTrial();
 
   const queryClient = useQueryClient();
+  const { isAvatarLoading, handleAvatarUpload, handleAvatarDelete } = useAvatarUpload();
 
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
   const [profileImage, setProfileImage] = useState<string | null>(null);
-  const [isAvatarLoading, setIsAvatarLoading] = useState(false);
 
   // Form states
   const [formData, setFormData] = useState({
@@ -90,7 +85,7 @@ export default function PatientDashboard() {
     role: user?.user_type || 'patient',
     organization: '',
     location: user?.location || 'Not specified',
-    language: user?.language_preference || 'English',
+    language: toLanguageCode(user?.language_preference),
     bio: user?.bio || 'Passionate about advancing health equity and improving access to clinical trials in underserved communities.',
     interests: (user?.interests as string[]) || []
   });
@@ -106,7 +101,7 @@ export default function PatientDashboard() {
         role: user.user_type || 'patient',
         organization: '',
         location: user.location || 'Not specified',
-        language: user.language_preference || 'English',
+        language: toLanguageCode(user.language_preference),
         bio: user.bio || '',
         interests: (user.interests as string[]) || []
       });
@@ -179,62 +174,6 @@ export default function PatientDashboard() {
     toggleSave(trialId);
   };
 
-  const handleProfileImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith('image/')) {
-        toast.error('Invalid file type', { description: 'Please upload an image file.' });
-        return;
-      }
-      
-      const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
-      if (!allowedTypes.includes(file.type)) {
-        toast.error('Invalid format', { description: 'Allowed formats: PNG, JPEG, JPG, WEBP.' });
-        return;
-      }
-      
-      if (file.size > 2 * 1024 * 1024) {
-        toast.error('File too large', { description: 'File size must be less than 2MB.' });
-        return;
-      }
-
-      try {
-        setIsAvatarLoading(true);
-        let finalFile = file;
-        try {
-          finalFile = await compressImage(file);
-        } catch (e) {
-          console.error("Silent compression failure:", e);
-        }
-        const response = await userService.uploadAvatar(finalFile);
-        queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
-        toast.success('Profile Photo Updated', {
-          description: response.message || 'Your new profile photo has been uploaded successfully.'
-        });
-      } catch (error: any) {
-        toast.error('Upload Failed', { 
-          description: error?.message || 'Could not upload avatar. Please try again.' 
-        });
-      } finally {
-        setIsAvatarLoading(false);
-      }
-    }
-  };
-
-  const handleDeleteAvatar = async () => {
-    try {
-      const response = await userService.deleteAvatar();
-      queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
-      toast.success('Profile Photo Deleted', {
-        description: response.message || 'Your profile photo has been deleted.'
-      });
-    } catch (error: any) {
-      toast.error('Delete Failed', { 
-        description: error?.message || 'Could not delete avatar. Please try again.' 
-      });
-    }
-  };
-
   /**
    * Redirect incomplete users
    */
@@ -253,6 +192,7 @@ export default function PatientDashboard() {
     { id: 'mytrials', label: 'My Trials', icon: FlaskConical },
     { id: 'saved', label: 'Saved Trials', icon: Heart },
     { id: 'surveys', label: 'My Surveys', icon: ClipboardList },
+    { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'privacy', label: 'Privacy & Security', icon: Shield },
     { id: 'danger', label: 'Danger Zone', icon: Lock, variant: 'destructive' }
   ];
@@ -293,7 +233,7 @@ export default function PatientDashboard() {
       <PageHeader
         title={formData.first_name && formData.last_name ? `${formData.first_name} ${formData.last_name}` : formData.display_name || 'Guest User'}
         description={formData.bio}
-        badgeText={user?.user_type === 'hcp' ? 'Healthcare Professional' : 'Patient Advocate'}
+        badgeText={roleLabelFor(user?.user_type)}
         variant="green"
         className="mb-0"
         action={
@@ -308,7 +248,7 @@ export default function PatientDashboard() {
             
             {profileImage && (
               <button
-                onClick={handleDeleteAvatar}
+                onClick={handleAvatarDelete}
                 className="absolute -top-1 -right-1 p-1.5 bg-destructive hover:bg-destructive/90 text-red-500 rounded-full cursor-pointer transition-all shadow-xl border-2 border-background z-20 hover:scale-110 flex items-center justify-center"
                 title="Delete Photo"
               >
@@ -324,7 +264,7 @@ export default function PatientDashboard() {
                   type="file"
                   className="hidden"
                   accept="image/*"
-                  onChange={handleProfileImageUpload}
+                  onChange={handleAvatarUpload}
                 />
               </label>
             </div>
@@ -448,7 +388,7 @@ export default function PatientDashboard() {
                       </SelectTrigger>
                       <SelectContent>
                         {languages.map(lang => (
-                          <SelectItem key={lang.code} value={lang.name}>
+                          <SelectItem key={lang.code} value={lang.code}>
                             {lang.name}
                           </SelectItem>
                         ))}
@@ -666,6 +606,10 @@ export default function PatientDashboard() {
           )}
 
 
+
+          {activeTab === 'notifications' && (
+            <NotificationSettings />
+          )}
 
           {activeTab === 'privacy' && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">

@@ -16,6 +16,7 @@ import {
   BellRing,
   ChevronDown,
   ShieldCheck,
+  ShieldAlert,
   BellDot,
   ClipboardList
 } from "lucide-react";
@@ -23,8 +24,7 @@ import {
 import { useTheme } from "../contexts/ThemeContext";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "sonner";
-import { useQuery } from "@tanstack/react-query";
-import { notificationService } from "../services/notificationService";
+import { useNotificationFeed } from "../hooks/useNotifications";
 
 import {
   DropdownMenu,
@@ -77,14 +77,8 @@ export default function Navigation() {
     return `${cleanBaseUrl}${cleanAvatarPath}`;
   };
 
-  const { data: notifData } = useQuery({
-    queryKey: ['notifications'],
-    queryFn: () => notificationService.getNotifications({ limit: 20 }),
-    enabled: isAuthenticated,
-    refetchInterval: 10000,
-  });
-
-  const unreadCount = notifData?.unread_count ?? notifData?.data?.filter((n: { read?: boolean }) => !n.read).length ?? 0;
+  const { data: notifData } = useNotificationFeed();
+  const unreadCount = isAuthenticated ? notifData?.unread_count ?? 0 : 0;
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     `flex items-center gap-2.5 px-6 py-2.5 rounded-full text-[11px] font-black uppercase tracking-[0.1em] transition-all duration-500 cursor-pointer
@@ -221,6 +215,16 @@ export default function Navigation() {
                   <UserIcon className="h-4 w-4 opacity-70" />
                   <span className="font-bold text-xs">Profile</span>
                 </DropdownMenuItem>
+
+                {user.user_type === 'admin' && (
+                  <DropdownMenuItem
+                    onClick={() => navigate("/admin")}
+                    className="px-4 py-2.5 rounded-xl focus:bg-primary-color/10 focus:text-primary-color cursor-pointer transition-colors gap-3"
+                  >
+                    <ShieldAlert className="h-4 w-4 opacity-70" />
+                    <span className="font-bold text-xs">Admin portal</span>
+                  </DropdownMenuItem>
+                )}
 
                 <DropdownMenuItem onClick={() => navigate("/surveys")}
                   className="px-4 py-2.5 rounded-xl focus:bg-primary-color/10 focus:text-primary-color cursor-pointer transition-colors gap-3">
