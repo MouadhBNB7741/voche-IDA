@@ -69,7 +69,7 @@ export const AI = {
 };
 
 export const SURVEYS = {
-  LIST: `${API_BASE}/surveys`,
+  LIST: `${API_BASE}/surveys/`,
   BY_ID: (id: string) => `${API_BASE}/surveys/${id}`,
   SUBMIT: (id: string) => `${API_BASE}/surveys/${id}/responses`,
   COMPLETED: `${API_BASE}/surveys/completed`,
