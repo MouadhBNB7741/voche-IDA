@@ -23,7 +23,6 @@ import {
 import { useTheme } from "../contexts/ThemeContext";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "sonner";
-import { useData } from "../contexts/DataContext";
 import { useQuery } from "@tanstack/react-query";
 import { notificationService } from "../services/notificationService";
 
@@ -51,7 +50,6 @@ export default function Navigation() {
   const navigate = useNavigate();
   const { isAuthenticated, user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const { state } = useData();
 
   const handleLogout = () => {
     logout();
@@ -86,7 +84,7 @@ export default function Navigation() {
     refetchInterval: 10000,
   });
 
-  const unreadCount = notifData?.unread_count ?? notifData?.data?.filter((n: any) => !n.read).length ?? state.notifications.filter((n) => !n.read).length;
+  const unreadCount = notifData?.unread_count ?? notifData?.data?.filter((n: { read?: boolean }) => !n.read).length ?? 0;
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     `flex items-center gap-2.5 px-6 py-2.5 rounded-full text-[11px] font-black uppercase tracking-[0.1em] transition-all duration-500 cursor-pointer

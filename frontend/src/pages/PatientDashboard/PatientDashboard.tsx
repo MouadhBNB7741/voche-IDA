@@ -33,7 +33,6 @@ import { trialService } from '../../services/trialService';
 import { formatMessageDate } from '../../utils/date';
 import { DesignSettings } from '../../components/profile/DesignSettings';
 import { useAuth } from '../../contexts/AuthContext';
-import { useData } from '../../contexts/DataContext';
 import { toast } from 'sonner';
 import {
   Select,
@@ -69,9 +68,8 @@ const languages = [
 export default function PatientDashboard() {
   const navigate = useNavigate();
   const { user, isAuthenticated, isLoading, isProfileComplete } = useAuth();
-  const { state } = useData();
 
-  useSavedTrials();
+  const { savedTrialIds } = useSavedTrials();
   // shortcut: saved trials are matched against the first 100 trials; use the saved-trials endpoint's details when lists grow past that
   const { data: allTrials = [] } = useTrials({ limit: 100 });
   const { toggleSave } = useSaveTrial();
@@ -149,7 +147,7 @@ export default function PatientDashboard() {
   });
 
   // Derived state for saved trials
-  const savedTrials = allTrials.filter(trial => state.savedTrials.includes(trial.trial_id));
+  const savedTrials = allTrials.filter(trial => savedTrialIds.includes(trial.trial_id));
 
   const handleSave = async () => {
     try {
